@@ -36,7 +36,10 @@ Route::post('/membership/process-payment', [MembershipController::class, 'proces
 
 // 3. Render Membership Final Data Registration Form Desk
 Route::get('/membership/application', [MembershipController::class, 'showApplicationForm']);
-Route::post('/membership/verify-aadhaar', [MembershipController::class, 'verifyAadhaar'])->name('membership.verify_aadhaar');
+Route::post('/membership/verify-aadhaar', [MembershipController::class, 'startAadhaarVerification'])->name('membership.verify_aadhaar');
+Route::post('/membership/aadhaar/start', [MembershipController::class, 'startAadhaarVerification'])->name('membership.aadhaar.start');
+Route::get('/membership/aadhaar/callback', [MembershipController::class, 'handleAadhaarCallback'])->name('membership.aadhaar.callback');
+Route::get('/membership/aadhaar/status', [MembershipController::class, 'checkAadhaarStatus'])->name('membership.aadhaar.status');
 
 // 4. Secure Form Submission Desk Mapped to url('/submit-membership')
 Route::post('/submit-membership', [MembershipController::class, 'submitApplication']);

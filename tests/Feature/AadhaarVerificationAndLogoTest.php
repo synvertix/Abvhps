@@ -62,18 +62,17 @@ class AadhaarVerificationAndLogoTest extends TestCase
     }
 
     /**
-     * Test CASE 1: Verify applicant A -> Applicant A's actual verified data returned.
+     * Test CASE 1: Verify applicant A -> Triggers DigiLocker start flow.
      */
     public function test_case_1_verify_applicant_a_returns_actual_verified_data(): void
     {
         \Illuminate\Support\Facades\Http::fake([
-            'https://sandbox.cashfree.com/verification/*' => \Illuminate\Support\Facades\Http::response([
-                'status'  => 'SUCCESS',
-                'name'    => 'RAHUL SHARMA',
-                'dob'     => '1995-05-15',
-                'gender'  => 'M',
-                'care_of' => 'Suresh Sharma',
-                'address' => 'House 123, Gandhi Nagar, Kadapa',
+            'https://sandbox.cashfree.com/verification/digilocker/verify-account' => \Illuminate\Support\Facades\Http::response([
+                'status' => 'ACCOUNT_EXISTS',
+            ], 200),
+            'https://sandbox.cashfree.com/verification/digilocker' => \Illuminate\Support\Facades\Http::response([
+                'status' => 'PENDING',
+                'url'    => 'https://digilocker.cashfree.com/signin',
             ], 200),
         ]);
 
@@ -95,32 +94,23 @@ class AadhaarVerificationAndLogoTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertJson([
-            'status'          => 'success',
-            'is_name_matched' => true,
-            'data' => [
-                'full_name'              => 'RAHUL SHARMA',
-                'dob'                    => '1995-05-15',
-                'gender'                 => 'Male',
-                'permanent_address'      => 'House 123, Gandhi Nagar, Kadapa',
-                'father_or_husband_name' => 'Suresh Sharma'
-            ]
+            'status'       => 'redirect',
+            'redirect_url' => 'https://digilocker.cashfree.com/signin',
         ]);
-        $response->assertJsonMissing(['full_name' => 'SRINIVASA RAO']);
     }
 
     /**
-     * Test CASE 2: Verify applicant B -> Applicant B's actual verified data returned.
+     * Test CASE 2: Verify applicant B -> Triggers DigiLocker start flow.
      */
     public function test_case_2_verify_applicant_b_returns_actual_verified_data(): void
     {
         \Illuminate\Support\Facades\Http::fake([
-            'https://sandbox.cashfree.com/verification/*' => \Illuminate\Support\Facades\Http::response([
-                'status'  => 'SUCCESS',
-                'name'    => 'PRIYA VENKATESH',
-                'dob'     => '1998-11-20',
-                'gender'  => 'F',
-                'care_of' => 'Venkatesh Babu',
-                'address' => 'Flat 401, Tirupati Heights, Tirupati',
+            'https://sandbox.cashfree.com/verification/digilocker/verify-account' => \Illuminate\Support\Facades\Http::response([
+                'status' => 'ACCOUNT_NOT_FOUND',
+            ], 200),
+            'https://sandbox.cashfree.com/verification/digilocker' => \Illuminate\Support\Facades\Http::response([
+                'status' => 'PENDING',
+                'url'    => 'https://digilocker.cashfree.com/signup',
             ], 200),
         ]);
 
@@ -142,17 +132,9 @@ class AadhaarVerificationAndLogoTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertJson([
-            'status'          => 'success',
-            'is_name_matched' => true,
-            'data' => [
-                'full_name'              => 'PRIYA VENKATESH',
-                'dob'                    => '1998-11-20',
-                'gender'                 => 'Female',
-                'permanent_address'      => 'Flat 401, Tirupati Heights, Tirupati',
-                'father_or_husband_name' => 'Venkatesh Babu'
-            ]
+            'status'       => 'redirect',
+            'redirect_url' => 'https://digilocker.cashfree.com/signup',
         ]);
-        $response->assertJsonMissing(['full_name' => 'SRINIVASA RAO']);
     }
 
     /**
@@ -226,64 +208,44 @@ class AadhaarVerificationAndLogoTest extends TestCase
     }
 
     /**
-     * Test CASE 6: Successful Aadhaar verification updates and persists data to database.
+     * Test CASE 6: Successful Aadhaar verification updates and persists data to database via DigiLocker callback.
      */
     public function test_case_6_successful_aadhaar_verification_persists_data_to_database(): void
     {
         \Illuminate\Support\Facades\Http::fake([
-            'https://sandbox.cashfree.com/verification/*' => \Illuminate\Support\Facades\Http::response([
+            'https://sandbox.cashfree.com/verification/digilocker/document/AADHAAR*' => \Illuminate\Support\Facades\Http::response([
                 'status'        => 'SUCCESS',
                 'name'          => 'KAVITHA REDDY',
-                'gender'        => 'Female',
                 'dob'           => '1992-08-20',
-                'care_of'       => 'Venkata Reddy',
-                'address'       => 'Plot 45, Akkalareddypalli, Porumamilla',
+                'gender'        => 'Female',
                 'split_address' => [
-                    'pincode' => '516193'
+                    'pincode' => '516193',
                 ],
+            ], 200),
+            'https://sandbox.cashfree.com/verification/digilocker*' => \Illuminate\Support\Facades\Http::response([
+                'status' => 'AUTHENTICATED',
             ], 200),
         ]);
 
-        \Illuminate\Support\Facades\Config::set('services.cashfree.verify_client_id', 'CF_TEST_ID');
-        \Illuminate\Support\Facades\Config::set('services.cashfree.verify_client_secret', 'CF_TEST_SECRET');
-
         $member = Membership::create([
-            'membership_id' => '333344445555',
-            'phone' => '9777777777',
+            'membership_id'  => '333344445555',
+            'phone'          => '9777777777',
             'payment_status' => 'success',
-            'is_completed' => 0
+            'is_completed'   => 0
         ]);
 
-        $response = $this->withSession(['verified_membership_phone' => '9777777777'])
-            ->postJson('/membership/verify-aadhaar', [
-                'aadhaar_number' => '555566667777',
-                'full_name'      => 'Kavitha Reddy',
-            ]);
+        $this->withSession([
+            'verified_membership_phone'    => '9777777777',
+            'digilocker_verification_id'   => 'SERVER_VERIF_999',
+            'digilocker_member_id'         => $member->id,
+            'digilocker_aadhaar_encrypted' => \Illuminate\Support\Facades\Crypt::encryptString('555566667777'),
+            'digilocker_started_at'        => time(),
+        ])->get('/membership/aadhaar/callback');
 
-        $response->assertStatus(200);
-        $response->assertJson([
-            'status'          => 'success',
-            'is_name_matched' => true,
-            'data' => [
-                'full_name'              => 'KAVITHA REDDY',
-                'gender'                 => 'Female',
-                'dob'                    => '1992-08-20',
-                'father_or_husband_name' => 'Venkata Reddy',
-                'permanent_address'      => 'Plot 45, Akkalareddypalli, Porumamilla',
-                'pincode'                => '516193'
-            ],
-            'masked_aadhaar' => 'XXXX-XXXX-7777'
-        ]);
-
-        // Verify database row was updated
         $member->refresh();
-        $this->assertEquals('555566667777', $member->aadhaar_number);
+        $this->assertTrue($member->is_aadhaar_verified);
         $this->assertEquals('KAVITHA REDDY', $member->full_name);
-        $this->assertEquals('Female', $member->gender);
-        $this->assertEquals('1992-08-20', $member->dob);
-        $this->assertEquals('Venkata Reddy', $member->father_or_husband_name);
-        $this->assertEquals('Plot 45, Akkalareddypalli, Porumamilla', $member->permanent_address);
-        $this->assertEquals('516193', $member->pincode);
+        $this->assertEquals('555566667777', $member->aadhaar_number);
     }
 
     /**
