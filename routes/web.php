@@ -32,7 +32,8 @@ Route::post('/membership/verify-otp', [MembershipController::class, 'verifyOtp']
 
 // 2. Membership Gateway Payment Process Routes
 Route::get('/membership/payment', [MembershipController::class, 'showPaymentPage']);
-Route::post('/membership/process-payment', [MembershipController::class, 'processPayment']);
+Route::post('/membership/payment/razorpay/initiate', [MembershipController::class, 'initiateRazorpayPayment'])->name('membership.payment.razorpay.initiate');
+Route::post('/membership/payment/razorpay/verify', [MembershipController::class, 'verifyRazorpayPayment'])->name('membership.payment.razorpay.verify');
 
 // 3. Render Membership Final Data Registration Form Desk
 Route::get('/membership/application', [MembershipController::class, 'showApplicationForm']);

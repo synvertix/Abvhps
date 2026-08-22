@@ -357,4 +357,211 @@ class RazorpayPaymentService implements PaymentGatewayInterface
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
+
+    // =========================================================================
+    // MEMBERSHIP REAL PAYMENT FLOW
+    // =========================================================================
+
+    /**
+     * Create a server-side Razorpay order for ABVHPS Membership Fee.
+     * Hardcoded amount = 10000 paise (₹100.00). No amount parameter accepted.
+     * FAIL CLOSED when credentials are missing (zero simulation).
+     */
+    public function createMembershipOrder(string $internalReference, string $phone): array
+    {
+        if (!$this->isConfigured) {
+            Log::warning('Razorpay membership order creation failed: missing credentials');
+            return [
+                'success' => false,
+                'message' => 'Razorpay gateway is not configured. Please contact administrator.',
+            ];
+        }
+
+        try {
+            $response = Http::withBasicAuth($this->keyId, $this->keySecret)
+                ->withHeaders(['Content-Type' => 'application/json'])
+                ->post("{$this->baseUrl}/orders", [
+                    'amount'          => 10000, // ₹100.00 fixed
+                    'currency'        => 'INR',
+                    'receipt'         => $internalReference,
+                    'payment_capture' => 1,
+                    'notes'           => [
+                        'phone' => $phone,
+                        'type'  => 'membership',
+                    ],
+                ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                return [
+                    'success'      => true,
+                    'key_id'       => $this->keyId, // public key ID only
+                    'order_id'     => $data['id'],
+                    'amount_paise' => 10000,
+                    'currency'     => 'INR',
+                ];
+            }
+
+            Log::error('Razorpay Membership Order Creation Failed', [
+                'status' => $response->status(),
+                'error'  => $response->json('error', []),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => $response->json('error.description') ?? 'Failed to initialize membership payment order.',
+            ];
+        } catch (\Exception $e) {
+            Log::error('RazorpayPaymentService::createMembershipOrder exception', ['error' => $e->getMessage()]);
+            return [
+                'success' => false,
+                'message' => 'Payment gateway communication failure. Please try again.',
+            ];
+        }
+    }
+
+    /**
+     * Verify Razorpay membership payment signature & server-to-server captured payment facts.
+     *
+     * 1. Validates HMAC-SHA256 signature using timing-safe hash_equals().
+     * 2. Server-to-server HTTP GET /payments/{payment_id} -> requires status=captured, amount=10000, currency=INR, order_id=DB payment_order_id.
+     * 3. Server-to-server HTTP GET /orders/{order_id} -> requires status=paid, id=DB payment_order_id, amount=10000, currency=INR.
+     */
+    public function verifyMembershipPayment(string $razorpayPaymentId, string $razorpaySignature, string $serverOrderId): array
+    {
+        if (!$this->isConfigured) {
+            return [
+                'success' => false,
+                'message' => 'Razorpay payment gateway is not configured.',
+            ];
+        }
+
+        if (empty($razorpayPaymentId) || empty($razorpaySignature) || empty($serverOrderId)) {
+            return [
+                'success' => false,
+                'message' => 'Missing required payment verification parameters.',
+            ];
+        }
+
+        // Step 1: Cryptographic HMAC-SHA256 signature verification
+        $expectedSignature = hash_hmac(
+            'sha256',
+            $serverOrderId . '|' . $razorpayPaymentId,
+            $this->keySecret
+        );
+
+        if (!hash_equals($expectedSignature, $razorpaySignature)) {
+            Log::warning('Razorpay membership payment signature mismatch', [
+                'server_order_id' => $serverOrderId,
+                'payment_id'      => $razorpayPaymentId,
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Payment signature verification failed.',
+            ];
+        }
+
+        // Step 2: Server-to-server fetch of Payment details
+        try {
+            $paymentResponse = Http::withBasicAuth($this->keyId, $this->keySecret)
+                ->get("{$this->baseUrl}/payments/{$razorpayPaymentId}");
+
+            if (!$paymentResponse->successful()) {
+                Log::error('Razorpay membership GET payment failed', [
+                    'payment_id' => $razorpayPaymentId,
+                    'status'     => $paymentResponse->status(),
+                ]);
+                return [
+                    'success' => false,
+                    'message' => 'Unable to verify payment status with gateway provider.',
+                ];
+            }
+
+            $paymentData = $paymentResponse->json();
+            $paymentStatus = $paymentData['status'] ?? '';
+            $paymentAmount = (int) ($paymentData['amount'] ?? 0);
+            $paymentCurrency = $paymentData['currency'] ?? '';
+            $paymentOrderId = $paymentData['order_id'] ?? '';
+
+            if (
+                $paymentStatus !== 'captured' ||
+                $paymentAmount !== 10000 ||
+                $paymentCurrency !== 'INR' ||
+                $paymentOrderId !== $serverOrderId
+            ) {
+                Log::warning('Razorpay membership payment status/fact check failed', [
+                    'expected_status'   => 'captured',
+                    'actual_status'     => $paymentStatus,
+                    'expected_amount'   => 10000,
+                    'actual_amount'     => $paymentAmount,
+                    'expected_currency' => 'INR',
+                    'actual_currency'   => $paymentCurrency,
+                    'expected_order_id' => $serverOrderId,
+                    'actual_order_id'   => $paymentOrderId,
+                ]);
+
+                return [
+                    'success' => false,
+                    'message' => 'Payment verification failed: payment status or amount mismatch.',
+                ];
+            }
+
+            // Step 3: Server-to-server fetch of Order details
+            $orderResponse = Http::withBasicAuth($this->keyId, $this->keySecret)
+                ->get("{$this->baseUrl}/orders/{$serverOrderId}");
+
+            if (!$orderResponse->successful()) {
+                Log::error('Razorpay membership GET order failed', [
+                    'order_id' => $serverOrderId,
+                    'status'   => $orderResponse->status(),
+                ]);
+                return [
+                    'success' => false,
+                    'message' => 'Unable to verify payment order status with gateway provider.',
+                ];
+            }
+
+            $orderData = $orderResponse->json();
+            $orderStatus = $orderData['status'] ?? '';
+            $orderId = $orderData['id'] ?? '';
+            $orderAmount = (int) ($orderData['amount'] ?? 0);
+            $orderCurrency = $orderData['currency'] ?? '';
+
+            if (
+                $orderStatus !== 'paid' ||
+                $orderId !== $serverOrderId ||
+                $orderAmount !== 10000 ||
+                $orderCurrency !== 'INR'
+            ) {
+                Log::warning('Razorpay membership order status/fact check failed', [
+                    'expected_status'   => 'paid',
+                    'actual_status'     => $orderStatus,
+                    'expected_id'       => $serverOrderId,
+                    'actual_id'         => $orderId,
+                    'expected_amount'   => 10000,
+                    'actual_amount'     => $orderAmount,
+                    'expected_currency' => 'INR',
+                    'actual_currency'   => $orderCurrency,
+                ]);
+
+                return [
+                    'success' => false,
+                    'message' => 'Payment verification failed: order status mismatch.',
+                ];
+            }
+
+            return [
+                'success'    => true,
+                'payment_id' => $razorpayPaymentId,
+                'order_id'   => $serverOrderId,
+            ];
+        } catch (\Exception $e) {
+            Log::error('RazorpayPaymentService::verifyMembershipPayment exception', ['error' => $e->getMessage()]);
+            return [
+                'success' => false,
+                'message' => 'Gateway verification communication failure.',
+            ];
+        }
+    }
 }

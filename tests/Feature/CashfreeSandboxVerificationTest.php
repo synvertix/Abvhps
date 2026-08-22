@@ -88,6 +88,9 @@ class CashfreeSandboxVerificationTest extends TestCase
      */
     public function test_membership_payment_flow_record_integrity(): void
     {
+        \Illuminate\Support\Facades\Config::set('services.razorpay.key_id', 'rzp_test_123');
+        \Illuminate\Support\Facades\Config::set('services.razorpay.key_secret', 'rzp_secret_123');
+
         $testPhone = '9876543210';
 
         DB::table('phone_verifications')->insert([
@@ -99,16 +102,24 @@ class CashfreeSandboxVerificationTest extends TestCase
             'updated_at' => now()
         ]);
 
-        $response = $this->withSession(['verified_membership_phone' => $testPhone])
-            ->post('/membership/process-payment');
+        Http::fake([
+            'https://api.razorpay.com/v1/orders' => Http::response([
+                'id'       => 'order_SB_123',
+                'amount'   => 10000,
+                'currency' => 'INR',
+            ], 200),
+        ]);
 
-        $response->assertRedirect('/membership/application');
+        $response = $this->withSession(['verified_membership_phone' => $testPhone])
+            ->postJson('/membership/payment/razorpay/initiate');
+
+        $response->assertOk();
+        $response->assertJson(['success' => true]);
 
         $member = Membership::where('phone', $testPhone)->first();
         $this->assertNotNull($member);
-        $this->assertEquals('success', $member->payment_status);
-        $this->assertEquals(12, strlen($member->membership_id));
-        $this->assertNotNull($member->payment_id);
+        $this->assertEquals('pending', $member->payment_status);
+        $this->assertEquals('order_SB_123', $member->payment_order_id);
     }
 
     /**

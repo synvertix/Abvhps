@@ -101,9 +101,14 @@ class CashfreeSecureIdVerificationTest extends TestCase
         ]);
 
         Membership::create([
-            'membership_id'  => '123456789012',
-            'phone'          => '9876543210',
-            'payment_status' => 'success',
+            'membership_id'       => '123456789012',
+            'phone'               => '9876543210',
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_TEST4',
+            'payment_order_id'    => 'order_TEST4',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
         ]);
 
         $response = $this->withSession(['verified_membership_phone' => '9876543210'])
@@ -134,9 +139,14 @@ class CashfreeSecureIdVerificationTest extends TestCase
         ]);
 
         Membership::create([
-            'membership_id'  => '123456789012',
-            'phone'          => '9876543210',
-            'payment_status' => 'success',
+            'membership_id'       => '123456789012',
+            'phone'               => '9876543210',
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_TEST5',
+            'payment_order_id'    => 'order_TEST5',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
         ]);
 
         $response = $this->withSession(['verified_membership_phone' => '9876543210'])
@@ -169,9 +179,14 @@ class CashfreeSecureIdVerificationTest extends TestCase
         ]);
 
         Membership::create([
-            'membership_id'  => '123456789012',
-            'phone'          => '9876543210',
-            'payment_status' => 'success',
+            'membership_id'       => '123456789012',
+            'phone'               => '9876543210',
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_TEST6',
+            'payment_order_id'    => 'order_TEST6',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
         ]);
 
         $response = $this->withSession(['verified_membership_phone' => '9876543210'])
@@ -209,9 +224,14 @@ class CashfreeSecureIdVerificationTest extends TestCase
         ]);
 
         Membership::create([
-            'membership_id'  => '123456789012',
-            'phone'          => '9876543210',
-            'payment_status' => 'success',
+            'membership_id'       => '123456789012',
+            'phone'               => '9876543210',
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_TEST7',
+            'payment_order_id'    => 'order_TEST7',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
         ]);
 
         $response = $this->withSession(['verified_membership_phone' => '9876543210'])
@@ -247,9 +267,14 @@ class CashfreeSecureIdVerificationTest extends TestCase
         ]);
 
         $member = Membership::create([
-            'membership_id'  => '123456789012',
-            'phone'          => '9876543210',
-            'payment_status' => 'success',
+            'membership_id'       => '123456789012',
+            'phone'               => '9876543210',
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_TEST8',
+            'payment_order_id'    => 'order_TEST8',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
         ]);
 
         $response = $this->withSession(['verified_membership_phone' => '9876543210'])
@@ -284,9 +309,14 @@ class CashfreeSecureIdVerificationTest extends TestCase
         ]);
 
         Membership::create([
-            'membership_id'  => '123456789012',
-            'phone'          => '9876543210',
-            'payment_status' => 'success',
+            'membership_id'       => '123456789012',
+            'phone'               => '9876543210',
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_TEST9',
+            'payment_order_id'    => 'order_TEST9',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
         ]);
 
         $this->withSession(['verified_membership_phone' => '9876543210'])
@@ -307,15 +337,25 @@ class CashfreeSecureIdVerificationTest extends TestCase
     public function test_callback_cannot_select_another_membership(): void
     {
         $member1 = Membership::create([
-            'membership_id'  => '111111111111',
-            'phone'          => '9111111111',
-            'payment_status' => 'success',
+            'membership_id'       => '111111111111',
+            'phone'               => '9111111111',
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_MEMBER1',
+            'payment_order_id'    => 'order_MEMBER1',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
         ]);
 
         $member2 = Membership::create([
-            'membership_id'  => '222222222222',
-            'phone'          => '9222222222',
-            'payment_status' => 'success',
+            'membership_id'       => '222222222222',
+            'phone'               => '9222222222',
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_MEMBER2',
+            'payment_order_id'    => 'order_MEMBER2',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
         ]);
 
         // Session phone belongs to member2, but digilocker_member_id in session belongs to member1
@@ -342,9 +382,14 @@ class CashfreeSecureIdVerificationTest extends TestCase
     public function test_expired_digilocker_session_cannot_verify(): void
     {
         $member = Membership::create([
-            'membership_id'  => '123456789012',
-            'phone'          => '9876543210',
-            'payment_status' => 'success',
+            'membership_id'       => '123456789012',
+            'phone'               => '9876543210',
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_TEST11',
+            'payment_order_id'    => 'order_TEST11',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
         ]);
 
         // Started 16 minutes ago (960 seconds > 900 seconds limit)
@@ -381,9 +426,14 @@ class CashfreeSecureIdVerificationTest extends TestCase
         ]);
 
         $member = Membership::create([
-            'membership_id'  => '123456789012',
-            'phone'          => '9876543210',
-            'payment_status' => 'success',
+            'membership_id'       => '123456789012',
+            'phone'               => '9876543210',
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_TEST12',
+            'payment_order_id'    => 'order_TEST12',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
         ]);
 
         // Query param has verification_id=MALICIOUS_OVERRIDE
@@ -435,9 +485,14 @@ class CashfreeSecureIdVerificationTest extends TestCase
         ]);
 
         $member = Membership::create([
-            'membership_id'  => '123456789012',
-            'phone'          => '9876543210',
-            'payment_status' => 'success',
+            'membership_id'       => '123456789012',
+            'phone'               => '9876543210',
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_TEST14',
+            'payment_order_id'    => 'order_TEST14',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
         ]);
 
         $this->withSession([
@@ -470,9 +525,14 @@ class CashfreeSecureIdVerificationTest extends TestCase
         ]);
 
         Membership::create([
-            'membership_id'  => '123456789012',
-            'phone'          => '9876543210',
-            'payment_status' => 'success',
+            'membership_id'       => '123456789012',
+            'phone'               => '9876543210',
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_LEGACY_VERIF',
+            'payment_order_id'    => 'order_LEGACY_VERIF',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
         ]);
 
         $response = $this->withSession(['verified_membership_phone' => '9876543210'])
@@ -616,6 +676,11 @@ class CashfreeSecureIdVerificationTest extends TestCase
             'membership_id'       => '123456789012',
             'phone'               => '9876543210',
             'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_STATUS_JSON',
+            'payment_order_id'    => 'order_STATUS_JSON',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
             'full_name'           => 'VERIFIED USER',
             'aadhaar_number'      => '234567890123',
             'is_aadhaar_verified' => true,
@@ -642,6 +707,11 @@ class CashfreeSecureIdVerificationTest extends TestCase
             'membership_id'       => '111111111111',
             'phone'               => '9111111111',
             'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_TEST20_1',
+            'payment_order_id'    => 'order_TEST20_1',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
             'full_name'           => 'MEMBER ONE VERIFIED',
             'is_aadhaar_verified' => true,
         ]);
@@ -650,6 +720,11 @@ class CashfreeSecureIdVerificationTest extends TestCase
             'membership_id'       => '222222222222',
             'phone'               => '9222222222',
             'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_TEST20_2',
+            'payment_order_id'    => 'order_TEST20_2',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
             'full_name'           => 'MEMBER TWO UNVERIFIED',
             'is_aadhaar_verified' => false,
         ]);

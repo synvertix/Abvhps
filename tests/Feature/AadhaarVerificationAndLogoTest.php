@@ -80,10 +80,15 @@ class AadhaarVerificationAndLogoTest extends TestCase
         \Illuminate\Support\Facades\Config::set('services.cashfree.verify_client_secret', 'CF_TEST_SECRET');
 
         $applicantA = Membership::create([
-            'membership_id'  => '111122223333',
-            'phone'          => '9111111111',
-            'payment_status' => 'success',
-            'is_completed'   => 1
+            'membership_id'       => '111122223333',
+            'phone'               => '9111111111',
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_CASE1',
+            'payment_order_id'    => 'order_CASE1',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
+            'is_completed'        => 1
         ]);
 
         $response = $this->withSession(['verified_membership_phone' => '9111111111'])
@@ -118,10 +123,15 @@ class AadhaarVerificationAndLogoTest extends TestCase
         \Illuminate\Support\Facades\Config::set('services.cashfree.verify_client_secret', 'CF_TEST_SECRET');
 
         $applicantB = Membership::create([
-            'membership_id'  => '999988887777',
-            'phone'          => '9222222222',
-            'payment_status' => 'success',
-            'is_completed'   => 1
+            'membership_id'       => '999988887777',
+            'phone'               => '9222222222',
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_CASE2',
+            'payment_order_id'    => 'order_CASE2',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
+            'is_completed'        => 1
         ]);
 
         $response = $this->withSession(['verified_membership_phone' => '9222222222'])
@@ -161,11 +171,16 @@ class AadhaarVerificationAndLogoTest extends TestCase
      */
     public function test_case_4_fresh_application_form_does_not_contain_hardcoded_srinivasa_rao(): void
     {
-        $newApplicant = Membership::create([
-            'membership_id' => '555566667777',
-            'phone' => '9444444444',
-            'payment_status' => 'success',
-            'is_completed' => 0
+        $member = Membership::create([
+            'membership_id'       => '555566667777',
+            'phone'               => '9444444444',
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_CASE4',
+            'payment_order_id'    => 'order_CASE4',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
+            'is_completed'        => 0
         ]);
 
         $response = $this->withSession(['verified_membership_phone' => '9444444444'])
@@ -228,10 +243,15 @@ class AadhaarVerificationAndLogoTest extends TestCase
         ]);
 
         $member = Membership::create([
-            'membership_id'  => '333344445555',
-            'phone'          => '9777777777',
-            'payment_status' => 'success',
-            'is_completed'   => 0
+            'membership_id'       => '333344445555',
+            'phone'               => '9777777777',
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_CASE6',
+            'payment_order_id'    => 'order_CASE6',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
+            'is_completed'        => 0
         ]);
 
         $this->withSession([
