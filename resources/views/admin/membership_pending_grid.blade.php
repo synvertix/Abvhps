@@ -28,7 +28,7 @@
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div>
                     <h3 class="text-xs font-black text-brandGray uppercase tracking-wider flex items-center gap-1.5">
-                        ⏳ Pending Incomplete Membership Applications (Paid ₹100)
+                        ⏳ Pending Incomplete Membership Applications (Paid Membership Fee)
                     </h3>
                     <p class="text-[11px] text-gray-500 font-semibold mt-0.5">Devotees who paid the membership fee but dropped off before submitting final profile details.</p>
                 </div>
@@ -122,7 +122,7 @@
                                     <!-- Payment Fee Status -->
                                     <td class="px-4 py-3.5">
                                         <span class="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded border border-emerald-200 uppercase tracking-wider">
-                                            ✓ PAID (₹100)
+                                            ✓ PAID
                                         </span>
                                     </td>
 
@@ -141,7 +141,7 @@
                                         <div class="flex items-center justify-center gap-1.5 flex-wrap">
                                             <!-- WhatsApp Reminder Link -->
                                             @php
-                                                $waText = "Namaste Devotee! You have completed the ₹100 ABVHPS Membership Fee (ID: " . $member->membership_id . "). Please login with your mobile number (" . $member->phone . ") at " . url('/membership') . " to submit your photograph and complete your lifetime membership card.";
+                                                $waText = "Namaste Devotee! You have completed the ABVHPS Membership Fee (ID: " . $member->membership_id . "). Please login with your mobile number (" . $member->phone . ") at " . url('/membership') . " to submit your photograph and complete your lifetime membership card.";
                                                 $waUrl = "https://api.whatsapp.com/send?phone=91" . $member->phone . "&text=" . urlencode($waText);
                                             @endphp
                                             <a href="{{ $waUrl }}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] px-2.5 py-1 rounded shadow-sm uppercase transition flex items-center gap-1" title="Send WhatsApp Reminder to Member">
