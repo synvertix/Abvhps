@@ -91,48 +91,216 @@ class MembershipController extends Controller
 
         $member = Membership::where('phone', $phone)->first();
 
-        if ($member && $member->payment_status === 'success') {
+        if ($member && (bool) $member->is_completed) {
+            return redirect('/membership/view-card')->with('success', 'Welcome back! Your completed membership ID card is ready.');
+        }
+
+        if (self::hasVerifiedMembershipPayment($member)) {
             return redirect('/membership/application')->with('success', 'Welcome back! Your payment is already verified.');
         }
 
         return redirect('/membership/payment');
     }
 
+    /**
+     * Helper check: Does member have a genuine server-verified Razorpay payment record?
+     */
+    public static function hasVerifiedMembershipPayment(?Membership $member): bool
+    {
+        if (!$member) {
+            return false;
+        }
+
+        return $member->payment_status === 'success'
+            && $member->payment_gateway === 'razorpay'
+            && !empty($member->payment_order_id)
+            && !empty($member->payment_id)
+            && !is_null($member->payment_verified_at)
+            && (float) $member->payment_amount == 100.00;
+    }
+
+    /**
+     * Helper check: Does member have valid application access?
+     * Either completed historical membership (is_completed === true) OR genuine verified Razorpay payment.
+     */
+    public static function hasValidMembershipAccess(?Membership $member): bool
+    {
+        if (!$member) {
+            return false;
+        }
+
+        return (bool) $member->is_completed || self::hasVerifiedMembershipPayment($member);
+    }
+
     // 4. Display the ₹100 Payment Screen
     public function showPaymentPage()
     {
-        if (!session('verified_membership_phone')) {
+        $phone = session('verified_membership_phone');
+        if (!$phone) {
             return redirect('/membership')->with('error', 'Please verify your mobile number first.');
         }
+
+        $member = Membership::where('phone', $phone)->first();
+        if ($member && (bool) $member->is_completed) {
+            return redirect('/membership/view-card');
+        }
+
+        if (self::hasVerifiedMembershipPayment($member)) {
+            return redirect('/membership/application');
+        }
+
         return view('membership_payment');
     }
 
-    // 5. Process Payment Success & Generate 12-Digit Automatic Random Unique Code
-    public function processPayment(Request $request)
+    /**
+     * 5. Initiate Razorpay Order for ₹100 Membership Payment.
+     */
+    public function initiateRazorpayPayment(Request $request)
     {
         $phone = session('verified_membership_phone');
 
         if (!$phone) {
-            return redirect('/membership')->with('error', 'Session expired. Please try again.');
+            return response()->json([
+                'success' => false,
+                'message' => 'Active membership session not found. Please verify your phone number first.',
+            ], 401);
         }
 
-        do {
-            $randomId = (string) rand(100000000000, 999999999999);
-            $duplicateCheck = Membership::where('membership_id', $randomId)->exists();
-        } while ($duplicateCheck);
+        $member = Membership::firstOrCreate(['phone' => $phone]);
 
-        Membership::updateOrCreate(
-            ['phone' => $phone],
-            [
-                'membership_id' => $randomId,
-                'payment_status' => 'success',
-                'payment_id' => 'TXN-' . strtoupper(str_shuffle(substr(md5(time()), 0, 8))),
-                'created_at' => now(),
-                'updated_at' => now()
-            ]
+        if (self::hasVerifiedMembershipPayment($member)) {
+            return response()->json([
+                'success'      => true,
+                'already_paid' => true,
+                'redirect_url' => '/membership/application',
+            ]);
+        }
+
+        $internalRef = 'ABVHPS_MEM_' . (string) Str::uuid();
+        $razorpayService = new \App\Services\RazorpayPaymentService();
+        $orderResult = $razorpayService->createMembershipOrder($internalRef, $phone);
+
+        if (!$orderResult['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $orderResult['message'] ?? 'Failed to initialize Razorpay payment order.',
+            ], 422);
+        }
+
+        $member->update([
+            'payment_status'   => 'pending',
+            'payment_gateway'  => 'razorpay',
+            'payment_order_id' => $orderResult['order_id'],
+            'payment_amount'   => 100.00,
+        ]);
+
+        return response()->json([
+            'success'      => true,
+            'key_id'       => $orderResult['key_id'],
+            'order_id'     => $orderResult['order_id'],
+            'amount_paise' => 10000,
+            'currency'     => 'INR',
+        ]);
+    }
+
+    /**
+     * 5b. Verify Razorpay Payment Signature and Confirm Captured Payment Facts.
+     */
+    public function verifyRazorpayPayment(Request $request)
+    {
+        $phone = session('verified_membership_phone');
+
+        if (!$phone) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Active membership session not found. Please verify your phone number first.',
+            ], 401);
+        }
+
+        $validated = $request->validate([
+            'razorpay_payment_id' => 'required|string',
+            'razorpay_signature'  => 'required|string',
+            'razorpay_order_id'    => 'nullable|string',
+        ]);
+
+        $member = Membership::where('phone', $phone)->first();
+
+        if (!$member || empty($member->payment_order_id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No pending payment order found for this membership session.',
+            ], 422);
+        }
+
+        // Browser order ID match check if provided
+        if (!empty($validated['razorpay_order_id']) && $validated['razorpay_order_id'] !== $member->payment_order_id) {
+            $maskedPhone = 'XXXXXX' . substr($phone, -4);
+            Log::warning("Razorpay verify order ID mismatch for phone {$maskedPhone}: browser {$validated['razorpay_order_id']} vs DB {$member->payment_order_id}");
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment order ID mismatch.',
+            ], 422);
+        }
+
+        $serverOrderId = $member->payment_order_id;
+        $razorpayService = new \App\Services\RazorpayPaymentService();
+        $verifyResult = $razorpayService->verifyMembershipPayment(
+            $validated['razorpay_payment_id'],
+            $validated['razorpay_signature'],
+            $serverOrderId
         );
 
-        return redirect('/membership/application')->with('success', 'Payment successful! 12-Digit Membership ID generated.');
+        if (!$verifyResult['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $verifyResult['message'] ?? 'Payment verification failed.',
+            ], 422);
+        }
+
+        $paymentId = $validated['razorpay_payment_id'];
+
+        try {
+            DB::transaction(function () use ($member, $paymentId) {
+                $lockedMember = Membership::where('id', $member->id)->lockForUpdate()->first();
+
+                // Reject reuse of the same Razorpay payment ID across different memberships with locking
+                $duplicateExists = Membership::where('payment_id', $paymentId)
+                    ->where('id', '!=', $lockedMember->id)
+                    ->lockForUpdate()
+                    ->exists();
+
+                if ($duplicateExists) {
+                    throw new \Exception('Payment ID has already been used for another membership.');
+                }
+
+                // Generate 12-digit membership ID idempotently if not present
+                if (empty($lockedMember->membership_id)) {
+                    do {
+                        $randomId = (string) random_int(100000000000, 999999999999);
+                        $exists = Membership::where('membership_id', $randomId)->exists();
+                    } while ($exists);
+                    $lockedMember->membership_id = $randomId;
+                }
+
+                $lockedMember->payment_status      = 'success';
+                $lockedMember->payment_gateway     = 'razorpay';
+                $lockedMember->payment_id          = $paymentId;
+                $lockedMember->payment_amount      = 100.00;
+                $lockedMember->payment_verified_at = Carbon::now();
+                $lockedMember->save();
+            });
+        } catch (\Throwable $e) {
+            Log::error("Razorpay membership completion transaction failed: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage() ?: 'Database error confirming payment.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success'      => true,
+            'redirect_url' => '/membership/application',
+        ]);
     }
 
     // 6. Show Registration Application Form (Linking directly to original layout file)
@@ -144,9 +312,9 @@ class MembershipController extends Controller
             return redirect('/membership')->with('error', 'Please verify your mobile number first.');
         }
 
-        $member = Membership::where('phone', $phone)->where('payment_status', 'success')->first();
+        $member = Membership::where('phone', $phone)->first();
 
-        if (!$member) {
+        if (!self::hasValidMembershipAccess($member)) {
             return redirect('/membership/payment')->with('error', 'Please complete the membership payment first.');
         }
 
@@ -193,10 +361,10 @@ class MembershipController extends Controller
             ], 422);
         }
 
-        $phone = session('verified_membership_phone') ?? $request->input('phone');
+        $phone = session('verified_membership_phone');
 
         if (!$phone) {
-            Log::warning("Aadhaar Verification: Missing active phone session or parameter.");
+            Log::warning("Aadhaar Verification: Missing active phone session.");
             return response()->json([
                 'status'              => 'error',
                 'is_name_matched'     => false,
@@ -218,6 +386,15 @@ class MembershipController extends Controller
                 'is_aadhaar_verified' => false,
                 'message'             => 'Membership record not found for this phone number.'
             ], 404);
+        }
+
+        if (!self::hasVerifiedMembershipPayment($member)) {
+            return response()->json([
+                'status'              => 'error',
+                'is_name_matched'     => false,
+                'is_aadhaar_verified' => false,
+                'message'             => 'Membership payment is required before Aadhaar verification.',
+            ], 403);
         }
 
         // Server-controlled verification reference
@@ -403,6 +580,13 @@ class MembershipController extends Controller
             ], 404);
         }
 
+        if (!self::hasVerifiedMembershipPayment($member)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Membership payment is required before Aadhaar verification.',
+            ], 403);
+        }
+
         // Security Requirement 4: Cryptographically strong, unpredictable verification ID (Str::uuid)
         $verificationId = 'ABVHPS_DIGILOCKER_' . (string) Str::uuid();
 
@@ -491,6 +675,12 @@ class MembershipController extends Controller
             return redirect('/membership')->with('error', 'Active membership session not found. Please verify your phone number first.');
         }
 
+        $member = Membership::where('phone', $phone)->first();
+        if (!self::hasVerifiedMembershipPayment($member)) {
+            $this->clearDigiLockerSession();
+            return redirect('/membership/payment')->with('error', 'Membership payment is required before Aadhaar verification.');
+        }
+
         // Security Requirement 2 & 6 & 7: Server session state validation
         $verificationId   = session('digilocker_verification_id');
         $sessionMemberId  = session('digilocker_member_id');
@@ -512,10 +702,9 @@ class MembershipController extends Controller
         }
 
         // Security Requirement 2: Load member strictly using verified phone session AND require session member ID match
-        $member = Membership::where('phone', $phone)->first();
-        if (!$member || (int) $member->id !== (int) $sessionMemberId) {
+        if ((int) $member->id !== (int) $sessionMemberId) {
             $this->clearDigiLockerSession();
-            Log::warning("DigiLocker Callback: Session member mismatch or member record not found.");
+            Log::warning("DigiLocker Callback: Session member mismatch.");
             return redirect('/membership/application')->with('error', 'Security Violation: Session member does not match verification request.');
         }
 
@@ -661,6 +850,13 @@ class MembershipController extends Controller
             ], 404);
         }
 
+        if (!self::hasVerifiedMembershipPayment($member)) {
+            return response()->json([
+                'is_verified' => false,
+                'message'     => 'Membership payment is required before Aadhaar verification.',
+            ], 403);
+        }
+
         // Security Requirement 2: Match digilocker_member_id if present
         $sessionMemberId = session('digilocker_member_id');
         if ($sessionMemberId && (int) $member->id !== (int) $sessionMemberId) {
@@ -712,6 +908,16 @@ class MembershipController extends Controller
         }
 
         $memberRecord = Membership::where('phone', $phone)->first();
+
+        if (!self::hasValidMembershipAccess($memberRecord)) {
+            if ($request->wantsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Membership payment is required before submitting your application.',
+                ], 403);
+            }
+            return redirect('/membership/payment')->with('error', 'Please complete membership payment before submitting the application.');
+        }
 
         // Form Submission Security Requirement: Server-side validation that Aadhaar is verified in DB
         if (!$memberRecord || !$memberRecord->is_aadhaar_verified) {

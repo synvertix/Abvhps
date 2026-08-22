@@ -24,6 +24,10 @@ class Membership extends Model
         'phone',
         'payment_status',
         'payment_id',
+        'payment_gateway',
+        'payment_order_id',
+        'payment_amount',
+        'payment_verified_at',
         'aadhaar_number',
         'full_name',
         'gender',
@@ -58,5 +62,7 @@ class Membership extends Model
         'is_aadhaar_verified' => 'boolean',
         'is_completed' => 'boolean',
         'aadhaar_verified_at' => 'datetime',
+        'payment_verified_at' => 'datetime',
+        'payment_amount' => 'decimal:2',
     ];
 }

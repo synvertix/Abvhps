@@ -162,23 +162,40 @@ class MembershipAdminTest extends TestCase
         $responseLedger->assertDontSee('9888877777');
     }
 
-    public function test_process_payment_simulation_creates_pending_membership(): void
+    public function test_razorpay_initiate_creates_pending_membership(): void
     {
+        \Illuminate\Support\Facades\Config::set('services.razorpay.key_id', 'rzp_test_123');
+        \Illuminate\Support\Facades\Config::set('services.razorpay.key_secret', 'rzp_secret_123');
+
         $phone = '9111122222';
 
-        // Simulate payment process with verified session
-        $response = $this->withSession(['verified_membership_phone' => $phone])
-                         ->get('/membership/application'); // Before payment, would redirect, now let's call processPayment
+        \Illuminate\Support\Facades\Http::fake([
+            'https://api.razorpay.com/v1/orders' => \Illuminate\Support\Facades\Http::response([
+                'id'       => 'order_SIM_INIT',
+                'amount'   => 10000,
+                'currency' => 'INR',
+            ], 200),
+        ]);
 
         $paymentResponse = $this->withSession(['verified_membership_phone' => $phone])
-                                ->post('/membership/process-payment');
+                                ->postJson('/membership/payment/razorpay/initiate');
 
-        $paymentResponse->assertRedirect('/membership/application');
+        $paymentResponse->assertOk();
+        $paymentResponse->assertJson(['success' => true]);
 
         $created = Membership::where('phone', $phone)->first();
         $this->assertNotNull($created);
-        $this->assertEquals('success', $created->payment_status);
+        $this->assertEquals('pending', $created->payment_status);
         $this->assertEquals(0, (int)$created->is_completed);
+
+        // Mark verified to simulate paid pending member
+        $created->update([
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_SIM_INIT',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
+        ]);
 
         // Verify it appears in pending admin grid
         $adminResp = $this->actingAs($this->admin)->get(route('admin.membership.pending'));
@@ -190,13 +207,17 @@ class MembershipAdminTest extends TestCase
     {
         $phone = '9333344444';
         
-        // Member paid but dropped off before filling application form
+        // Member paid with real verified Razorpay audit fields but dropped off before filling application form
         Membership::create([
-            'membership_id' => '556677889900',
-            'phone' => $phone,
-            'payment_status' => 'success',
-            'payment_id' => 'TXN-RESUME99',
-            'is_completed' => 0
+            'membership_id'       => '556677889900',
+            'phone'               => $phone,
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_RESUME99',
+            'payment_order_id'    => 'order_RESUME99',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
+            'is_completed'        => 0
         ]);
 
         \Illuminate\Support\Facades\DB::table('phone_verifications')->insert([
@@ -223,12 +244,16 @@ class MembershipAdminTest extends TestCase
     {
         $phone = '9876501234';
         
-        // Paid pending member with verified Aadhaar
+        // Paid pending member with verified Aadhaar and real Razorpay audit fields
         Membership::create([
             'membership_id'       => '123456789012',
             'phone'               => $phone,
             'payment_status'      => 'success',
-            'payment_id'          => 'TXN-FEMALE01',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_FEMALE01',
+            'payment_order_id'    => 'order_FEMALE01',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
             'is_completed'        => 0,
             'is_aadhaar_verified' => true,
         ]);
@@ -276,7 +301,11 @@ class MembershipAdminTest extends TestCase
             'membership_id'       => '123456789013',
             'phone'               => $phone,
             'payment_status'      => 'success',
-            'payment_id'          => 'TXN-NOGENDER01',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_NOGENDER01',
+            'payment_order_id'    => 'order_NOGENDER01',
+            'payment_amount'      => 100.00,
+            'payment_verified_at' => now(),
             'is_completed'        => 0,
             'is_aadhaar_verified' => true,
         ]);
