@@ -116,6 +116,439 @@ class CashfreeSecureIdService
     }
 
     /**
+     * Verify if user has an existing DigiLocker account using Cashfree Secure ID.
+     *
+     * @param string $verificationId Server-controlled unique reference ID
+     * @param string|null $aadhaarNumber Optional 12-digit Aadhaar number
+     * @param string|null $mobileNumber Optional mobile number
+     * @return array Standardized result array
+     */
+    public function verifyDigiLockerAccount(
+        string $verificationId,
+        ?string $aadhaarNumber = null,
+        ?string $mobileNumber = null
+    ): array {
+        if (!$this->isConfigured) {
+            Log::warning("CashfreeSecureId: Secure ID credentials not configured in environment. DigiLocker account check skipped for Ref: {$verificationId}.");
+            return [
+                'success' => false,
+                'status'  => 'UNCONFIGURED',
+                'data'    => [],
+                'message' => 'Cashfree Secure ID credentials are not configured. Please contact the administrator.',
+            ];
+        }
+
+        try {
+            $endpoint = "{$this->baseUrl}/digilocker/verify-account";
+
+            $payload = [
+                'verification_id' => $verificationId,
+            ];
+
+            if (!empty($aadhaarNumber)) {
+                $payload['aadhaar_number'] = $aadhaarNumber;
+            } elseif (!empty($mobileNumber)) {
+                $payload['mobile_number'] = $mobileNumber;
+            }
+
+            Log::info("CashfreeSecureId: Initiating DigiLocker account verification request (Ref: {$verificationId}).");
+
+            $response = Http::withHeaders([
+                'x-client-id'     => $this->clientId,
+                'x-client-secret' => $this->clientSecret,
+                'Content-Type'    => 'application/json',
+                'Accept'          => 'application/json',
+            ])->timeout(15)->post($endpoint, $payload);
+
+            $statusCode = $response->status();
+            $body = $response->json();
+
+            if ($response->successful() && is_array($body)) {
+                $status = strtoupper((string) ($body['status'] ?? $body['verification_status'] ?? 'UNKNOWN'));
+                $refId  = $body['reference_id'] ?? $body['ref_id'] ?? $body['verification_id'] ?? $verificationId;
+
+                if (in_array($status, ['ACCOUNT_EXISTS', 'ACCOUNT_NOT_FOUND'], true)) {
+                    return [
+                        'success'      => true,
+                        'status'       => $status,
+                        'reference_id' => $refId,
+                        'data'         => ['status' => $status, 'reference_id' => $refId],
+                        'message'      => $body['message'] ?? ($status === 'ACCOUNT_EXISTS' ? 'DigiLocker account exists.' : 'DigiLocker account not found.'),
+                    ];
+                }
+
+                return [
+                    'success'      => false,
+                    'status'       => $status,
+                    'reference_id' => $refId,
+                    'data'         => [],
+                    'message'      => $body['message'] ?? $body['error_msg'] ?? 'DigiLocker account verification returned unrecognized status.',
+                ];
+            }
+
+            $providerMsg = is_array($body) ? ($body['message'] ?? $body['error_msg'] ?? 'Provider API error') : 'Non-JSON response';
+            Log::error("CashfreeSecureId: DigiLocker account verification failed with HTTP {$statusCode} (Ref: {$verificationId}).", [
+                'response_message' => $providerMsg,
+            ]);
+
+            return [
+                'success'      => false,
+                'status'       => 'GATEWAY_ERROR',
+                'reference_id' => null,
+                'data'         => [],
+                'message'      => $providerMsg,
+            ];
+        } catch (\Throwable $e) {
+            Log::error("CashfreeSecureId: Exception during DigiLocker account verification: " . $e->getMessage());
+            return [
+                'success'      => false,
+                'status'       => 'SERVICE_EXCEPTION',
+                'reference_id' => null,
+                'data'         => [],
+                'message'      => 'Unable to communicate with the DigiLocker verification service. Please try again later.',
+            ];
+        }
+    }
+
+    /**
+     * Create DigiLocker verification redirection URL using Cashfree Secure ID.
+     *
+     * @param string $verificationId Server-controlled unique reference ID
+     * @param string $redirectUrl URL to return user to after DigiLocker flow
+     * @param string $userFlow User flow ('signin' or 'signup', default 'signup')
+     * @return array Standardized result array
+     */
+    public function createDigiLockerUrl(
+        string $verificationId,
+        string $redirectUrl,
+        string $userFlow = 'signup'
+    ): array {
+        if (!$this->isConfigured) {
+            Log::warning("CashfreeSecureId: Secure ID credentials not configured in environment. DigiLocker URL creation skipped for Ref: {$verificationId}.");
+            return [
+                'success'         => false,
+                'status'          => 'UNCONFIGURED',
+                'verification_id' => $verificationId,
+                'reference_id'    => null,
+                'url'             => null,
+                'message'         => 'Cashfree Secure ID credentials are not configured. Please contact the administrator.',
+            ];
+        }
+
+        try {
+            $endpoint = "{$this->baseUrl}/digilocker";
+            $flow     = in_array(strtolower($userFlow), ['signin', 'signup'], true) ? strtolower($userFlow) : 'signup';
+
+            $payload = [
+                'verification_id'    => $verificationId,
+                'document_requested' => ['AADHAAR'],
+                'redirect_url'       => $redirectUrl,
+                'user_flow'          => $flow,
+            ];
+
+            Log::info("CashfreeSecureId: Requesting DigiLocker verification URL (Ref: {$verificationId}, Flow: {$flow}).");
+
+            $response = Http::withHeaders([
+                'x-client-id'     => $this->clientId,
+                'x-client-secret' => $this->clientSecret,
+                'Content-Type'    => 'application/json',
+                'Accept'          => 'application/json',
+            ])->timeout(15)->post($endpoint, $payload);
+
+            $statusCode = $response->status();
+            $body       = $response->json();
+
+            if ($response->successful() && is_array($body)) {
+                $status  = strtoupper((string) ($body['status'] ?? $body['verification_status'] ?? 'UNKNOWN'));
+                $refId   = $body['reference_id'] ?? $body['ref_id'] ?? null;
+                $verifId = $body['verification_id'] ?? $verificationId;
+                $url     = (string) ($body['url'] ?? $body['redirect_url'] ?? $body['link'] ?? '');
+
+                if ($status === 'PENDING' && !empty($url)) {
+                    Log::info("CashfreeSecureId: Successfully generated DigiLocker URL (Ref: {$verifId}).");
+                    return [
+                        'success'         => true,
+                        'status'          => 'PENDING',
+                        'verification_id' => $verifId,
+                        'reference_id'    => $refId,
+                        'url'             => $url,
+                        'message'         => 'DigiLocker verification URL created successfully.',
+                    ];
+                }
+            }
+
+            $providerMsg = is_array($body) ? ($body['message'] ?? $body['error_msg'] ?? 'DigiLocker URL creation failed or missing URL.') : 'Non-JSON response';
+            Log::error("CashfreeSecureId: DigiLocker URL creation failed with HTTP {$statusCode} (Ref: {$verificationId}).", [
+                'response_message' => $providerMsg,
+            ]);
+
+            return [
+                'success'         => false,
+                'status'          => 'GATEWAY_ERROR',
+                'verification_id' => $verificationId,
+                'reference_id'    => null,
+                'url'             => null,
+                'message'         => $providerMsg,
+            ];
+        } catch (\Throwable $e) {
+            Log::error("CashfreeSecureId: Exception during DigiLocker URL creation: " . $e->getMessage());
+            return [
+                'success'         => false,
+                'status'          => 'SERVICE_EXCEPTION',
+                'verification_id' => $verificationId,
+                'reference_id'    => null,
+                'url'             => null,
+                'message'         => 'Unable to generate DigiLocker verification link. Please try again later.',
+            ];
+        }
+    }
+
+    /**
+     * Get DigiLocker verification session status using Cashfree Secure ID.
+     *
+     * @param string $verificationId Server-controlled unique reference ID
+     * @param int|string|null $referenceId Optional gateway reference ID
+     * @return array Standardized result array
+     */
+    public function getDigiLockerStatus(
+        string $verificationId,
+        int|string|null $referenceId = null
+    ): array {
+        if (!$this->isConfigured) {
+            Log::warning("CashfreeSecureId: Secure ID credentials not configured. DigiLocker status check skipped for Ref: {$verificationId}.");
+            return [
+                'success'          => false,
+                'status'           => 'UNCONFIGURED',
+                'verification_id'  => $verificationId,
+                'reference_id'     => $referenceId,
+                'user_details'     => [],
+                'document_consent' => [],
+                'message'          => 'Cashfree Secure ID credentials are not configured. Please contact the administrator.',
+            ];
+        }
+
+        try {
+            $endpoint = "{$this->baseUrl}/digilocker";
+
+            $queryParams = [
+                'verification_id' => $verificationId,
+            ];
+            if (!empty($referenceId)) {
+                $queryParams['reference_id'] = (string) $referenceId;
+            }
+
+            Log::info("CashfreeSecureId: Checking DigiLocker session status (Ref: {$verificationId}).");
+
+            $response = Http::withHeaders([
+                'x-client-id'     => $this->clientId,
+                'x-client-secret' => $this->clientSecret,
+                'Content-Type'    => 'application/json',
+                'Accept'          => 'application/json',
+            ])->timeout(15)->get($endpoint, $queryParams);
+
+            $statusCode = $response->status();
+            $body       = $response->json();
+
+            if ($response->successful() && is_array($body)) {
+                $status          = strtoupper((string) ($body['status'] ?? $body['verification_status'] ?? 'UNKNOWN'));
+                $refId           = $body['reference_id'] ?? $body['ref_id'] ?? $referenceId;
+                $verifId         = $body['verification_id'] ?? $verificationId;
+                $rawUserDetails  = is_array($body['user_details'] ?? null) ? $body['user_details'] : [];
+                $documentConsent = is_array($body['document_consent'] ?? null) ? $body['document_consent'] : [];
+
+                // Sanitize user_details to ONLY safe fields: name, dob, gender
+                $sanitizedUserDetails = array_filter([
+                    'name'   => $rawUserDetails['name'] ?? $rawUserDetails['user_name'] ?? null,
+                    'dob'    => $rawUserDetails['dob'] ?? $rawUserDetails['date_of_birth'] ?? null,
+                    'gender' => $rawUserDetails['gender'] ?? null,
+                ]);
+
+                // Documented HTTP-200 statuses: PENDING, AUTHENTICATED, EXPIRED, CONSENT_DENIED
+                if (in_array($status, ['PENDING', 'AUTHENTICATED', 'EXPIRED', 'CONSENT_DENIED'], true)) {
+                    return [
+                        'success'          => true,
+                        'status'           => $status,
+                        'verification_id'  => $verifId,
+                        'reference_id'     => $refId,
+                        'user_details'     => $sanitizedUserDetails,
+                        'document_consent' => $documentConsent,
+                        'message'          => $body['message'] ?? "DigiLocker status is {$status}.",
+                    ];
+                }
+
+                return [
+                    'success'          => false,
+                    'status'           => $status,
+                    'verification_id'  => $verifId,
+                    'reference_id'     => $refId,
+                    'user_details'     => [],
+                    'document_consent' => [],
+                    'message'          => $body['message'] ?? $body['error_msg'] ?? 'DigiLocker status returned unrecognized status.',
+                ];
+            }
+
+            $providerMsg = is_array($body) ? ($body['message'] ?? $body['error_msg'] ?? 'Provider API error') : 'Non-JSON response';
+            Log::error("CashfreeSecureId: DigiLocker status request failed with HTTP {$statusCode} (Ref: {$verificationId}).", [
+                'response_message' => $providerMsg,
+            ]);
+
+            return [
+                'success'          => false,
+                'status'           => 'GATEWAY_ERROR',
+                'verification_id'  => $verificationId,
+                'reference_id'     => $referenceId,
+                'user_details'     => [],
+                'document_consent' => [],
+                'message'          => $providerMsg,
+            ];
+        } catch (\Throwable $e) {
+            Log::error("CashfreeSecureId: Exception during DigiLocker status check: " . $e->getMessage());
+            return [
+                'success'          => false,
+                'status'           => 'SERVICE_EXCEPTION',
+                'verification_id'  => $verificationId,
+                'reference_id'     => $referenceId,
+                'user_details'     => [],
+                'document_consent' => [],
+                'message'          => 'Unable to communicate with the DigiLocker verification service. Please try again later.',
+            ];
+        }
+    }
+
+    /**
+     * Fetch verified Aadhaar document data from DigiLocker session using Cashfree Secure ID.
+     *
+     * @param string $verificationId Server-controlled unique reference ID
+     * @param int|string|null $referenceId Optional gateway reference ID
+     * @return array Standardized result array with sanitized identity fields ONLY
+     */
+    public function getDigiLockerAadhaarDocument(
+        string $verificationId,
+        int|string|null $referenceId = null
+    ): array {
+        if (!$this->isConfigured) {
+            Log::warning("CashfreeSecureId: Secure ID credentials not configured. DigiLocker Aadhaar document fetch skipped for Ref: {$verificationId}.");
+            return [
+                'success'         => false,
+                'status'          => 'UNCONFIGURED',
+                'verification_id' => $verificationId,
+                'reference_id'    => $referenceId,
+                'verified_name'   => null,
+                'data'            => [],
+                'message'         => 'Cashfree Secure ID credentials are not configured. Please contact the administrator.',
+            ];
+        }
+
+        try {
+            $endpoint = "{$this->baseUrl}/digilocker/document/AADHAAR";
+
+            $queryParams = [
+                'verification_id' => $verificationId,
+            ];
+            if (!empty($referenceId)) {
+                $queryParams['reference_id'] = (string) $referenceId;
+            }
+
+            Log::info("CashfreeSecureId: Requesting DigiLocker Aadhaar document (Ref: {$verificationId}).");
+
+            $response = Http::withHeaders([
+                'x-client-id'     => $this->clientId,
+                'x-client-secret' => $this->clientSecret,
+                'Content-Type'    => 'application/json',
+                'Accept'          => 'application/json',
+            ])->timeout(15)->get($endpoint, $queryParams);
+
+            $statusCode = $response->status();
+            $body       = $response->json();
+
+            if ($response->successful() && is_array($body)) {
+                $status  = strtoupper((string) ($body['status'] ?? $body['verification_status'] ?? 'UNKNOWN'));
+                $refId   = $body['reference_id'] ?? $body['ref_id'] ?? $referenceId;
+                $verifId = $body['verification_id'] ?? $verificationId;
+
+                if ($status === 'AADHAAR_NOT_LINKED') {
+                    Log::warning("CashfreeSecureId: Aadhaar is not linked to DigiLocker account (Ref: {$verifId}).");
+                    return [
+                        'success'         => false,
+                        'status'          => 'AADHAAR_NOT_LINKED',
+                        'verification_id' => $verifId,
+                        'reference_id'    => $refId,
+                        'verified_name'   => null,
+                        'data'            => [],
+                        'message'         => 'Aadhaar document is not linked to this DigiLocker account.',
+                    ];
+                }
+
+                if ($status === 'SUCCESS') {
+                    $extracted = $this->extractIdentityData($body);
+
+                    // Filter sanitized identity fields ONLY — exclude photo_link, xml_file, UIDs, or raw tokens
+                    $sanitizedData = array_filter([
+                        'name'                   => $extracted['name'] ?? null,
+                        'dob'                    => $extracted['dob'] ?? null,
+                        'gender'                 => $extracted['gender'] ?? null,
+                        'care_of'                => $extracted['care_of'] ?? null,
+                        'father_or_husband_name' => $extracted['father_or_husband_name'] ?? null,
+                        'address'                => $extracted['address'] ?? null,
+                        'permanent_address'      => $extracted['permanent_address'] ?? null,
+                        'pincode'                => $extracted['pincode'] ?? null,
+                        'district'               => $extracted['district'] ?? null,
+                        'state'                  => $extracted['state'] ?? null,
+                    ], fn($v) => !is_null($v));
+
+                    Log::info("CashfreeSecureId: Successfully retrieved verified DigiLocker Aadhaar document (Ref: {$verifId}).");
+
+                    return [
+                        'success'         => true,
+                        'status'          => 'SUCCESS',
+                        'verification_id' => $verifId,
+                        'reference_id'    => $refId,
+                        'verified_name'   => $sanitizedData['name'] ?? null,
+                        'data'            => $sanitizedData,
+                        'message'         => 'Aadhaar document retrieved and verified via DigiLocker successfully.',
+                    ];
+                }
+
+                return [
+                    'success'         => false,
+                    'status'          => $status,
+                    'verification_id' => $verifId,
+                    'reference_id'    => $refId,
+                    'verified_name'   => null,
+                    'data'            => [],
+                    'message'         => $body['message'] ?? $body['error_msg'] ?? 'DigiLocker Aadhaar document fetch was not successful.',
+                ];
+            }
+
+            $providerMsg = is_array($body) ? ($body['message'] ?? $body['error_msg'] ?? 'Provider API error') : 'Non-JSON response';
+            Log::error("CashfreeSecureId: DigiLocker Aadhaar document fetch failed with HTTP {$statusCode} (Ref: {$verificationId}).", [
+                'response_message' => $providerMsg,
+            ]);
+
+            return [
+                'success'         => false,
+                'status'          => 'GATEWAY_ERROR',
+                'verification_id' => $verificationId,
+                'reference_id'    => $referenceId,
+                'verified_name'   => null,
+                'data'            => [],
+                'message'         => $providerMsg,
+            ];
+        } catch (\Throwable $e) {
+            Log::error("CashfreeSecureId: Exception during DigiLocker Aadhaar document fetch: " . $e->getMessage());
+            return [
+                'success'         => false,
+                'status'          => 'SERVICE_EXCEPTION',
+                'verification_id' => $verificationId,
+                'reference_id'    => $referenceId,
+                'verified_name'   => null,
+                'data'            => [],
+                'message'         => 'Unable to retrieve Aadhaar document from DigiLocker service. Please try again later.',
+            ];
+        }
+    }
+
+    /**
      * Verify Aadhaar via Cashfree Secure ID Verification Suite.
      *
      * In live/sandbox environments, communicates with Cashfree Verification API.
@@ -238,7 +671,7 @@ class CashfreeSecureIdService
 
         $split = $source['split_address'] ?? [];
         $pincode  = (string) ($split['pincode'] ?? $source['pincode'] ?? $source['zip'] ?? '');
-        $district = (string) ($split['district'] ?? $source['district'] ?? '');
+        $district = (string) ($split['district'] ?? $split['dist'] ?? $source['district'] ?? '');
         $state    = (string) ($split['state'] ?? $source['state'] ?? '');
 
         return [

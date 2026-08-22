@@ -10,6 +10,8 @@ use App\Models\Membership;
 use App\Services\Fast2SmsService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Str;
 
 class MembershipController extends Controller
 {
@@ -343,16 +345,383 @@ class MembershipController extends Controller
         ]);
     }
 
+    /**
+     * Clear temporary DigiLocker verification session state.
+     */
+    private function clearDigiLockerSession(): void
+    {
+        session()->forget([
+            'digilocker_verification_id',
+            'digilocker_member_id',
+            'digilocker_reference_id',
+            'digilocker_aadhaar_encrypted',
+            'digilocker_started_at',
+        ]);
+    }
+
+    /**
+     * Start DigiLocker Aadhaar verification process for membership application.
+     */
+    public function startAadhaarVerification(Request $request)
+    {
+        // Security Requirement 1: MUST use ONLY session('verified_membership_phone'). No request fallback.
+        $phone = session('verified_membership_phone');
+
+        if (!$phone) {
+            Log::warning("DigiLocker Start: Missing verified membership phone session.");
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Active membership session not found. Please verify your phone number first.',
+            ], 401);
+        }
+
+        // Clear any previous/stale DigiLocker session state before starting fresh
+        $this->clearDigiLockerSession();
+
+        $validated = $request->validate([
+            'aadhaar_number' => 'required|digits:12',
+        ]);
+
+        $aadhaar = (string) $validated['aadhaar_number'];
+
+        // Strict format check: Aadhaar numbers cannot start with 0 or 1
+        if ($aadhaar[0] === '0' || $aadhaar[0] === '1') {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Invalid Aadhaar number format. Aadhaar numbers cannot start with 0 or 1.',
+            ], 422);
+        }
+
+        $maskedPhone = 'XXXXXX' . substr($phone, -4);
+        $member = Membership::where('phone', $phone)->first();
+
+        if (!$member) {
+            Log::warning("DigiLocker Start: Member record not found for phone {$maskedPhone}.");
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Membership record not found for this phone number.',
+            ], 404);
+        }
+
+        // Security Requirement 4: Cryptographically strong, unpredictable verification ID (Str::uuid)
+        $verificationId = 'ABVHPS_DIGILOCKER_' . (string) Str::uuid();
+
+        // Security Requirement 5: Protect raw Aadhaar in session using Laravel Crypt
+        try {
+            $encryptedAadhaar = Crypt::encryptString($aadhaar);
+        } catch (\Throwable $e) {
+            Log::error("DigiLocker Start: Failed to encrypt session Aadhaar for phone {$maskedPhone}.");
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Security error initializing verification session. Please retry.',
+            ], 500);
+        }
+
+        $service = new \App\Services\CashfreeSecureIdService();
+
+        // Security Requirement 3: FAIL CLOSED ON DIGILOCKER ACCOUNT CHECK
+        $accountCheck = $service->verifyDigiLockerAccount($verificationId, $aadhaar, $phone);
+
+        if (!$accountCheck['success']) {
+            Log::warning("DigiLocker Start: Account check failed for phone {$maskedPhone}.", [
+                'status'  => $accountCheck['status'] ?? 'FAILED',
+                'message' => $accountCheck['message'] ?? 'Gateway error',
+            ]);
+            return response()->json([
+                'status'  => 'error',
+                'message' => $accountCheck['message'] ?? 'DigiLocker account check failed. Please try again.',
+            ], 422);
+        }
+
+        $accountStatus = strtoupper((string) ($accountCheck['status'] ?? ''));
+        if ($accountStatus === 'ACCOUNT_EXISTS') {
+            $userFlow = 'signin';
+        } elseif ($accountStatus === 'ACCOUNT_NOT_FOUND') {
+            $userFlow = 'signup';
+        } else {
+            Log::warning("DigiLocker Start: Unrecognized account status '{$accountStatus}' for phone {$maskedPhone}.");
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'DigiLocker account check returned unrecognized status.',
+            ], 422);
+        }
+
+        $callbackUrl = route('membership.aadhaar.callback');
+        $urlResult = $service->createDigiLockerUrl($verificationId, $callbackUrl, $userFlow);
+
+        if (!$urlResult['success'] || empty($urlResult['url'])) {
+            Log::error("DigiLocker Start: Failed to generate redirect URL for Ref {$verificationId}.", [
+                'status'  => $urlResult['status'] ?? 'FAILED',
+                'message' => $urlResult['message'] ?? 'Gateway error',
+            ]);
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => $urlResult['message'] ?? 'Unable to initialize DigiLocker verification. Please try again later.',
+            ], 422);
+        }
+
+        // Security Requirement 6 & 7: Store server-side reference ID and started_at timestamp
+        session([
+            'digilocker_verification_id'   => $verificationId,
+            'digilocker_member_id'         => $member->id,
+            'digilocker_reference_id'       => $urlResult['reference_id'] ?? null,
+            'digilocker_aadhaar_encrypted' => $encryptedAadhaar,
+            'digilocker_started_at'        => time(),
+        ]);
+
+        Log::info("DigiLocker Start: Successfully generated URL for member ID {$member->id} (Flow: {$userFlow}).");
+
+        return response()->json([
+            'status'       => 'redirect',
+            'redirect_url' => $urlResult['url'],
+            'message'      => 'Redirecting to DigiLocker for Aadhaar verification...',
+        ]);
+    }
+
+    /**
+     * Handle user callback from DigiLocker verification gateway.
+     */
+    public function handleAadhaarCallback(Request $request)
+    {
+        // Security Requirement 1: Require verified phone session (no request fallback)
+        $phone = session('verified_membership_phone');
+        if (!$phone) {
+            $this->clearDigiLockerSession();
+            return redirect('/membership')->with('error', 'Active membership session not found. Please verify your phone number first.');
+        }
+
+        // Security Requirement 2 & 6 & 7: Server session state validation
+        $verificationId   = session('digilocker_verification_id');
+        $sessionMemberId  = session('digilocker_member_id');
+        $referenceId      = session('digilocker_reference_id');
+        $encryptedAadhaar = session('digilocker_aadhaar_encrypted');
+        $startedAt        = session('digilocker_started_at');
+
+        if (!$verificationId || !$sessionMemberId || !$startedAt || !$encryptedAadhaar) {
+            $this->clearDigiLockerSession();
+            Log::warning("DigiLocker Callback: Missing server session verification details.");
+            return redirect('/membership/application')->with('error', 'DigiLocker verification session expired or invalid. Please try again.');
+        }
+
+        // Security Requirement 7: Enforce 15-minute flow expiry window
+        if ((time() - (int) $startedAt) > 900) {
+            $this->clearDigiLockerSession();
+            Log::warning("DigiLocker Callback: Flow session expired for Ref {$verificationId}.");
+            return redirect('/membership/application')->with('error', 'Verification Expired: DigiLocker verification session expired. Please restart verification.');
+        }
+
+        // Security Requirement 2: Load member strictly using verified phone session AND require session member ID match
+        $member = Membership::where('phone', $phone)->first();
+        if (!$member || (int) $member->id !== (int) $sessionMemberId) {
+            $this->clearDigiLockerSession();
+            Log::warning("DigiLocker Callback: Session member mismatch or member record not found.");
+            return redirect('/membership/application')->with('error', 'Security Violation: Session member does not match verification request.');
+        }
+
+        $service = new \App\Services\CashfreeSecureIdService();
+        // Security Requirement 6: Pass stored server-side reference ID
+        $statusResult = $service->getDigiLockerStatus($verificationId, $referenceId);
+
+        if (!$statusResult['success']) {
+            $this->clearDigiLockerSession();
+            Log::warning("DigiLocker Callback: Status check returned failure for Ref {$verificationId}.", [
+                'status'  => $statusResult['status'] ?? 'UNKNOWN',
+                'message' => $statusResult['message'] ?? 'Gateway error',
+            ]);
+            return redirect('/membership/application')->with('error', 'Verification Failed: ' . ($statusResult['message'] ?? 'Unable to verify DigiLocker status.'));
+        }
+
+        $status = strtoupper((string) ($statusResult['status'] ?? 'UNKNOWN'));
+
+        if ($status === 'PENDING') {
+            // Flow still in progress — keep session state
+            return redirect('/membership/application')->with('warning', 'Verification Pending: DigiLocker verification is still in progress.');
+        }
+
+        if ($status === 'EXPIRED') {
+            $this->clearDigiLockerSession();
+            return redirect('/membership/application')->with('error', 'Verification Expired: DigiLocker verification session expired. Please try again.');
+        }
+
+        if ($status === 'CONSENT_DENIED') {
+            $this->clearDigiLockerSession();
+            return redirect('/membership/application')->with('error', 'Verification Failed: DigiLocker consent was declined.');
+        }
+
+        if ($status !== 'AUTHENTICATED') {
+            $this->clearDigiLockerSession();
+            return redirect('/membership/application')->with('error', 'Verification Failed: Unrecognized DigiLocker verification status.');
+        }
+
+        // Security Requirement 12: Status is explicitly AUTHENTICATED -> fetch verified Aadhaar document server-side
+        $docResult = $service->getDigiLockerAadhaarDocument($verificationId, $referenceId);
+
+        if (($docResult['status'] ?? '') === 'AADHAAR_NOT_LINKED') {
+            $this->clearDigiLockerSession();
+            Log::warning("DigiLocker Callback: Aadhaar document not linked for Ref {$verificationId}.");
+            return redirect('/membership/application')->with('error', 'Verification Failed: Aadhaar document is not linked to this DigiLocker account.');
+        }
+
+        if (!$docResult['success'] || ($docResult['status'] ?? '') !== 'SUCCESS') {
+            $this->clearDigiLockerSession();
+            Log::error("DigiLocker Callback: Document fetch failed for Ref {$verificationId}.", [
+                'status'  => $docResult['status'] ?? 'FAILED',
+                'message' => $docResult['message'] ?? 'Document error',
+            ]);
+            return redirect('/membership/application')->with('error', 'Verification Failed: ' . ($docResult['message'] ?? 'Could not retrieve verified Aadhaar document.'));
+        }
+
+        $verifiedData = $docResult['data'] ?? [];
+        $verifiedName = $docResult['verified_name'] ?? ($verifiedData['name'] ?? null);
+
+        if (empty($verifiedName)) {
+            $this->clearDigiLockerSession();
+            Log::error("DigiLocker Callback: Verified name missing from document payload for Ref {$verificationId}.");
+            return redirect('/membership/application')->with('error', 'Verification Failed: Verified Aadhaar name missing from provider records.');
+        }
+
+        // Security Requirement 5: Decrypt stored Aadhaar after successful AUTHENTICATED + document SUCCESS
+        try {
+            $decryptedAadhaar = Crypt::decryptString($encryptedAadhaar);
+        } catch (\Throwable $e) {
+            $this->clearDigiLockerSession();
+            Log::error("DigiLocker Callback: Failed to decrypt session Aadhaar for Ref {$verificationId}.");
+            return redirect('/membership/application')->with('error', 'Security Error: Failed to process verification data.');
+        }
+
+        // Authoritative server-side persistence of verified identity
+        $updatePayload = [
+            'aadhaar_number'           => $decryptedAadhaar,
+            'full_name'                => $verifiedName,
+            'is_aadhaar_verified'      => true,
+            'aadhaar_verification_ref' => $docResult['reference_id'] ?? $referenceId ?? $verificationId,
+            'aadhaar_verified_at'      => Carbon::now('Asia/Kolkata'),
+        ];
+
+        if (!empty($verifiedData['dob'])) {
+            $updatePayload['dob'] = $verifiedData['dob'];
+        }
+        if (!empty($verifiedData['gender'])) {
+            $updatePayload['gender'] = $verifiedData['gender'];
+        }
+        if (!empty($verifiedData['care_of']) || !empty($verifiedData['father_or_husband_name'])) {
+            $updatePayload['father_or_husband_name'] = $verifiedData['care_of'] ?? $verifiedData['father_or_husband_name'];
+        }
+        if (!empty($verifiedData['permanent_address']) || !empty($verifiedData['address'])) {
+            $updatePayload['permanent_address'] = $verifiedData['permanent_address'] ?? $verifiedData['address'];
+        }
+        if (!empty($verifiedData['pincode'])) {
+            $updatePayload['pincode'] = $verifiedData['pincode'];
+        }
+        if (!empty($verifiedData['district'])) {
+            $updatePayload['district'] = $verifiedData['district'];
+        }
+        if (!empty($verifiedData['state'])) {
+            $updatePayload['state'] = $verifiedData['state'];
+        }
+
+        try {
+            $member->update($updatePayload);
+            $member->refresh();
+        } catch (\Throwable $e) {
+            $this->clearDigiLockerSession();
+            Log::error("DigiLocker Callback: Database update failed for member ID {$member->id}: " . $e->getMessage());
+            return redirect('/membership/application')->with('error', 'Failed to save verified identity data to database.');
+        }
+
+        // Security Requirement 8: Clear temporary DigiLocker session state after successful verification
+        $this->clearDigiLockerSession();
+
+        Log::info("DigiLocker Callback: Successfully verified and persisted Aadhaar & Name for member ID {$member->id}.");
+
+        return redirect('/membership/application')->with('success', 'Aadhaar & Name Verified Successfully via DigiLocker!');
+    }
+
+    /**
+     * AJAX endpoint to check current Aadhaar verification status for the active session member.
+     */
+    public function checkAadhaarStatus(Request $request)
+    {
+        // Security Requirement 1: MUST use ONLY session('verified_membership_phone')
+        $phone = session('verified_membership_phone');
+
+        if (!$phone) {
+            return response()->json([
+                'is_verified' => false,
+                'message'     => 'No active membership phone session found.',
+            ], 401);
+        }
+
+        $member = Membership::where('phone', $phone)->first();
+        if (!$member) {
+            return response()->json([
+                'is_verified' => false,
+                'message'     => 'Membership record not found.',
+            ], 404);
+        }
+
+        // Security Requirement 2: Match digilocker_member_id if present
+        $sessionMemberId = session('digilocker_member_id');
+        if ($sessionMemberId && (int) $member->id !== (int) $sessionMemberId) {
+            return response()->json([
+                'is_verified' => false,
+                'message'     => 'Session member mismatch.',
+            ], 403);
+        }
+
+        if ($member->is_aadhaar_verified) {
+            // Security Requirement 5 & 13: Never return full Aadhaar in JSON
+            $maskedAadhaar = $member->aadhaar_number ? ('XXXX-XXXX-' . substr($member->aadhaar_number, -4)) : null;
+
+            return response()->json([
+                'is_verified'    => true,
+                'verified_name'  => $member->full_name,
+                'masked_aadhaar' => $maskedAadhaar,
+                'data'           => array_filter([
+                    'full_name'              => $member->full_name,
+                    'dob'                    => $member->dob,
+                    'gender'                 => $member->gender,
+                    'father_or_husband_name' => $member->father_or_husband_name,
+                    'permanent_address'      => $member->permanent_address,
+                    'pincode'                => $member->pincode,
+                    'district'               => $member->district,
+                    'state'                  => $member->state,
+                ], fn($v) => !is_null($v)),
+                'message'        => 'Aadhaar & Name Verified Successfully!',
+            ]);
+        }
+
+        return response()->json([
+            'is_verified'   => false,
+            'verified_name' => null,
+            'message'       => 'Aadhaar not verified yet.',
+        ]);
+    }
+
     // 7. Store Registration Form Data supporting both Web Forms and Mobile App API requests
     public function submitApplication(Request $request)
     {
-        // Capture tracking inputs from both traditional forms and incoming App JSON payloads
-        $phone = $request->input('phone') ?? session('verified_membership_phone');
+        // Security Requirement 1: MUST use ONLY session('verified_membership_phone') for web membership flow
+        $phone = session('verified_membership_phone');
         if (!$phone) {
             if ($request->wantsJson()) {
-                return response()->json(['status' => 'error', 'message' => 'Phone verification metrics missing.'], 400);
+                return response()->json(['status' => 'error', 'message' => 'Phone verification metrics missing.'], 401);
             }
             return redirect('/membership')->with('error', 'Please verify your mobile number first.');
+        }
+
+        $memberRecord = Membership::where('phone', $phone)->first();
+
+        // Form Submission Security Requirement: Server-side validation that Aadhaar is verified in DB
+        if (!$memberRecord || !$memberRecord->is_aadhaar_verified) {
+            if ($request->wantsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Aadhaar verification is required before submitting your membership application.',
+                ], 422);
+            }
+            return redirect()->back()->with('error', 'Please complete Aadhaar verification before submitting the application.');
         }
 
         // Standard Indian form validation rules tracking inputs including optional email
@@ -389,24 +758,36 @@ class MembershipController extends Controller
             ? $request->input('present_address')
             : $permanentAddress;
 
+        // Security Requirement 11: PROTECT VERIFIED IDENTITY FIELDS ON SUBMISSION
+        // Always preserve verified server/database values when non-empty — do not let request inputs overwrite them!
+        $finalFullName    = $memberRecord->full_name ?: strtoupper(trim($request->input('full_name')));
+        $finalAadhaar     = $memberRecord->aadhaar_number ?: $request->input('aadhaar_number');
+        $finalDob         = $memberRecord->dob ?: $request->input('dob');
+        $finalGender      = $memberRecord->gender ?: $request->input('gender');
+        $finalCareOf      = $memberRecord->father_or_husband_name ?: $request->input('father_or_husband_name');
+        $finalPermAddress = $memberRecord->permanent_address ?: $permanentAddress;
+        $finalPincode     = $memberRecord->pincode ?: $request->input('pincode');
+        $finalDistrict    = $memberRecord->district ?: $request->input('district');
+        $finalState       = $memberRecord->state ?: $request->input('state');
+
         // Updating final record fields safely inside the database row tracking system
         $updatePayload = [
-            'aadhaar_number'         => $request->input('aadhaar_number'),
-            'full_name'              => strtoupper(trim($request->input('full_name'))),
-            'gender'                 => $request->input('gender'),
-            'dob'                    => $request->input('dob'),
-            'father_or_husband_name' => $request->input('father_or_husband_name'),
-            'permanent_address'      => $permanentAddress,
+            'aadhaar_number'         => $finalAadhaar,
+            'full_name'              => $finalFullName,
+            'gender'                 => $finalGender,
+            'dob'                    => $finalDob,
+            'father_or_husband_name' => $finalCareOf,
+            'permanent_address'      => $finalPermAddress,
             'present_address'        => $presentAddress,
             'gotram'                 => $request->input('gotram'),
             'occupation'             => $request->input('occupation'),
             'blood_group'            => $request->input('blood_group'),
-            'pincode'                => $request->input('pincode'),
+            'pincode'                => $finalPincode,
             'grama_panchayat'        => $request->input('grama_panchayat'),
             'mandal'                 => $request->input('mandal'),
             'assembly_segment'       => $request->input('assembly_segment'),
-            'district'               => $request->input('district'),
-            'state'                  => $request->input('state'),
+            'district'               => $finalDistrict,
+            'state'                  => $finalState,
             'email'                  => $emailInput,
             'is_completed'           => 1,
             'updated_at'             => \Carbon\Carbon::now()

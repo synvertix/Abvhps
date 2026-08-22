@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Crypt;
 use Tests\TestCase;
 use App\Models\Membership;
 use App\Services\CashfreeSecureIdService;
@@ -23,336 +24,644 @@ class CashfreeSecureIdVerificationTest extends TestCase
     }
 
     /**
-     * Helper to mock successful Cashfree Secure ID response.
+     * Test 1: start rejects request phone when verified session absent.
      */
-    protected function mockCashfreeSuccess(array $overrideData = []): void
+    public function test_start_rejects_request_phone_without_verified_session(): void
     {
-        $defaultData = [
-            'status'          => 'SUCCESS',
-            'ref_id'          => 'CF_REF_987654321',
-            'verification_id' => 'ABVHPS_VER_12345',
-            'name'            => 'KONDA REDDY',
-            'dob'             => '1990-05-20',
-            'gender'          => 'M',
-            'care_of'         => 'Narayana Reddy',
-            'address'         => '12-34 Main Bazar, Porumamilla',
-            'split_address'   => [
-                'pincode'  => '516193',
-                'district' => 'YSR Kadapa',
-                'state'    => 'Andhra Pradesh',
-            ],
-        ];
+        Membership::create([
+            'membership_id'  => '123456789012',
+            'phone'          => '9876543210',
+            'payment_status' => 'success',
+        ]);
 
-        $responseData = array_merge($defaultData, $overrideData);
+        // Attempting to pass phone parameter without session('verified_membership_phone')
+        $response = $this->postJson('/membership/aadhaar/start', [
+            'aadhaar_number' => '234567890123',
+            'phone'          => '9876543210',
+        ]);
 
-        Http::fake([
-            'https://sandbox.cashfree.com/verification/*' => Http::response($responseData, 200),
+        $response->assertStatus(401);
+        $response->assertJson([
+            'status'  => 'error',
+            'message' => 'Active membership session not found. Please verify your phone number first.',
         ]);
     }
 
     /**
-     * Test 1: Valid Aadhaar + matching name -> SUCCESS
+     * Test 2: status rejects request phone when verified session absent.
      */
-    public function test_matching_aadhaar_and_name_verifies_and_persists_cashfree_identity(): void
+    public function test_status_rejects_request_phone_without_verified_session(): void
     {
-        $this->mockCashfreeSuccess([
-            'name' => 'KONDA REDDY',
-        ]);
-
-        $member = Membership::create([
+        Membership::create([
             'membership_id'  => '123456789012',
             'phone'          => '9876543210',
             'payment_status' => 'success',
-            'is_completed'   => false,
         ]);
 
-        $response = $this->withSession(['verified_membership_phone' => '9876543210'])
-            ->postJson('/membership/verify-aadhaar', [
-                'aadhaar_number' => '234567890123',
-                'full_name'      => 'Konda Reddy',
-            ]);
+        $response = $this->getJson('/membership/aadhaar/status?phone=9876543210');
 
-        $response->assertStatus(200);
+        $response->assertStatus(401);
         $response->assertJson([
-            'status'              => 'success',
-            'is_name_matched'     => true,
+            'is_verified' => false,
+            'message'     => 'No active membership phone session found.',
+        ]);
+    }
+
+    /**
+     * Test 3: submission rejects request phone when verified session absent.
+     */
+    public function test_submission_rejects_request_phone_without_verified_session(): void
+    {
+        Membership::create([
+            'membership_id'       => '123456789012',
+            'phone'               => '9876543210',
+            'payment_status'      => 'success',
             'is_aadhaar_verified' => true,
-            'verified_name'       => 'KONDA REDDY',
-            'data' => [
-                'full_name'              => 'KONDA REDDY',
-                'dob'                    => '1990-05-20',
-                'gender'                 => 'Male',
-                'father_or_husband_name' => 'Narayana Reddy',
-                'pincode'                => '516193',
-                'district'               => 'YSR Kadapa',
-                'state'                  => 'Andhra Pradesh',
-            ],
         ]);
 
-        $member->refresh();
-        $this->assertTrue($member->is_aadhaar_verified);
-        $this->assertEquals('234567890123', $member->aadhaar_number);
-        $this->assertEquals('KONDA REDDY', $member->full_name);
-        $this->assertEquals('1990-05-20', $member->dob);
-        $this->assertEquals('Male', $member->gender);
-        $this->assertEquals('Narayana Reddy', $member->father_or_husband_name);
-        $this->assertEquals('516193', $member->pincode);
-        $this->assertNotNull($member->aadhaar_verified_at);
-    }
-
-    /**
-     * Test 2: Valid Aadhaar + mismatching name -> FAIL (is_name_matched = false)
-     */
-    public function test_mismatching_name_fails_verification_and_does_not_persist(): void
-    {
-        $this->mockCashfreeSuccess([
-            'name' => 'KONDA REDDY',
-        ]);
-
-        $member = Membership::create([
-            'membership_id'  => '123456789012',
+        $response = $this->postJson('/submit-membership', [
             'phone'          => '9876543210',
-            'payment_status' => 'success',
-            'full_name'      => null,
-            'is_completed'   => false,
-        ]);
-
-        $response = $this->withSession(['verified_membership_phone' => '9876543210'])
-            ->postJson('/membership/verify-aadhaar', [
-                'aadhaar_number' => '234567890123',
-                'full_name'      => 'Ravi Kumar', // Deliberately different name
-            ]);
-
-        $response->assertStatus(200);
-        $response->assertJson([
-            'status'              => 'error',
-            'is_name_matched'     => false,
-            'is_aadhaar_verified' => false,
-            'message'             => 'Aadhaar number verified, but the name does not match Aadhaar records.',
-        ]);
-
-        $member->refresh();
-        $this->assertFalse($member->is_aadhaar_verified);
-        $this->assertNull($member->full_name);
-        $this->assertNull($member->aadhaar_verified_at);
-    }
-
-    /**
-     * Test 3: Invalid Aadhaar format (starts with 0 or 1, or not 12 digits) -> 422
-     */
-    public function test_invalid_aadhaar_format_rejected(): void
-    {
-        $member = Membership::create([
-            'membership_id'  => '123456789012',
-            'phone'          => '9876543210',
-            'payment_status' => 'success',
-            'is_completed'   => false,
-        ]);
-
-        // Starts with 0
-        $response = $this->withSession(['verified_membership_phone' => '9876543210'])
-            ->postJson('/membership/verify-aadhaar', [
-                'aadhaar_number' => '012345678901',
-                'full_name'      => 'Konda Reddy',
-            ]);
-        $response->assertStatus(422);
-
-        // Starts with 1
-        $response2 = $this->withSession(['verified_membership_phone' => '9876543210'])
-            ->postJson('/membership/verify-aadhaar', [
-                'aadhaar_number' => '112345678901',
-                'full_name'      => 'Konda Reddy',
-            ]);
-        $response2->assertStatus(422);
-
-        // Less than 12 digits
-        $response3 = $this->withSession(['verified_membership_phone' => '9876543210'])
-            ->postJson('/membership/verify-aadhaar', [
-                'aadhaar_number' => '2345678901',
-                'full_name'      => 'Konda Reddy',
-            ]);
-        $response3->assertStatus(422);
-    }
-
-    /**
-     * Test 4: Missing session -> 401 Unauthorized
-     */
-    public function test_missing_session_returns_401(): void
-    {
-        $response = $this->postJson('/membership/verify-aadhaar', [
             'aadhaar_number' => '234567890123',
             'full_name'      => 'Konda Reddy',
         ]);
 
         $response->assertStatus(401);
-        $response->assertJson([
-            'status'              => 'error',
-            'is_name_matched'     => false,
-            'is_aadhaar_verified' => false,
-        ]);
     }
 
     /**
-     * Test 5: Cashfree API gateway error -> Fails safely
+     * Test 4: account-check transport/provider failure does NOT create DigiLocker URL.
      */
-    public function test_cashfree_api_gateway_error_fails_safely(): void
+    public function test_account_check_failure_does_not_create_digilocker_url(): void
     {
         Http::fake([
-            'https://sandbox.cashfree.com/verification/*' => Http::response([
+            'https://sandbox.cashfree.com/verification/digilocker/verify-account' => Http::response([
                 'status'  => 'FAILED',
-                'message' => 'Invalid Aadhaar number according to UIDAI gateway.',
+                'message' => 'Cashfree gateway account check failed.',
             ], 400),
         ]);
 
-        $member = Membership::create([
+        Membership::create([
             'membership_id'  => '123456789012',
             'phone'          => '9876543210',
             'payment_status' => 'success',
-            'is_completed'   => false,
         ]);
 
         $response = $this->withSession(['verified_membership_phone' => '9876543210'])
-            ->postJson('/membership/verify-aadhaar', [
+            ->postJson('/membership/aadhaar/start', [
                 'aadhaar_number' => '234567890123',
-                'full_name'      => 'Konda Reddy',
             ]);
 
         $response->assertStatus(422);
         $response->assertJson([
-            'status'              => 'error',
-            'is_name_matched'     => false,
-            'is_aadhaar_verified' => false,
+            'status'  => 'error',
+            'message' => 'Cashfree gateway account check failed.',
         ]);
 
-        $member->refresh();
-        $this->assertFalse($member->is_aadhaar_verified);
+        Http::assertNotSent(function ($request) {
+            return str_contains($request->url(), '/digilocker') && !str_contains($request->url(), '/verify-account');
+        });
     }
 
     /**
-     * Test 6: Cashfree unconfigured -> Fails safely without fake simulation
+     * Test 5: unknown account status fails closed.
      */
-    public function test_unconfigured_credentials_fails_safely(): void
+    public function test_unknown_account_status_fails_closed(): void
     {
-        Config::set('services.cashfree.verify_client_id', '');
-        Config::set('services.cashfree.verify_client_secret', '');
+        Http::fake([
+            'https://sandbox.cashfree.com/verification/digilocker/verify-account' => Http::response([
+                'status' => 'UNEXPECTED_STATUS',
+            ], 200),
+        ]);
 
-        $member = Membership::create([
+        Membership::create([
             'membership_id'  => '123456789012',
             'phone'          => '9876543210',
             'payment_status' => 'success',
-            'is_completed'   => false,
         ]);
 
         $response = $this->withSession(['verified_membership_phone' => '9876543210'])
-            ->postJson('/membership/verify-aadhaar', [
+            ->postJson('/membership/aadhaar/start', [
                 'aadhaar_number' => '234567890123',
-                'full_name'      => 'Konda Reddy',
             ]);
 
         $response->assertStatus(422);
         $response->assertJson([
-            'status'              => 'error',
-            'is_name_matched'     => false,
-            'is_aadhaar_verified' => false,
+            'status'  => 'error',
+            'message' => 'DigiLocker account verification returned unrecognized status.',
         ]);
-
-        $member->refresh();
-        $this->assertFalse($member->is_aadhaar_verified);
     }
 
     /**
-     * Test 7: Case-insensitive, punctuation, and multi-space name matching
+     * Test 6: ACCOUNT_EXISTS => signin.
      */
-    public function test_name_normalization_and_matching_rules(): void
+    public function test_account_exists_selects_signin_flow(): void
     {
-        // Exact case variations
-        $this->assertTrue(CashfreeSecureIdService::compareNames('konda reddy', 'KONDA REDDY'));
-        $this->assertTrue(CashfreeSecureIdService::compareNames('Konda Reddy', 'KONDA REDDY'));
-
-        // Whitespace collapse
-        $this->assertTrue(CashfreeSecureIdService::compareNames('KONDA   REDDY', 'KONDA REDDY'));
-        $this->assertTrue(CashfreeSecureIdService::compareNames('  KONDA REDDY  ', 'KONDA REDDY'));
-
-        // Punctuation normalization
-        $this->assertTrue(CashfreeSecureIdService::compareNames('Konda-Reddy', 'KONDA REDDY'));
-        $this->assertTrue(CashfreeSecureIdService::compareNames('Konda.Reddy', 'KONDA REDDY'));
-
-        // Token order variations
-        $this->assertTrue(CashfreeSecureIdService::compareNames('Reddy Konda', 'Konda Reddy'));
-
-        // Disparate names must fail
-        $this->assertFalse(CashfreeSecureIdService::compareNames('Konda Reddy', 'Ravi Kumar'));
-        $this->assertFalse(CashfreeSecureIdService::compareNames('Srinivasa Rao', 'Venkat Reddy'));
-    }
-
-    /**
-     * Test 8: Authoritative verified name is saved (not user entered casing/spelling)
-     */
-    public function test_authoritative_cashfree_name_is_saved(): void
-    {
-        $this->mockCashfreeSuccess([
-            'name' => 'KONDA VENKATA REDDY',
+        Http::fake([
+            'https://sandbox.cashfree.com/verification/digilocker/verify-account' => Http::response([
+                'status'       => 'ACCOUNT_EXISTS',
+                'reference_id' => 'CF_REF_SIGNIN',
+            ], 200),
+            'https://sandbox.cashfree.com/verification/digilocker' => Http::response([
+                'status'       => 'PENDING',
+                'reference_id' => 'CF_REF_SIGNIN',
+                'url'          => 'https://digilocker.cashfree.com/signin?token=123',
+            ], 200),
         ]);
 
-        $member = Membership::create([
+        Membership::create([
             'membership_id'  => '123456789012',
             'phone'          => '9876543210',
             'payment_status' => 'success',
-            'is_completed'   => false,
         ]);
 
         $response = $this->withSession(['verified_membership_phone' => '9876543210'])
-            ->postJson('/membership/verify-aadhaar', [
+            ->postJson('/membership/aadhaar/start', [
                 'aadhaar_number' => '234567890123',
-                'full_name'      => 'konda venkata reddy', // Lowercase user entry
             ]);
 
         $response->assertStatus(200);
         $response->assertJson([
-            'status'        => 'success',
-            'verified_name' => 'KONDA VENKATA REDDY',
+            'status'       => 'redirect',
+            'redirect_url' => 'https://digilocker.cashfree.com/signin?token=123',
         ]);
 
-        $member->refresh();
-        $this->assertEquals('KONDA VENKATA REDDY', $member->full_name);
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/digilocker')
+                && str_contains($request->body(), '"user_flow":"signin"');
+        });
     }
 
     /**
-     * Test 9: One member cannot verify or update another member's record
+     * Test 7: ACCOUNT_NOT_FOUND => signup.
      */
-    public function test_data_isolation_between_sessions(): void
+    public function test_account_not_found_selects_signup_flow(): void
     {
-        $this->mockCashfreeSuccess([
-            'name' => 'MEMBER ONE',
+        Http::fake([
+            'https://sandbox.cashfree.com/verification/digilocker/verify-account' => Http::response([
+                'status'       => 'ACCOUNT_NOT_FOUND',
+                'reference_id' => 'CF_REF_SIGNUP',
+            ], 200),
+            'https://sandbox.cashfree.com/verification/digilocker' => Http::response([
+                'status'       => 'PENDING',
+                'reference_id' => 'CF_REF_SIGNUP',
+                'url'          => 'https://digilocker.cashfree.com/signup?token=456',
+            ], 200),
         ]);
 
+        Membership::create([
+            'membership_id'  => '123456789012',
+            'phone'          => '9876543210',
+            'payment_status' => 'success',
+        ]);
+
+        $response = $this->withSession(['verified_membership_phone' => '9876543210'])
+            ->postJson('/membership/aadhaar/start', [
+                'aadhaar_number' => '234567890123',
+            ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'status'       => 'redirect',
+            'redirect_url' => 'https://digilocker.cashfree.com/signup?token=456',
+        ]);
+
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/digilocker')
+                && str_contains($request->body(), '"user_flow":"signup"');
+        });
+    }
+
+    /**
+     * Test 8: verification ID does not contain membership ID, phone or Aadhaar.
+     */
+    public function test_verification_id_is_unpredictable_uuid_and_not_predictable(): void
+    {
+        Http::fake([
+            'https://sandbox.cashfree.com/verification/digilocker/verify-account' => Http::response([
+                'status' => 'ACCOUNT_NOT_FOUND',
+            ], 200),
+            'https://sandbox.cashfree.com/verification/digilocker' => Http::response([
+                'status' => 'PENDING',
+                'url'    => 'https://digilocker.cashfree.com/auth',
+            ], 200),
+        ]);
+
+        $member = Membership::create([
+            'membership_id'  => '123456789012',
+            'phone'          => '9876543210',
+            'payment_status' => 'success',
+        ]);
+
+        $response = $this->withSession(['verified_membership_phone' => '9876543210'])
+            ->postJson('/membership/aadhaar/start', [
+                'aadhaar_number' => '234567890123',
+            ]);
+
+        $response->assertStatus(200);
+
+        $verifId = session('digilocker_verification_id');
+        $this->assertNotNull($verifId);
+        $this->assertStringStartsWith('ABVHPS_DIGILOCKER_', $verifId);
+        $uuidPart = substr($verifId, strlen('ABVHPS_DIGILOCKER_'));
+        $this->assertTrue(\Illuminate\Support\Str::isUuid($uuidPart));
+        $this->assertStringNotContainsString('9876543210', $verifId);
+        $this->assertStringNotContainsString('234567890123', $verifId);
+    }
+
+    /**
+     * Test 9: raw Aadhaar is not stored directly in session (encrypted).
+     */
+    public function test_raw_aadhaar_is_not_stored_unencrypted_in_session(): void
+    {
+        Http::fake([
+            'https://sandbox.cashfree.com/verification/digilocker/verify-account' => Http::response([
+                'status' => 'ACCOUNT_EXISTS',
+            ], 200),
+            'https://sandbox.cashfree.com/verification/digilocker' => Http::response([
+                'status' => 'PENDING',
+                'url'    => 'https://digilocker.cashfree.com/auth',
+            ], 200),
+        ]);
+
+        Membership::create([
+            'membership_id'  => '123456789012',
+            'phone'          => '9876543210',
+            'payment_status' => 'success',
+        ]);
+
+        $this->withSession(['verified_membership_phone' => '9876543210'])
+            ->postJson('/membership/aadhaar/start', [
+                'aadhaar_number' => '234567890123',
+            ]);
+
+        $this->assertNull(session('digilocker_aadhaar_number'));
+        $encrypted = session('digilocker_aadhaar_encrypted');
+        $this->assertNotNull($encrypted);
+        $this->assertNotEquals('234567890123', $encrypted);
+        $this->assertEquals('234567890123', Crypt::decryptString($encrypted));
+    }
+
+    /**
+     * Test 10: callback cannot select another membership.
+     */
+    public function test_callback_cannot_select_another_membership(): void
+    {
         $member1 = Membership::create([
             'membership_id'  => '111111111111',
             'phone'          => '9111111111',
             'payment_status' => 'success',
-            'is_completed'   => false,
         ]);
 
         $member2 = Membership::create([
             'membership_id'  => '222222222222',
             'phone'          => '9222222222',
             'payment_status' => 'success',
-            'is_completed'   => false,
         ]);
 
-        $this->withSession(['verified_membership_phone' => '9111111111'])
-            ->postJson('/membership/verify-aadhaar', [
-                'aadhaar_number' => '234567890123',
-                'full_name'      => 'MEMBER ONE',
-            ]);
+        // Session phone belongs to member2, but digilocker_member_id in session belongs to member1
+        $response = $this->withSession([
+            'verified_membership_phone'  => '9222222222',
+            'digilocker_verification_id' => 'ABVHPS_DIGILOCKER_TEST',
+            'digilocker_member_id'       => $member1->id,
+            'digilocker_aadhaar_encrypted' => Crypt::encryptString('234567890123'),
+            'digilocker_started_at'      => time(),
+        ])->get('/membership/aadhaar/callback');
+
+        $response->assertRedirect('/membership/application');
+        $response->assertSessionHas('error');
 
         $member1->refresh();
         $member2->refresh();
-
-        $this->assertTrue($member1->is_aadhaar_verified);
-        $this->assertEquals('MEMBER ONE', $member1->full_name);
-
+        $this->assertFalse($member1->is_aadhaar_verified);
         $this->assertFalse($member2->is_aadhaar_verified);
-        $this->assertNull($member2->full_name);
+    }
+
+    /**
+     * Test 11: expired server-side DigiLocker session cannot verify.
+     */
+    public function test_expired_digilocker_session_cannot_verify(): void
+    {
+        $member = Membership::create([
+            'membership_id'  => '123456789012',
+            'phone'          => '9876543210',
+            'payment_status' => 'success',
+        ]);
+
+        // Started 16 minutes ago (960 seconds > 900 seconds limit)
+        $expiredTime = time() - 960;
+
+        $response = $this->withSession([
+            'verified_membership_phone'  => '9876543210',
+            'digilocker_verification_id' => 'ABVHPS_DIGILOCKER_EXPIRED',
+            'digilocker_member_id'       => $member->id,
+            'digilocker_aadhaar_encrypted' => Crypt::encryptString('234567890123'),
+            'digilocker_started_at'      => $expiredTime,
+        ])->get('/membership/aadhaar/callback');
+
+        $response->assertRedirect('/membership/application');
+        $response->assertSessionHas('error');
+
+        $member->refresh();
+        $this->assertFalse($member->is_aadhaar_verified);
+    }
+
+    /**
+     * Test 12: callback query verification_id/reference_id cannot override server session values.
+     */
+    public function test_callback_query_params_cannot_override_server_session(): void
+    {
+        Http::fake([
+            'https://sandbox.cashfree.com/verification/digilocker/document/AADHAAR*' => Http::response([
+                'status' => 'SUCCESS',
+                'name'   => 'AUTHENTICATED USER',
+            ], 200),
+            'https://sandbox.cashfree.com/verification/digilocker*' => Http::response([
+                'status' => 'AUTHENTICATED',
+            ], 200),
+        ]);
+
+        $member = Membership::create([
+            'membership_id'  => '123456789012',
+            'phone'          => '9876543210',
+            'payment_status' => 'success',
+        ]);
+
+        // Query param has verification_id=MALICIOUS_OVERRIDE
+        $this->withSession([
+            'verified_membership_phone'    => '9876543210',
+            'digilocker_verification_id'   => 'SERVER_SESSION_ID_123',
+            'digilocker_member_id'         => $member->id,
+            'digilocker_reference_id'       => 'SERVER_REF_456',
+            'digilocker_aadhaar_encrypted' => Crypt::encryptString('234567890123'),
+            'digilocker_started_at'        => time(),
+        ])->get('/membership/aadhaar/callback?verification_id=MALICIOUS_OVERRIDE&reference_id=MALICIOUS_REF');
+
+        // Verify Http request used SERVER_SESSION_ID_123, not MALICIOUS_OVERRIDE
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), 'verification_id=SERVER_SESSION_ID_123');
+        });
+    }
+
+    /**
+     * Test 13: callback alone cannot mark verified.
+     */
+    public function test_callback_alone_cannot_mark_verified(): void
+    {
+        $response = $this->get('/membership/aadhaar/callback?verification_id=FAKED_ID');
+
+        $response->assertRedirect('/membership');
+    }
+
+    /**
+     * Test 14: AUTHENTICATED + document SUCCESS can mark verified.
+     */
+    public function test_authenticated_plus_document_success_marks_verified(): void
+    {
+        Http::fake([
+            'https://sandbox.cashfree.com/verification/digilocker/document/AADHAAR*' => Http::response([
+                'status'        => 'SUCCESS',
+                'name'          => 'SUBBA REDDY',
+                'dob'           => '1988-11-22',
+                'gender'        => 'M',
+                'split_address' => [
+                    'pincode'  => '516193',
+                    'district' => 'YSR Kadapa',
+                    'state'    => 'Andhra Pradesh',
+                ],
+            ], 200),
+            'https://sandbox.cashfree.com/verification/digilocker*' => Http::response([
+                'status' => 'AUTHENTICATED',
+            ], 200),
+        ]);
+
+        $member = Membership::create([
+            'membership_id'  => '123456789012',
+            'phone'          => '9876543210',
+            'payment_status' => 'success',
+        ]);
+
+        $this->withSession([
+            'verified_membership_phone'    => '9876543210',
+            'digilocker_verification_id'   => 'SERVER_VERIF_888',
+            'digilocker_member_id'         => $member->id,
+            'digilocker_aadhaar_encrypted' => Crypt::encryptString('234567890123'),
+            'digilocker_started_at'        => time(),
+        ])->get('/membership/aadhaar/callback');
+
+        $member->refresh();
+        $this->assertTrue($member->is_aadhaar_verified);
+        $this->assertEquals('SUBBA REDDY', $member->full_name);
+        $this->assertEquals('234567890123', $member->aadhaar_number);
+    }
+
+    /**
+     * Test 15: legacy /membership/verify-aadhaar cannot invoke old offline Aadhaar verification.
+     */
+    public function test_legacy_verify_aadhaar_route_invokes_start_flow_not_offline_verify(): void
+    {
+        Http::fake([
+            'https://sandbox.cashfree.com/verification/digilocker/verify-account' => Http::response([
+                'status' => 'ACCOUNT_NOT_FOUND',
+            ], 200),
+            'https://sandbox.cashfree.com/verification/digilocker' => Http::response([
+                'status' => 'PENDING',
+                'url'    => 'https://digilocker.cashfree.com/signup',
+            ], 200),
+        ]);
+
+        Membership::create([
+            'membership_id'  => '123456789012',
+            'phone'          => '9876543210',
+            'payment_status' => 'success',
+        ]);
+
+        $response = $this->withSession(['verified_membership_phone' => '9876543210'])
+            ->postJson('/membership/verify-aadhaar', [
+                'aadhaar_number' => '234567890123',
+            ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'status'       => 'redirect',
+            'redirect_url' => 'https://digilocker.cashfree.com/signup',
+        ]);
+
+        // Assert obsolete /offline-aadhaar/verify endpoint was NOT called
+        Http::assertNotSent(function ($request) {
+            return str_contains($request->url(), '/offline-aadhaar/verify');
+        });
+    }
+
+    /**
+     * Test 16: browser cannot overwrite verified full_name.
+     */
+    public function test_browser_cannot_overwrite_verified_full_name(): void
+    {
+        $member = Membership::create([
+            'membership_id'       => '123456789012',
+            'phone'               => '9876543210',
+            'payment_status'      => 'success',
+            'full_name'           => 'AUTHORITATIVE VERIFIED NAME',
+            'is_aadhaar_verified' => true,
+        ]);
+
+        $this->withSession(['verified_membership_phone' => '9876543210'])
+            ->post('/submit-membership', [
+                'aadhaar_number'         => '234567890123',
+                'full_name'              => 'TAMPERED NAME FROM BROWSER',
+                'gender'                 => 'Male',
+                'dob'                    => '1990-01-01',
+                'father_or_husband_name' => 'Father Name',
+                'permanent_address'      => 'Address',
+                'gotram'                 => 'Kashyapa',
+                'occupation'             => 'Business',
+                'blood_group'            => 'O+',
+                'pincode'                => '516193',
+                'grama_panchayat'        => 'Porumamilla',
+                'mandal'                 => 'Porumamilla',
+                'district'               => 'YSR Kadapa',
+                'state'                  => 'Andhra Pradesh',
+                'photo'                  => \Illuminate\Http\UploadedFile::fake()->image('photo.jpg'),
+            ]);
+
+        $member->refresh();
+        $this->assertEquals('AUTHORITATIVE VERIFIED NAME', $member->full_name);
+    }
+
+    /**
+     * Test 17: browser cannot overwrite verified aadhaar_number.
+     */
+    public function test_browser_cannot_overwrite_verified_aadhaar_number(): void
+    {
+        $member = Membership::create([
+            'membership_id'       => '123456789012',
+            'phone'               => '9876543210',
+            'payment_status'      => 'success',
+            'aadhaar_number'      => '234567890123',
+            'full_name'           => 'VERIFIED USER',
+            'is_aadhaar_verified' => true,
+        ]);
+
+        $this->withSession(['verified_membership_phone' => '9876543210'])
+            ->post('/submit-membership', [
+                'aadhaar_number'         => '999999999999', // Tampered Aadhaar number
+                'full_name'              => 'VERIFIED USER',
+                'gender'                 => 'Male',
+                'dob'                    => '1990-01-01',
+                'father_or_husband_name' => 'Father Name',
+                'permanent_address'      => 'Address',
+                'gotram'                 => 'Kashyapa',
+                'occupation'             => 'Business',
+                'blood_group'            => 'O+',
+                'pincode'                => '516193',
+                'grama_panchayat'        => 'Porumamilla',
+                'mandal'                 => 'Porumamilla',
+                'district'               => 'YSR Kadapa',
+                'state'                  => 'Andhra Pradesh',
+                'photo'                  => \Illuminate\Http\UploadedFile::fake()->image('photo.jpg'),
+            ]);
+
+        $member->refresh();
+        $this->assertEquals('234567890123', $member->aadhaar_number);
+    }
+
+    /**
+     * Test 18: browser cannot overwrite non-empty verified DOB/gender/address identity fields.
+     */
+    public function test_browser_cannot_overwrite_verified_demographic_fields(): void
+    {
+        $member = Membership::create([
+            'membership_id'          => '123456789012',
+            'phone'                  => '9876543210',
+            'payment_status'         => 'success',
+            'full_name'              => 'VERIFIED USER',
+            'aadhaar_number'         => '234567890123',
+            'dob'                    => '1990-05-15',
+            'gender'                 => 'Female',
+            'permanent_address'      => 'Original Verified Address',
+            'is_aadhaar_verified'    => true,
+        ]);
+
+        $this->withSession(['verified_membership_phone' => '9876543210'])
+            ->post('/submit-membership', [
+                'aadhaar_number'         => '234567890123',
+                'full_name'              => 'VERIFIED USER',
+                'gender'                 => 'Male', // Tampered gender
+                'dob'                    => '2000-01-01', // Tampered DOB
+                'father_or_husband_name' => 'Father Name',
+                'permanent_address'      => 'Fake Address', // Tampered Address
+                'gotram'                 => 'Kashyapa',
+                'occupation'             => 'Business',
+                'blood_group'            => 'O+',
+                'pincode'                => '516193',
+                'grama_panchayat'        => 'Porumamilla',
+                'mandal'                 => 'Porumamilla',
+                'district'               => 'YSR Kadapa',
+                'state'                  => 'Andhra Pradesh',
+                'photo'                  => \Illuminate\Http\UploadedFile::fake()->image('photo.jpg'),
+            ]);
+
+        $member->refresh();
+        $this->assertEquals('1990-05-15', $member->dob);
+        $this->assertEquals('Female', $member->gender);
+        $this->assertEquals('Original Verified Address', $member->permanent_address);
+    }
+
+    /**
+     * Test 19: no full Aadhaar is returned in status JSON.
+     */
+    public function test_no_full_aadhaar_returned_in_status_json(): void
+    {
+        Membership::create([
+            'membership_id'       => '123456789012',
+            'phone'               => '9876543210',
+            'payment_status'      => 'success',
+            'full_name'           => 'VERIFIED USER',
+            'aadhaar_number'      => '234567890123',
+            'is_aadhaar_verified' => true,
+        ]);
+
+        $response = $this->withSession(['verified_membership_phone' => '9876543210'])
+            ->getJson('/membership/aadhaar/status');
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'is_verified'    => true,
+            'masked_aadhaar' => 'XXXX-XXXX-0123',
+        ]);
+        $response->assertJsonMissing(['aadhaar_number' => '234567890123']);
+        $this->assertStringNotContainsString('234567890123', $response->getContent());
+    }
+
+    /**
+     * Test 20: status endpoint returns only the currently verified session member.
+     */
+    public function test_status_endpoint_returns_only_verified_session_member(): void
+    {
+        $member1 = Membership::create([
+            'membership_id'       => '111111111111',
+            'phone'               => '9111111111',
+            'payment_status'      => 'success',
+            'full_name'           => 'MEMBER ONE VERIFIED',
+            'is_aadhaar_verified' => true,
+        ]);
+
+        $member2 = Membership::create([
+            'membership_id'       => '222222222222',
+            'phone'               => '9222222222',
+            'payment_status'      => 'success',
+            'full_name'           => 'MEMBER TWO UNVERIFIED',
+            'is_aadhaar_verified' => false,
+        ]);
+
+        $response = $this->withSession(['verified_membership_phone' => '9222222222'])
+            ->getJson('/membership/aadhaar/status');
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'is_verified'   => false,
+            'verified_name' => null,
+        ]);
+        $response->assertJsonMissing(['verified_name' => 'MEMBER ONE VERIFIED']);
     }
 }

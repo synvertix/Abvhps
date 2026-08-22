@@ -223,19 +223,20 @@ class MembershipAdminTest extends TestCase
     {
         $phone = '9876501234';
         
-        // Paid pending member
+        // Paid pending member with verified Aadhaar
         Membership::create([
-            'membership_id' => '123456789012',
-            'phone' => $phone,
-            'payment_status' => 'success',
-            'payment_id' => 'TXN-FEMALE01',
-            'is_completed' => 0
+            'membership_id'       => '123456789012',
+            'phone'               => $phone,
+            'payment_status'      => 'success',
+            'payment_id'          => 'TXN-FEMALE01',
+            'is_completed'        => 0,
+            'is_aadhaar_verified' => true,
         ]);
 
         // Submit form with Female gender
         $response = $this->withSession(['verified_membership_phone' => $phone])
                          ->post('/submit-membership', [
-                             'aadhaar_number' => '123456789012',
+                             'aadhaar_number' => '234567890123',
                              'full_name' => 'LAKSHMI DEVI',
                              'gender' => 'Female',
                              'dob' => '1995-03-20',
@@ -272,11 +273,12 @@ class MembershipAdminTest extends TestCase
         $phone = '9876505678';
         
         Membership::create([
-            'membership_id' => '123456789013',
-            'phone' => $phone,
-            'payment_status' => 'success',
-            'payment_id' => 'TXN-NOGENDER01',
-            'is_completed' => 0
+            'membership_id'       => '123456789013',
+            'phone'               => $phone,
+            'payment_status'      => 'success',
+            'payment_id'          => 'TXN-NOGENDER01',
+            'is_completed'        => 0,
+            'is_aadhaar_verified' => true,
         ]);
 
         // Submit form without gender
