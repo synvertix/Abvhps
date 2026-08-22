@@ -9,6 +9,7 @@ use App\Models\TaxCertificate;
 use App\Models\SiteSetting;
 use App\Models\ExamSetting;
 use App\Models\FundraisingCampaign;
+use App\Models\Donation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -245,5 +246,59 @@ class AdminModulesTest extends TestCase
         $homeRes->assertStatus(200);
         $homeRes->assertSee('+91 9998887776');
         $homeRes->assertSee('support@abvhps.org');
+    }
+
+    /**
+     * Module 16: Admin Devotee Totals Paid Filter
+     */
+    public function test_admin_fundraising_totals_include_paid_donations_and_exclude_pending_failed_cancelled(): void
+    {
+        Donation::create([
+            'name'            => 'PAID DONOR 1',
+            'contact'         => '9876543210',
+            'amount'          => 1500.00,
+            'payment_gateway' => 'cashfree',
+            'payment_status'  => 'paid',
+        ]);
+
+        Donation::create([
+            'name'            => 'PAID DONOR 2',
+            'contact'         => '9876543211',
+            'amount'          => 2500.00,
+            'payment_gateway' => 'razorpay',
+            'payment_status'  => 'paid',
+        ]);
+
+        Donation::create([
+            'name'            => 'PENDING DONOR',
+            'contact'         => '9876543212',
+            'amount'          => 5000.00,
+            'payment_gateway' => 'cashfree',
+            'payment_status'  => 'pending',
+        ]);
+
+        Donation::create([
+            'name'            => 'FAILED DONOR',
+            'contact'         => '9876543213',
+            'amount'          => 10000.00,
+            'payment_gateway' => 'razorpay',
+            'payment_status'  => 'failed',
+        ]);
+
+        Donation::create([
+            'name'            => 'CANCELLED DONOR',
+            'contact'         => '9876543214',
+            'amount'          => 20000.00,
+            'payment_gateway' => 'cashfree',
+            'payment_status'  => 'cancelled',
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('admin.fundraising.index'));
+
+        $response->assertStatus(200);
+        $stats = $response->viewData('stats');
+
+        $this->assertEquals(4000.00, (float) $stats['total_devotee_donations']);
+        $this->assertEquals(2, $stats['donor_count']);
     }
 }

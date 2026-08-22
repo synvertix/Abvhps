@@ -213,4 +213,40 @@ class SeoOptimizationTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('content="noindex, nofollow"', false);
     }
+
+    /**
+     * 10. Top public header and mobile header drawer cleanup
+     */
+    public function test_top_header_and_mobile_drawer_header_cleanups(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertStatus(200);
+        $content = $response->getContent();
+
+        // Top header retains contact phone and email
+        $response->assertSee('+91 8884933379');
+        $response->assertSee('info@abvhps.org');
+
+        // Top header element check
+        if (preg_match('/<header[^>]*>(.*?)<\/header>/s', $content, $matches)) {
+            $headerHtml = $matches[1];
+            $this->assertStringNotContainsString('Facebook', $headerHtml);
+            $this->assertStringNotContainsString('Twitter', $headerHtml);
+            $this->assertStringNotContainsString('YouTube', $headerHtml);
+            $this->assertStringNotContainsString('80G/12A Compliance', $headerHtml);
+        }
+
+        // Mobile drawer footer check
+        if (preg_match('/id="public-mobile-drawer"[^>]*>(.*?)<\/div>\s*<\/div>/s', $content, $matches)) {
+            $drawerHtml = $matches[1];
+            $this->assertStringNotContainsString('80G / 12A TAX EXEMPTION COMPLIANCE', $drawerHtml);
+        }
+
+        // Footer compliance link remains
+        if (preg_match('/<footer[^>]*>(.*?)<\/footer>/s', $content, $matches)) {
+            $footerHtml = $matches[1];
+            $this->assertStringContainsString('80G / 12A', $footerHtml);
+        }
+    }
 }

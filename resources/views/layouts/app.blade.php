@@ -85,12 +85,6 @@
                 <span>📞 {{ \App\Models\SiteSetting::get('contact_phone', '+91 8884933379') }}</span>
                 <span>✉️ {{ \App\Models\SiteSetting::get('contact_email', 'info@abvhps.org') }}</span>
             </div>
-            <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] sm:text-xs">
-                <a href="{{ \App\Models\SiteSetting::get('facebook_url', '#') }}" target="_blank" class="hover:text-brandOrange">Facebook</a>
-                <a href="{{ \App\Models\SiteSetting::get('twitter_url', '#') }}" target="_blank" class="hover:text-brandOrange">Twitter</a>
-                <a href="{{ \App\Models\SiteSetting::get('youtube_url', '#') }}" target="_blank" class="hover:text-brandOrange">YouTube</a>
-                <a href="{{ route('public.certificates') }}" class="hover:text-brandOrange font-bold text-orange-300">📜 80G/12A Compliance</a>
-            </div>
         </div>
     </header>
 
@@ -460,11 +454,6 @@
 
         <!-- Footer of Drawer (Opaque #0b1426) -->
         <div class="p-3.5 border-t border-white/10 space-y-1.5 text-[10px] shrink-0 bg-[#0b1426]">
-            <a href="{{ route('public.certificates') }}" 
-               onclick="togglePublicMobileMenu(false)" 
-               class="block text-brandOrange font-black tracking-wider uppercase hover:underline">
-                📜 80G / 12A TAX EXEMPTION COMPLIANCE
-            </a>
             <div class="text-gray-400 text-[9px] space-y-0.5 font-bold">
                 <div>📞 {{ \App\Models\SiteSetting::get('contact_phone', '+91 8884933379') }}</div>
                 <div>✉️ {{ \App\Models\SiteSetting::get('contact_email', 'info@abvhps.org') }}</div>
