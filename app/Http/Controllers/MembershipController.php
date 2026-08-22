@@ -588,7 +588,7 @@ class MembershipController extends Controller
         }
 
         // Security Requirement 4: Cryptographically strong, unpredictable verification ID (Str::uuid)
-        $verificationId = 'ABVHPS_DIGILOCKER_' . (string) Str::uuid();
+        $verificationId = 'ABV_' . (string) Str::uuid();
 
         // Security Requirement 5: Protect raw Aadhaar in session using Laravel Crypt
         try {
