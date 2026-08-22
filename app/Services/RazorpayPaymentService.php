@@ -248,19 +248,15 @@ class RazorpayPaymentService implements PaymentGatewayInterface
      *   Header: X-Razorpay-Signature
      *
      * CRITICAL: Use raw body ONLY. Never parse/re-serialize.
+     * FAIL CLOSED: Always return false if webhook secret or signature is missing/invalid.
      */
     public function verifyWebhookSignature(Request $request): bool
     {
         $signature = $request->header('X-Razorpay-Signature', '');
         $secret    = $this->webhookSecret;
 
-        if (empty($secret)) {
-            Log::warning('Razorpay webhook secret not configured — allowing in simulation mode');
-            return true; // Allow in dev/simulation mode
-        }
-
-        if (empty($signature)) {
-            Log::warning('Razorpay webhook: missing X-Razorpay-Signature header');
+        if (empty($secret) || empty($signature)) {
+            Log::warning('Razorpay webhook signature verification rejected: missing signature header or webhook secret');
             return false;
         }
 

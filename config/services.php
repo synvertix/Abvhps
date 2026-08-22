@@ -41,7 +41,6 @@ return [
         'verify_client_id'      => env('CASHFREE_VERIFY_CLIENT_ID', ''),
         'verify_client_secret'  => env('CASHFREE_VERIFY_CLIENT_SECRET', ''),
         'verification_base_url' => env('CASHFREE_VERIFICATION_BASE_URL', ''),
-        'webhook_secret'        => env('CASHFREE_WEBHOOK_SECRET', ''),
         'api_version'           => env('CASHFREE_API_VERSION', '2023-08-01'),
         'environment'           => env('CASHFREE_ENV', 'sandbox'), // 'sandbox' or 'production'
     ],

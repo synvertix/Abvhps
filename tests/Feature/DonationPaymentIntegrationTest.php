@@ -231,6 +231,9 @@ class DonationPaymentIntegrationTest extends TestCase
 
     public function test_cashfree_webhook_confirms_payment_and_increments_campaign(): void
     {
+        $secret = 'test_cf_secret_key_999';
+        config(['services.cashfree.secret_key' => $secret]);
+
         $campaign = $this->createCampaign(['raised_amount' => 5000.00]);
 
         $donation = Donation::create([
@@ -260,8 +263,16 @@ class DonationPaymentIntegrationTest extends TestCase
             ]
         ];
 
-        // Webhook call
-        $response = $this->postJson('/webhook/cashfree', $webhookPayload);
+        $rawBody   = json_encode($webhookPayload);
+        $timestamp = (string) time();
+        $signature = base64_encode(hash_hmac('sha256', $timestamp . $rawBody, $secret, true));
+
+        $response = $this->call('POST', '/webhook/cashfree', [], [], [], [
+            'HTTP_X_WEBHOOK_TIMESTAMP' => $timestamp,
+            'HTTP_X_WEBHOOK_SIGNATURE' => $signature,
+            'CONTENT_TYPE'             => 'application/json',
+        ], $rawBody);
+
         $response->assertStatus(200);
 
         $donation->refresh();
@@ -274,6 +285,9 @@ class DonationPaymentIntegrationTest extends TestCase
 
     public function test_duplicate_webhook_delivery_is_idempotent(): void
     {
+        $secret = 'test_cf_secret_key_999';
+        config(['services.cashfree.secret_key' => $secret]);
+
         $campaign = $this->createCampaign(['raised_amount' => 5000.00]);
 
         $donation = Donation::create([
@@ -296,8 +310,18 @@ class DonationPaymentIntegrationTest extends TestCase
             ]
         ];
 
+        $rawBody   = json_encode($webhookPayload);
+        $timestamp = (string) time();
+        $signature = base64_encode(hash_hmac('sha256', $timestamp . $rawBody, $secret, true));
+
+        $headers = [
+            'HTTP_X_WEBHOOK_TIMESTAMP' => $timestamp,
+            'HTTP_X_WEBHOOK_SIGNATURE' => $signature,
+            'CONTENT_TYPE'             => 'application/json',
+        ];
+
         // Delivery 1
-        $res1 = $this->postJson('/webhook/cashfree', $webhookPayload);
+        $res1 = $this->call('POST', '/webhook/cashfree', [], [], [], $headers, $rawBody);
         $res1->assertStatus(200);
 
         $donation->refresh();
@@ -306,11 +330,11 @@ class DonationPaymentIntegrationTest extends TestCase
         $this->assertEquals(6000.00, (float) $campaign->raised_amount);
 
         // Duplicate Delivery 2
-        $res2 = $this->postJson('/webhook/cashfree', $webhookPayload);
+        $res2 = $this->call('POST', '/webhook/cashfree', [], [], [], $headers, $rawBody);
         $res2->assertStatus(200);
 
         // Duplicate Delivery 3
-        $res3 = $this->postJson('/webhook/cashfree', $webhookPayload);
+        $res3 = $this->call('POST', '/webhook/cashfree', [], [], [], $headers, $rawBody);
         $res3->assertStatus(200);
 
         $donation->refresh();
@@ -328,6 +352,9 @@ class DonationPaymentIntegrationTest extends TestCase
 
     public function test_razorpay_webhook_marks_donation_paid(): void
     {
+        $secret = 'test_rzp_webhook_secret_888';
+        config(['services.razorpay.webhook_secret' => $secret]);
+
         $campaign = $this->createCampaign(['raised_amount' => 20000.00]);
 
         $donation = Donation::create([
@@ -356,7 +383,14 @@ class DonationPaymentIntegrationTest extends TestCase
             ]
         ];
 
-        $response = $this->postJson('/webhook/razorpay', $webhookPayload);
+        $rawBody   = json_encode($webhookPayload);
+        $signature = hash_hmac('sha256', $rawBody, $secret);
+
+        $response = $this->call('POST', '/webhook/razorpay', [], [], [], [
+            'HTTP_X_RAZORPAY_SIGNATURE' => $signature,
+            'CONTENT_TYPE'              => 'application/json',
+        ], $rawBody);
+
         $response->assertStatus(200);
 
         $donation->refresh();

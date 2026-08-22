@@ -21,17 +21,15 @@ class CashfreePaymentService implements PaymentGatewayInterface
 {
     protected string $appId;
     protected string $secretKey;
-    protected string $webhookSecret;
     protected string $apiVersion;
     protected string $baseUrl;
     protected bool $isConfigured;
 
     public function __construct()
     {
-        $this->appId         = config('services.cashfree.app_id', '');
-        $this->secretKey     = config('services.cashfree.secret_key', '');
-        $this->webhookSecret = config('services.cashfree.webhook_secret', '');
-        $this->apiVersion    = config('services.cashfree.api_version', '2023-08-01');
+        $this->appId      = config('services.cashfree.app_id', '');
+        $this->secretKey  = config('services.cashfree.secret_key', '');
+        $this->apiVersion = config('services.cashfree.api_version', '2023-08-01');
 
         $environment  = config('services.cashfree.environment', 'sandbox');
         $this->baseUrl = $environment === 'production'
@@ -219,26 +217,26 @@ class CashfreePaymentService implements PaymentGatewayInterface
      * Verify Cashfree webhook signature using raw request body.
      *
      * Cashfree signature algorithm:
-     *   HMAC-SHA256( "{timestamp}{rawBody}", webhook_secret )
-     *   Header: x-webhook-signature (base64)
-     *   Header: x-webhook-timestamp
+     *   HMAC-SHA256( "{timestamp}{rawBody}", CASHFREE_SECRET_KEY )
+     *   Header: x-webhook-signature / x-cashfree-signature (base64)
+     *   Header: x-webhook-timestamp / x-cashfree-timestamp
      *
      * CRITICAL: Use raw body ONLY. Never re-serialize JSON.
+     * FAIL CLOSED: Always return false if timestamp, signature, or secret is missing/invalid.
      */
     public function verifyWebhookSignature(Request $request): bool
     {
-        $timestamp = $request->header('x-webhook-timestamp', '');
-        $signature = $request->header('x-webhook-signature', '');
-        $secret    = $this->webhookSecret;
+        $timestamp = $request->header('x-webhook-timestamp') ?? $request->header('x-cashfree-timestamp') ?? '';
+        $signature = $request->header('x-webhook-signature') ?? $request->header('x-cashfree-signature') ?? '';
+        $secret    = $this->secretKey;
 
         if (empty($timestamp) || empty($signature) || empty($secret)) {
-            Log::warning('Cashfree webhook missing signature headers or secret not configured');
-            // In simulation mode (unconfigured), allow processing for testing
-            return empty($secret);
+            Log::warning('Cashfree webhook signature verification rejected: missing timestamp, signature header, or secret key');
+            return false;
         }
 
-        $rawBody   = $request->getContent();
-        $computed  = base64_encode(hash_hmac('sha256', $timestamp . $rawBody, $secret, true));
+        $rawBody  = $request->getContent();
+        $computed = base64_encode(hash_hmac('sha256', $timestamp . $rawBody, $secret, true));
 
         $valid = hash_equals($computed, $signature);
 
