@@ -283,14 +283,31 @@ class CashfreeSecureIdVerificationTest extends TestCase
             ]);
 
         $response->assertStatus(200);
+        $response->assertJson([
+            'status'       => 'redirect',
+            'redirect_url' => 'https://digilocker.cashfree.com/auth',
+        ]);
 
         $verifId = session('digilocker_verification_id');
         $this->assertNotNull($verifId);
-        $this->assertStringStartsWith('ABVHPS_DIGILOCKER_', $verifId);
-        $uuidPart = substr($verifId, strlen('ABVHPS_DIGILOCKER_'));
+        $this->assertLessThanOrEqual(50, strlen($verifId));
+        $this->assertStringStartsWith('ABV_', $verifId);
+        $uuidPart = substr($verifId, strlen('ABV_'));
         $this->assertTrue(\Illuminate\Support\Str::isUuid($uuidPart));
         $this->assertStringNotContainsString('9876543210', $verifId);
         $this->assertStringNotContainsString('234567890123', $verifId);
+        $this->assertStringNotContainsString('123456789012', $verifId);
+
+        Http::assertSent(function ($request) use ($verifId) {
+            if (str_contains($request->url(), '/verification/digilocker')) {
+                $data = $request->data();
+                return isset($data['verification_id'])
+                    && $data['verification_id'] === $verifId
+                    && strlen($data['verification_id']) <= 50
+                    && str_starts_with($data['verification_id'], 'ABV_');
+            }
+            return false;
+        });
     }
 
     /**
