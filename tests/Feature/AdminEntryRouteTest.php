@@ -18,8 +18,8 @@ class AdminEntryRouteTest extends TestCase
 
         $this->admin = User::create([
             'name' => 'ADMIN TEST OFFICER',
-            'email' => 'admin@abvhps.org',
-            'password' => bcrypt('AdminPassword123')
+            'email' => 'admin-test@abvhps.test',
+            'password' => bcrypt('TestOnlyPassword123!')
         ]);
     }
 
@@ -55,8 +55,8 @@ class AdminEntryRouteTest extends TestCase
     public function test_successful_admin_login_redirects_to_dashboard(): void
     {
         $response = $this->post(route('admin.login.submit'), [
-            'email' => 'admin@abvhps.org',
-            'password' => 'AdminPassword123'
+            'email' => 'admin-test@abvhps.test',
+            'password' => 'TestOnlyPassword123!'
         ]);
 
         $response->assertStatus(302);
