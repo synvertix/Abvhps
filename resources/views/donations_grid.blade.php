@@ -305,30 +305,21 @@
                 <div class="space-y-3">
                     <label class="block text-xs font-black text-brandDarkGray uppercase tracking-wider flex items-center gap-2">
                         <span class="w-5 h-5 rounded-full bg-brandOrange text-white text-[10px] flex items-center justify-center font-bold">1</span>
-                        <span>Select Donation Amount (INR)</span>
+                        <span>Donation Amount (INR)</span>
                         <span class="text-red-500">*</span>
                     </label>
-
-                    <!-- Preset Amount Grid -->
-                    <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
-                        @foreach([100, 500, 1000, 2500, 5000, 10000] as $amt)
-                            <button type="button" onclick="selectPresetAmount({{ $amt }}, this)" class="preset-amount-btn py-3 px-2 rounded-2xl border-2 font-black text-xs sm:text-sm text-center transition flex flex-col items-center justify-center min-h-[50px] cursor-pointer @if($amt === 500) border-brandOrange bg-orange-50 text-brandOrange ring-2 ring-brandOrange/20 @else border-gray-200 bg-gray-50/50 text-brandGray hover:border-orange-300 @endif">
-                                <span>₹{{ number_format($amt) }}</span>
-                            </button>
-                        @endforeach
-                    </div>
 
                     <!-- Custom Amount Input -->
                     <div class="relative pt-2">
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 font-black text-base pt-2">
                             ₹
                         </div>
-                        <input type="number" id="donation_amount" name="amount" min="100" max="500000" step="1" value="500" required
+                        <input type="number" id="donation_amount" name="amount" min="1" max="500000" step="1" required
                                class="w-full pl-9 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-2xl text-sm sm:text-base font-black font-mono text-gray-900 focus:outline-none focus:border-brandOrange focus:bg-white transition"
-                               placeholder="Or enter custom amount (Min: ₹100, Max: ₹5,00,000)"
+                               placeholder="Enter amount from ₹1 to ₹5,00,000"
                                oninput="handleCustomAmountInput(this.value)">
                         <p class="text-[10px] text-gray-400 font-semibold mt-1 pl-1">
-                            * Server-side amount validation enforced. Minimum ₹100, Maximum ₹5,00,000 per transaction.
+                            * Server-side amount validation enforced. Minimum ₹1 • Maximum ₹5,00,000 per transaction.
                         </p>
                     </div>
                 </div>
@@ -463,7 +454,7 @@
                 <div class="pt-4 space-y-3">
                     <button type="submit" id="submit_donation_btn" class="w-full bg-brandOrange hover:bg-orange-600 text-white font-black text-sm sm:text-base py-4 px-6 rounded-2xl shadow-xl shadow-orange-500/25 uppercase tracking-wider transition transform hover:scale-[1.01] flex items-center justify-center gap-2 min-h-[52px] cursor-pointer">
                         <span id="btn_icon">🔒</span>
-                        <span id="btn_label">Proceed to Contribute ₹500</span>
+                        <span id="btn_label">Proceed to Contribute</span>
                     </button>
 
                     <div class="flex flex-wrap items-center justify-center gap-4 text-[10px] text-gray-500 font-semibold pt-1">
@@ -554,37 +545,19 @@
         }
     }
 
-    function selectPresetAmount(amount, buttonEl) {
-        document.querySelectorAll('.preset-amount-btn').forEach(btn => {
-            btn.classList.remove('border-brandOrange', 'bg-orange-50', 'text-brandOrange', 'ring-2', 'ring-brandOrange/20');
-            btn.classList.add('border-gray-200', 'bg-gray-50/50', 'text-brandGray');
-        });
-
-        if (buttonEl) {
-            buttonEl.classList.remove('border-gray-200', 'bg-gray-50/50', 'text-brandGray');
-            buttonEl.classList.add('border-brandOrange', 'bg-orange-50', 'text-brandOrange', 'ring-2', 'ring-brandOrange/20');
-        }
-
-        const amtInput = document.getElementById('donation_amount');
-        if (amtInput) {
-            amtInput.value = amount;
-        }
-        updateButtonLabel(amount);
-    }
-
     function handleCustomAmountInput(value) {
         const val = parseFloat(value) || 0;
-        document.querySelectorAll('.preset-amount-btn').forEach(btn => {
-            btn.classList.remove('border-brandOrange', 'bg-orange-50', 'text-brandOrange', 'ring-2', 'ring-brandOrange/20');
-            btn.classList.add('border-gray-200', 'bg-gray-50/50', 'text-brandGray');
-        });
         updateButtonLabel(val);
     }
 
     function updateButtonLabel(amount) {
         const btnLabel = document.getElementById('btn_label');
         if (btnLabel) {
-            btnLabel.innerText = `Proceed to Contribute ₹${amount.toLocaleString('en-IN')}`;
+            if (amount && amount > 0) {
+                btnLabel.innerText = `Proceed to Contribute ₹${amount.toLocaleString('en-IN')}`;
+            } else {
+                btnLabel.innerText = 'Proceed to Contribute';
+            }
         }
     }
 
@@ -654,8 +627,8 @@
             return;
         }
 
-        if (amount < 100 || amount > 500000) {
-            showToast('Invalid Amount', 'Contribution amount must be between ₹100 and ₹5,00,000.', '⚠️');
+        if (amount < 1 || amount > 500000) {
+            showToast('Invalid Amount', 'Contribution amount must be between ₹1 and ₹5,00,000.', '⚠️');
             return;
         }
 
