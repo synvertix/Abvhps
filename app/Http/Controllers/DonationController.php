@@ -23,7 +23,7 @@ class DonationController extends Controller
     // =========================================================================
 
     /** Minimum donation in INR. Any lower will be rejected server-side. */
-    private const MIN_AMOUNT = 100;
+    private const MIN_AMOUNT = 1;
 
     /** Maximum donation in INR (₹5,00,000 = 5 Lakh). */
     private const MAX_AMOUNT = 500000;
