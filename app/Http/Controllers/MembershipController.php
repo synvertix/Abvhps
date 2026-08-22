@@ -8,6 +8,7 @@ use Carbon\Carbon;
 
 use App\Models\Membership;
 use App\Services\Fast2SmsService;
+use App\Services\RazorpayPaymentService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Crypt;
@@ -111,12 +112,17 @@ class MembershipController extends Controller
             return false;
         }
 
+        $validAmounts = [
+            RazorpayPaymentService::MEMBERSHIP_AMOUNT_RUPEES,
+            RazorpayPaymentService::LEGACY_MEMBERSHIP_AMOUNT_RUPEES,
+        ];
+
         return $member->payment_status === 'success'
             && $member->payment_gateway === 'razorpay'
             && !empty($member->payment_order_id)
             && !empty($member->payment_id)
             && !is_null($member->payment_verified_at)
-            && (float) $member->payment_amount == 100.00;
+            && in_array((float) $member->payment_amount, $validAmounts, true);
     }
 
     /**
@@ -132,7 +138,7 @@ class MembershipController extends Controller
         return (bool) $member->is_completed || self::hasVerifiedMembershipPayment($member);
     }
 
-    // 4. Display the ₹100 Payment Screen
+    // 4. Display the ₹1 Payment Screen
     public function showPaymentPage()
     {
         $phone = session('verified_membership_phone');
@@ -153,7 +159,7 @@ class MembershipController extends Controller
     }
 
     /**
-     * 5. Initiate Razorpay Order for ₹100 Membership Payment.
+     * 5. Initiate Razorpay Order for ₹1 Membership Payment.
      */
     public function initiateRazorpayPayment(Request $request)
     {
@@ -177,7 +183,7 @@ class MembershipController extends Controller
         }
 
         $internalRef = 'ABVHPS_MEM_' . (string) Str::uuid();
-        $razorpayService = new \App\Services\RazorpayPaymentService();
+        $razorpayService = new RazorpayPaymentService();
         $orderResult = $razorpayService->createMembershipOrder($internalRef, $phone);
 
         if (!$orderResult['success']) {
@@ -191,14 +197,14 @@ class MembershipController extends Controller
             'payment_status'   => 'pending',
             'payment_gateway'  => 'razorpay',
             'payment_order_id' => $orderResult['order_id'],
-            'payment_amount'   => 100.00,
+            'payment_amount'   => RazorpayPaymentService::MEMBERSHIP_AMOUNT_RUPEES,
         ]);
 
         return response()->json([
             'success'      => true,
             'key_id'       => $orderResult['key_id'],
             'order_id'     => $orderResult['order_id'],
-            'amount_paise' => 10000,
+            'amount_paise' => RazorpayPaymentService::MEMBERSHIP_AMOUNT_PAISE,
             'currency'     => 'INR',
         ]);
     }
@@ -285,7 +291,7 @@ class MembershipController extends Controller
                 $lockedMember->payment_status      = 'success';
                 $lockedMember->payment_gateway     = 'razorpay';
                 $lockedMember->payment_id          = $paymentId;
-                $lockedMember->payment_amount      = 100.00;
+                $lockedMember->payment_amount      = RazorpayPaymentService::MEMBERSHIP_AMOUNT_RUPEES;
                 $lockedMember->payment_verified_at = Carbon::now();
                 $lockedMember->save();
             });

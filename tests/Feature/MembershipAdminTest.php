@@ -172,7 +172,7 @@ class MembershipAdminTest extends TestCase
         \Illuminate\Support\Facades\Http::fake([
             'https://api.razorpay.com/v1/orders' => \Illuminate\Support\Facades\Http::response([
                 'id'       => 'order_SIM_INIT',
-                'amount'   => 10000,
+                'amount'   => 100,
                 'currency' => 'INR',
             ], 200),
         ]);

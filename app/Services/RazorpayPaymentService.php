@@ -23,6 +23,10 @@ use Illuminate\Support\Facades\Log;
  */
 class RazorpayPaymentService implements PaymentGatewayInterface
 {
+    public const MEMBERSHIP_AMOUNT_PAISE = 100;
+    public const MEMBERSHIP_AMOUNT_RUPEES = 1.00;
+    public const LEGACY_MEMBERSHIP_AMOUNT_RUPEES = 100.00;
+
     protected string $keyId;
     protected string $keySecret;
     protected string $webhookSecret;
@@ -364,7 +368,7 @@ class RazorpayPaymentService implements PaymentGatewayInterface
 
     /**
      * Create a server-side Razorpay order for ABVHPS Membership Fee.
-     * Hardcoded amount = 10000 paise (₹100.00). No amount parameter accepted.
+     * Fixed test amount = 100 paise (₹1.00). No amount parameter accepted.
      * FAIL CLOSED when credentials are missing (zero simulation).
      */
     public function createMembershipOrder(string $internalReference, string $phone): array
@@ -381,7 +385,7 @@ class RazorpayPaymentService implements PaymentGatewayInterface
             $response = Http::withBasicAuth($this->keyId, $this->keySecret)
                 ->withHeaders(['Content-Type' => 'application/json'])
                 ->post("{$this->baseUrl}/orders", [
-                    'amount'          => 10000, // ₹100.00 fixed
+                    'amount'          => self::MEMBERSHIP_AMOUNT_PAISE, // ₹1.00 test amount
                     'currency'        => 'INR',
                     'receipt'         => $internalReference,
                     'payment_capture' => 1,
@@ -397,7 +401,7 @@ class RazorpayPaymentService implements PaymentGatewayInterface
                     'success'      => true,
                     'key_id'       => $this->keyId, // public key ID only
                     'order_id'     => $data['id'],
-                    'amount_paise' => 10000,
+                    'amount_paise' => self::MEMBERSHIP_AMOUNT_PAISE,
                     'currency'     => 'INR',
                 ];
             }
@@ -424,8 +428,8 @@ class RazorpayPaymentService implements PaymentGatewayInterface
      * Verify Razorpay membership payment signature & server-to-server captured payment facts.
      *
      * 1. Validates HMAC-SHA256 signature using timing-safe hash_equals().
-     * 2. Server-to-server HTTP GET /payments/{payment_id} -> requires status=captured, amount=10000, currency=INR, order_id=DB payment_order_id.
-     * 3. Server-to-server HTTP GET /orders/{order_id} -> requires status=paid, id=DB payment_order_id, amount=10000, currency=INR.
+     * 2. Server-to-server HTTP GET /payments/{payment_id} -> requires status=captured, amount=100, currency=INR, order_id=DB payment_order_id.
+     * 3. Server-to-server HTTP GET /orders/{order_id} -> requires status=paid, id=DB payment_order_id, amount=100, currency=INR.
      */
     public function verifyMembershipPayment(string $razorpayPaymentId, string $razorpaySignature, string $serverOrderId): array
     {
@@ -486,14 +490,14 @@ class RazorpayPaymentService implements PaymentGatewayInterface
 
             if (
                 $paymentStatus !== 'captured' ||
-                $paymentAmount !== 10000 ||
+                $paymentAmount !== self::MEMBERSHIP_AMOUNT_PAISE ||
                 $paymentCurrency !== 'INR' ||
                 $paymentOrderId !== $serverOrderId
             ) {
                 Log::warning('Razorpay membership payment status/fact check failed', [
                     'expected_status'   => 'captured',
                     'actual_status'     => $paymentStatus,
-                    'expected_amount'   => 10000,
+                    'expected_amount'   => self::MEMBERSHIP_AMOUNT_PAISE,
                     'actual_amount'     => $paymentAmount,
                     'expected_currency' => 'INR',
                     'actual_currency'   => $paymentCurrency,
@@ -531,7 +535,7 @@ class RazorpayPaymentService implements PaymentGatewayInterface
             if (
                 $orderStatus !== 'paid' ||
                 $orderId !== $serverOrderId ||
-                $orderAmount !== 10000 ||
+                $orderAmount !== self::MEMBERSHIP_AMOUNT_PAISE ||
                 $orderCurrency !== 'INR'
             ) {
                 Log::warning('Razorpay membership order status/fact check failed', [
@@ -539,7 +543,7 @@ class RazorpayPaymentService implements PaymentGatewayInterface
                     'actual_status'     => $orderStatus,
                     'expected_id'       => $serverOrderId,
                     'actual_id'         => $orderId,
-                    'expected_amount'   => 10000,
+                    'expected_amount'   => self::MEMBERSHIP_AMOUNT_PAISE,
                     'actual_amount'     => $orderAmount,
                     'expected_currency' => 'INR',
                     'actual_currency'   => $orderCurrency,
