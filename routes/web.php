@@ -201,6 +201,9 @@ Route::post('/admin/fundraising/store', [FundraisingController::class, 'storeCam
 // ======================================================================
 
 // 1. PUBLIC UNPROTECTED GATEWAYS (Accessible without any active login session)
+Route::get('/admin', function () {
+    return redirect()->route('login');
+})->name('admin.entry');
 Route::get('/admin/login', [AdminAuthController::class, 'showLoginView'])->name('login');
 Route::post('/admin/login', [AdminAuthController::class, 'executeAuthentication'])->name('admin.login.submit');
 
