@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Donation;
 use App\Models\FundraisingCampaign;
 use App\Models\NotificationLog;
+use App\Models\SiteSetting;
 use App\Services\CashfreePaymentService;
 use App\Services\RazorpayPaymentService;
 use Carbon\Carbon;
@@ -87,7 +88,7 @@ class DonationController extends Controller
         }
 
         $logoAsset  = asset('images/ABVHPS_LOGO.jpg');
-        $address    = 'Survey No:1035, Sasirekhapuram, Akkalareddy Palli, Porumamilla, Kadapa, A.P - 516193';
+        $address    = SiteSetting::get('contact_address', 'Survey No:1826, Shanmukhapuram, Akkalareddy Palli Village and Post, Porumamilla Mandalam, Kadapa, A.P - 516193');
         $receiptNum = $donation->receipt_number ?? ('ABVHPS-TXN-' . str_pad($donation->id, 6, '0', STR_PAD_LEFT));
 
         $paidAt     = $donation->paid_at
@@ -189,20 +190,17 @@ class DonationController extends Controller
                 </span>
             </div>
 
-            <div style='margin-top: 40px; border-top: 1px dashed #E5E7EB; padding-top: 20px; text-align: right;'>
-                <div style='display: inline-block; text-align: center;'>
-                    <div style='font-size: 14px; font-weight: bold; color: #111827; margin-bottom: 45px;'>Authorized Signatory</div>
-                    <div style='font-size: 10px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px;'>Central Administration Node Desk</div>
-                </div>
-            </div>
-
             <div style='text-align: center; margin-top: 30px; border-top: 1px solid #E5E7EB; padding-top: 15px;'>
                 <p style='color: #9CA3AF; font-size: 9px; font-weight: 700; text-transform: uppercase; margin: 0; letter-spacing: 1px;'>Thank you for your sacred contribution towards Sanatana Dharma Protection.</p>
             </div>
         </div>
         ";
 
-        return response($htmlOutput)->header('Content-Type', 'text/html');
+        $filename = preg_replace('/[^A-Za-z0-9_\-]/', '_', $receiptNum) . '.html';
+
+        return response($htmlOutput)
+            ->header('Content-Type', 'text/html; charset=UTF-8')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
     }
 
     // =========================================================================

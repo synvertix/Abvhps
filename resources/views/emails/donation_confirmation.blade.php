@@ -72,7 +72,7 @@
         <!-- Footer -->
         <div style="background-color: #f3f4f6; padding: 16px 24px; text-align: center; font-size: 11px; color: #9ca3af; border-top: 1px solid #e5e7eb;">
             <p style="margin: 0;">Akhanda Bharatha Viswa Hindu Parirakshana Samiti (ABVHPS)</p>
-            <p style="margin: 4px 0 0 0;">Survey No:1035, Sasirekhapuram, Akkalareddy Palli, Porumamilla, Kadapa, A.P - 516193</p>
+            <p style="margin: 4px 0 0 0;">{{ \App\Models\SiteSetting::get('contact_address', 'Survey No:1826, Shanmukhapuram, Akkalareddy Palli Village and Post, Porumamilla Mandalam, Kadapa, A.P - 516193') }}</p>
         </div>
     </div>
 </body>

@@ -590,6 +590,9 @@ class DonationPaymentIntegrationTest extends TestCase
         $response->assertSee('1,000.00');
         $response->assertSee('ABVHPS-RCP-2026-000100');
         $response->assertSee('Download Official 80G Receipt');
+        $response->assertSee('Thank You!');
+        $response->assertDontSee('Dhanyavadagalu');
+        $response->assertDontSee('target="_blank"');
     }
 
     // =========================================================================
@@ -609,7 +612,7 @@ class DonationPaymentIntegrationTest extends TestCase
             'payment_gateway'    => 'razorpay',
             'gateway_payment_id' => 'pay_MOCK_RECEIPT_123',
             'payment_status'     => 'paid',
-            'receipt_number'     => 'ABVHPS-RCP-2026-000555',
+            'receipt_number'     => 'ABVHPS-TXN-000555',
             'paid_at'            => Carbon::now('Asia/Kolkata'),
         ]);
 
@@ -617,6 +620,8 @@ class DonationPaymentIntegrationTest extends TestCase
             ->get('/donations/receipt/' . $donation->id);
 
         $response->assertStatus(200);
+        $response->assertHeader('Content-Type', 'text/html; charset=UTF-8');
+        $response->assertHeader('Content-Disposition', 'attachment; filename="ABVHPS-TXN-000555.html"');
         $response->assertSee('AKHANDA BHARATA VISWA HINDU PARIRAKSHANA SAMITI');
         $response->assertSee('Official Donation Receipt');
         $response->assertSee('RAMACHANDRA DEVOTEE');
@@ -624,6 +629,11 @@ class DonationPaymentIntegrationTest extends TestCase
         $response->assertSee('Razorpay');
         $response->assertSee('pay_MOCK_RECEIPT_123');
         $response->assertSee('PAID');
+        $response->assertSee('Survey No:1826, Shanmukhapuram, Akkalareddy Palli Village and Post, Porumamilla Mandalam, Kadapa, A.P - 516193');
+        $response->assertDontSee('Survey No:1035');
+        $response->assertDontSee('Sasirekhapuram');
+        $response->assertDontSee('Authorized Signatory');
+        $response->assertDontSee('Central Administration Node Desk');
     }
 
     public function test_unauthorized_user_cannot_access_other_donation_status_or_receipt(): void

@@ -64,9 +64,10 @@ class FundraisingController extends Controller
         $activeCount = $campaigns->where('status', 'active')->count();
         $expiredCount = $campaigns->where('status', 'expired')->count();
 
-        // Also fetch total general devotee donations from donations table
-        $totalDevoteeDonations = Donation::sum('amount');
-        $donorCount = Donation::count();
+        // Also fetch total general devotee donations from donations table (only successfully paid donations)
+        $paidDonations = Donation::where('payment_status', 'paid');
+        $totalDevoteeDonations = (clone $paidDonations)->sum('amount');
+        $donorCount = (clone $paidDonations)->count();
 
         $stats = [
             'total_target' => $totalTarget,

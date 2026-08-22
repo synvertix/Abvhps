@@ -92,7 +92,7 @@
                     <div class="space-y-1">
                         <h1 class="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight font-serif">
                             @if($isPaid)
-                                Dhanyavadagalu / Thank You!
+                                Thank You!
                             @elseif($isPending)
                                 Awaiting Payment Confirmation
                             @else
@@ -330,7 +330,7 @@
                     {{-- Action Buttons --}}
                     <div class="space-y-2.5 pt-1">
                         @if($isPaid)
-                            <a href="{{ route('donations.receipt', $donation->id) }}" target="_blank" rel="noopener noreferrer" class="group w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-extrabold py-3 px-5 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-orange-600/20 text-xs uppercase tracking-wider transition-all transform hover:-translate-y-0.5 active:translate-y-0 min-h-[44px]">
+                            <a href="{{ route('donations.receipt', $donation->id) }}" class="group w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-extrabold py-3 px-5 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-orange-600/20 text-xs uppercase tracking-wider transition-all transform hover:-translate-y-0.5 active:translate-y-0 min-h-[44px]">
                                 <svg class="w-4 h-4 transition-transform group-hover:-translate-y-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                 </svg>
