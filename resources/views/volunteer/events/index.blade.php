@@ -22,12 +22,12 @@
 
             <div class="flex flex-wrap items-center gap-2 sm:gap-3">
                 <a href="{{ route('volunteer.events.create') }}"
-                   class="bg-yellow-500 hover:bg-yellow-400 text-orange-950 text-xs font-black px-4 py-2 rounded-xl shadow uppercase tracking-wider transition min-h-[44px] inline-flex items-center gap-1.5">
-                    <span>➕</span> Create New Event
+                   class="bg-yellow-500 hover:bg-yellow-400 text-orange-950 text-xs font-black px-4 py-2 rounded-xl shadow uppercase tracking-wider transition min-h-[44px] inline-flex items-center">
+                    Create New Event
                 </a>
                 <a href="{{ route('volunteer.member_search') }}"
-                   class="bg-white/15 hover:bg-white/25 border border-white/20 text-white text-xs font-bold px-4 py-2 rounded-xl uppercase tracking-wider transition min-h-[44px] inline-flex items-center gap-1.5">
-                    <span>🔍</span> Member Search
+                   class="bg-white/15 hover:bg-white/25 border border-white/20 text-white text-xs font-bold px-4 py-2 rounded-xl uppercase tracking-wider transition min-h-[44px] inline-flex items-center">
+                    Member Search
                 </a>
                 <a href="{{ route('volunteer.dashboard') }}"
                    class="bg-white/15 hover:bg-white/25 border border-white/20 text-white text-xs font-bold px-4 py-2 rounded-xl uppercase tracking-wider transition min-h-[44px] inline-flex items-center">
@@ -91,19 +91,19 @@
         <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-1.5 flex flex-wrap items-center gap-1.5">
             <a href="{{ route('volunteer.events.index', ['tab' => 'conducted']) }}"
                class="flex-1 sm:flex-initial text-center px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition {{ $tab === 'conducted' || $tab === 'completed' ? 'bg-brandOrange text-white shadow-xs' : 'text-gray-600 hover:bg-gray-100' }}">
-                <span>🏆</span> Conducted Events ({{ $stats['conducted'] }})
+                Conducted Events ({{ $stats['conducted'] }})
             </a>
             <a href="{{ route('volunteer.events.index', ['tab' => 'upcoming']) }}"
                class="flex-1 sm:flex-initial text-center px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition {{ $tab === 'upcoming' ? 'bg-brandOrange text-white shadow-xs' : 'text-gray-600 hover:bg-gray-100' }}">
-                <span>📅</span> Upcoming Events ({{ $stats['upcoming'] }})
+                Upcoming Events ({{ $stats['upcoming'] }})
             </a>
             <a href="{{ route('volunteer.events.index', ['tab' => 'all']) }}"
                class="flex-1 sm:flex-initial text-center px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition {{ $tab === 'all' ? 'bg-brandOrange text-white shadow-xs' : 'text-gray-600 hover:bg-gray-100' }}">
-                <span>📋</span> All Events ({{ $stats['total'] }})
+                All Events ({{ $stats['total'] }})
             </a>
             <a href="{{ route('volunteer.events.create') }}"
-               class="ml-auto text-center px-4 py-2.5 rounded-xl text-xs font-bold text-brandOrange hover:bg-orange-50 transition border border-orange-200 flex items-center gap-1">
-                <span>➕</span> Create Event
+               class="ml-auto text-center px-4 py-2.5 rounded-xl text-xs font-bold text-brandOrange hover:bg-orange-50 transition border border-orange-200 inline-flex items-center">
+                Create Event
             </a>
         </div>
 

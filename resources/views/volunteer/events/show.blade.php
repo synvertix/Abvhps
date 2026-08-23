@@ -28,8 +28,8 @@
             <div class="flex flex-wrap items-center gap-2">
                 @if($event->status === 'upcoming')
                     <a href="{{ route('volunteer.events.edit', $event->id) }}"
-                       class="bg-white/15 hover:bg-white/25 border border-white/20 text-white text-xs font-bold px-4 py-2 rounded-xl uppercase tracking-wider transition min-h-[44px] inline-flex items-center gap-1.5">
-                        <span>✏️</span> Edit Event
+                       class="bg-white/15 hover:bg-white/25 border border-white/20 text-white text-xs font-bold px-4 py-2 rounded-xl uppercase tracking-wider transition min-h-[44px] inline-flex items-center">
+                        Edit Event
                     </a>
                 @endif
                 <a href="{{ route('volunteer.events.index') }}"
