@@ -105,21 +105,30 @@ class VolunteerEventController extends Controller
             'outcome'      => 'nullable|string|max:5000',
         ]);
 
+        $isVerifiedGeo = $volunteer->status === 'approved'
+            && ($volunteer->is_active === true || $volunteer->is_active === 1 || $volunteer->is_active === '1')
+            && $volunteer->geo_mapping_status === 'verified';
+
         $event = VolunteerEvent::create([
-            'volunteer_id' => $volunteer->id,
-            'title'        => $validated['title'],
-            'event_type'   => $validated['event_type'],
-            'description'  => $validated['description'] ?? null,
-            'event_date'   => $validated['event_date'],
-            'start_time'   => $validated['start_time'] ?? null,
-            'end_time'     => $validated['end_time'] ?? null,
-            'venue'        => $validated['venue'] ?? null,
-            'village'      => $validated['village'] ?? ($volunteer->resolved_grama_panchayat ?? null),
-            'mandal'       => $validated['mandal'] ?? ($volunteer->resolved_mandal ?? null),
-            'district'     => $validated['district'] ?? ($volunteer->resolved_district ?? null),
-            'state'        => $validated['state'] ?? ($volunteer->resolved_state ?? 'Andhra Pradesh'),
-            'status'       => $validated['status'],
-            'outcome'      => $validated['outcome'] ?? null,
+            'volunteer_id'        => $volunteer->id,
+            'title'               => $validated['title'],
+            'event_type'          => $validated['event_type'],
+            'description'         => $validated['description'] ?? null,
+            'event_date'          => $validated['event_date'],
+            'start_time'          => $validated['start_time'] ?? null,
+            'end_time'            => $validated['end_time'] ?? null,
+            'venue'               => $validated['venue'] ?? null,
+            'village'             => $validated['village'] ?? ($volunteer->resolved_grama_panchayat ?? null),
+            'mandal'              => $validated['mandal'] ?? ($volunteer->resolved_mandal ?? null),
+            'district'            => $validated['district'] ?? ($volunteer->resolved_district ?? null),
+            'state'               => $validated['state'] ?? ($volunteer->resolved_state ?? 'Andhra Pradesh'),
+            'state_id'            => $isVerifiedGeo ? $volunteer->state_id : null,
+            'district_id'         => $isVerifiedGeo ? $volunteer->district_id : null,
+            'assembly_segment_id' => $isVerifiedGeo ? $volunteer->assembly_segment_id : null,
+            'mandal_id'           => $isVerifiedGeo ? $volunteer->mandal_id : null,
+            'panchayat_id'        => $isVerifiedGeo ? $volunteer->panchayat_id : null,
+            'status'              => $validated['status'],
+            'outcome'             => $validated['outcome'] ?? null,
         ]);
 
         AuditLogger::log(

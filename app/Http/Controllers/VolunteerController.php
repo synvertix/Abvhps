@@ -522,11 +522,11 @@ class VolunteerController extends Controller
 
         if ($mappedStatus === 'approved') {
             // Validate required jurisdiction IDs based on cadre level
-            if ($cadreLevel === 'panchayat_president' && (!$panchayatId || !$mandalId || !$districtId || !$stateId)) {
-                return back()->withInput()->withErrors(['panchayat_id' => 'Panchayat President requires valid State, District, Mandal, and Panchayat selections.']);
+            if ($cadreLevel === 'panchayat_president' && (!$panchayatId || !$mandalId || !$assemblyId || !$districtId || !$stateId)) {
+                return back()->withInput()->withErrors(['panchayat_id' => 'Panchayat President requires valid State, District, Assembly Segment, Mandal, and Panchayat selections.']);
             }
-            if ($cadreLevel === 'mandal_president' && (!$mandalId || !$districtId || !$stateId)) {
-                return back()->withInput()->withErrors(['mandal_id' => 'Mandal President requires valid State, District, and Mandal selections.']);
+            if ($cadreLevel === 'mandal_president' && (!$mandalId || !$assemblyId || !$districtId || !$stateId)) {
+                return back()->withInput()->withErrors(['mandal_id' => 'Mandal President requires valid State, District, Assembly Segment, and Mandal selections.']);
             }
             if ($cadreLevel === 'assembly_president' && (!$assemblyId || !$districtId || !$stateId)) {
                 return back()->withInput()->withErrors(['assembly_segment_id' => 'Taluka / Assembly Segment President requires valid State, District, and Assembly Segment selections.']);

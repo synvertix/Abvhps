@@ -267,7 +267,7 @@ class VolunteerCadreScopeService
         return $query->whereRaw('1 = 0');
     }
 
-    public static function mandalsFor(Volunteer $volunteer, ?int $segmentOrDistrictId = null): Builder
+    public static function mandalsFor(Volunteer $volunteer, ?int $assemblySegmentId = null): Builder
     {
         if (!self::isVerifiedCadre($volunteer)) {
             return GeoMandal::whereRaw('1 = 0');
@@ -275,11 +275,8 @@ class VolunteerCadreScopeService
 
         $query = GeoMandal::where('is_active', true);
 
-        if ($segmentOrDistrictId) {
-            $query->where(function ($q) use ($segmentOrDistrictId) {
-                $q->where('assembly_segment_id', $segmentOrDistrictId)
-                  ->orWhere('district_id', $segmentOrDistrictId);
-            });
+        if ($assemblySegmentId) {
+            $query->where('assembly_segment_id', $assemblySegmentId);
         }
 
         if ($volunteer->cadre_level === 'national_president') {
@@ -384,7 +381,7 @@ class VolunteerCadreScopeService
     }
 
     // =========================================================================
-    // Subordinate Unit Directory Helpers
+    // Hierarchy Subordinate Unit Directory & Real Statistics
     // =========================================================================
 
     /**
@@ -407,134 +404,254 @@ class VolunteerCadreScopeService
         };
     }
 
-    protected static function getSubordinateStates(): Collection
+    public static function getUnitStatistics(string $tier, int $unitId): array
+    {
+        $foreignKey = match ($tier) {
+            'state'     => 'state_id',
+            'district'  => 'district_id',
+            'assembly'  => 'assembly_segment_id',
+            'mandal'    => 'mandal_id',
+            'panchayat' => 'panchayat_id',
+            default     => null,
+        };
+
+        if (!$foreignKey) {
+            return [
+                'members_count'          => 0,
+                'volunteers_count'       => 0,
+                'events_count'           => 0,
+                'upcoming_events_count'  => 0,
+                'completed_events_count' => 0,
+                'participants_count'     => 0,
+                'beneficiaries_count'    => 0,
+            ];
+        }
+
+        $membersCount = Membership::where($foreignKey, $unitId)->count();
+
+        $volunteersCount = Volunteer::where($foreignKey, $unitId)
+            ->where('status', 'approved')
+            ->where('is_active', true)
+            ->where('geo_mapping_status', 'verified')
+            ->count();
+
+        // Canonical Event Reporting: Prefer the event's canonical geography snapshot
+        $eventsQuery = \App\Models\VolunteerEvent::where($foreignKey, $unitId);
+        $eventsCount = (clone $eventsQuery)->count();
+        $upcomingEventsCount = (clone $eventsQuery)->where('status', 'upcoming')->count();
+        $completedEventsCount = (clone $eventsQuery)->where('status', 'completed')->count();
+
+        $eventIds = (clone $eventsQuery)->pluck('id');
+
+        $participantsCount = \App\Models\VolunteerEventMember::whereIn('volunteer_event_id', $eventIds)
+            ->whereIn('participation_status', ['registered', 'participated', 'benefited'])
+            ->count();
+
+        $beneficiariesCount = \App\Models\VolunteerEventMember::whereIn('volunteer_event_id', $eventIds)
+            ->where(function ($q) {
+                $q->where('participation_type', 'beneficiary')
+                  ->orWhere('participation_status', 'benefited');
+            })
+            ->count();
+
+        return [
+            'members_count'          => $membersCount,
+            'volunteers_count'       => $volunteersCount,
+            'events_count'           => $eventsCount,
+            'upcoming_events_count'  => $upcomingEventsCount,
+            'completed_events_count' => $completedEventsCount,
+            'participants_count'     => $participantsCount,
+            'beneficiaries_count'    => $beneficiariesCount,
+        ];
+    }
+
+    public static function getPresidentForUnit(string $tier, int $unitId): ?Volunteer
+    {
+        $cadreLevel = match ($tier) {
+            'state'     => 'state_president',
+            'district'  => 'district_president',
+            'assembly'  => 'assembly_president',
+            'mandal'    => 'mandal_president',
+            'panchayat' => 'panchayat_president',
+            default     => null,
+        };
+
+        $foreignKey = match ($tier) {
+            'state'     => 'state_id',
+            'district'  => 'district_id',
+            'assembly'  => 'assembly_segment_id',
+            'mandal'    => 'mandal_id',
+            'panchayat' => 'panchayat_id',
+            default     => null,
+        };
+
+        if (!$cadreLevel || !$foreignKey) return null;
+
+        return Volunteer::where('cadre_level', $cadreLevel)
+            ->where($foreignKey, $unitId)
+            ->where('status', 'approved')
+            ->where('is_active', true)
+            ->where('geo_mapping_status', 'verified')
+            ->first();
+    }
+
+    public static function getSubordinateStates(): Collection
     {
         return GeoState::where('is_active', true)->orderBy('name')->get()->map(function ($st) {
-            $pres = Volunteer::where('cadre_level', 'state_president')
-                ->where('state_id', $st->id)
-                ->where('status', 'approved')
-                ->where('is_active', true)
-                ->where('geo_mapping_status', 'verified')
-                ->first();
+            $pres = self::getPresidentForUnit('state', $st->id);
+            $stats = self::getUnitStatistics('state', $st->id);
 
             return [
-                'unit_id' => $st->id,
-                'unit_name' => $st->name,
-                'unit_type' => 'State',
-                'president_name' => $pres?->full_name ?? 'Not Assigned',
-                'contact_phone' => $pres?->phone ?? '—',
-                'is_assigned' => $pres !== null,
-                'volunteer_id' => $pres?->volunteer_id,
+                'unit_id'             => $st->id,
+                'unit_name'           => $st->name,
+                'unit_type'           => 'State',
+                'detail_route'        => route('volunteer.hierarchy.state', $st->id),
+                'child_count'         => $st->districts()->where('is_active', true)->count(),
+                'members_count'       => $stats['members_count'],
+                'volunteers_count'    => $stats['volunteers_count'],
+                'events_count'        => $stats['events_count'],
+                'beneficiaries_count' => $stats['beneficiaries_count'],
+                'president_name'      => $pres?->full_name ?? 'Not Assigned',
+                'contact_phone'       => $pres?->phone ?? '—',
+                'is_assigned'         => $pres !== null,
+                'volunteer_id'        => $pres?->volunteer_id,
             ];
         });
     }
 
-    protected static function getSubordinateDistricts(?int $stateId): Collection
+    public static function getSubordinateDistricts(?int $stateId): Collection
     {
         if (!$stateId) return collect();
 
         return GeoDistrict::where('state_id', $stateId)->where('is_active', true)->orderBy('name')->get()->map(function ($dst) {
-            $pres = Volunteer::where('cadre_level', 'district_president')
-                ->where('district_id', $dst->id)
-                ->where('status', 'approved')
-                ->where('is_active', true)
-                ->where('geo_mapping_status', 'verified')
-                ->first();
+            $pres = self::getPresidentForUnit('district', $dst->id);
+            $stats = self::getUnitStatistics('district', $dst->id);
 
             return [
-                'unit_id' => $dst->id,
-                'unit_name' => $dst->name,
-                'unit_type' => 'District',
-                'president_name' => $pres?->full_name ?? 'Not Assigned',
-                'contact_phone' => $pres?->phone ?? '—',
-                'is_assigned' => $pres !== null,
-                'volunteer_id' => $pres?->volunteer_id,
+                'unit_id'             => $dst->id,
+                'unit_name'           => $dst->name,
+                'unit_type'           => 'District',
+                'detail_route'        => route('volunteer.hierarchy.district', $dst->id),
+                'child_count'         => $dst->assemblySegments()->where('is_active', true)->count(),
+                'members_count'       => $stats['members_count'],
+                'volunteers_count'    => $stats['volunteers_count'],
+                'events_count'        => $stats['events_count'],
+                'beneficiaries_count' => $stats['beneficiaries_count'],
+                'president_name'      => $pres?->full_name ?? 'Not Assigned',
+                'contact_phone'       => $pres?->phone ?? '—',
+                'is_assigned'         => $pres !== null,
+                'volunteer_id'        => $pres?->volunteer_id,
             ];
         });
     }
 
-    protected static function getSubordinateAssemblySegments(?int $districtId): Collection
+    public static function getSubordinateAssemblySegments(?int $districtId): Collection
     {
         if (!$districtId) return collect();
 
         return GeoAssemblySegment::where('district_id', $districtId)->where('is_active', true)->orderBy('name')->get()->map(function ($seg) {
-            $pres = Volunteer::where('cadre_level', 'assembly_president')
-                ->where('assembly_segment_id', $seg->id)
-                ->where('status', 'approved')
-                ->where('is_active', true)
-                ->where('geo_mapping_status', 'verified')
-                ->first();
+            $pres = self::getPresidentForUnit('assembly', $seg->id);
+            $stats = self::getUnitStatistics('assembly', $seg->id);
 
             return [
-                'unit_id' => $seg->id,
-                'unit_name' => $seg->name,
-                'unit_type' => 'Assembly Segment',
-                'president_name' => $pres?->full_name ?? 'Not Assigned',
-                'contact_phone' => $pres?->phone ?? '—',
-                'is_assigned' => $pres !== null,
-                'volunteer_id' => $pres?->volunteer_id,
+                'unit_id'             => $seg->id,
+                'unit_name'           => $seg->name,
+                'unit_type'           => 'Assembly Segment',
+                'detail_route'        => route('volunteer.hierarchy.assembly', $seg->id),
+                'child_count'         => $seg->mandals()->where('is_active', true)->count(),
+                'members_count'       => $stats['members_count'],
+                'volunteers_count'    => $stats['volunteers_count'],
+                'events_count'        => $stats['events_count'],
+                'beneficiaries_count' => $stats['beneficiaries_count'],
+                'president_name'      => $pres?->full_name ?? 'Not Assigned',
+                'contact_phone'       => $pres?->phone ?? '—',
+                'is_assigned'         => $pres !== null,
+                'volunteer_id'        => $pres?->volunteer_id,
             ];
         });
     }
 
-    protected static function getSubordinateMandals(?int $assemblySegmentId): Collection
+    public static function getSubordinateMandals(?int $assemblySegmentId): Collection
     {
         if (!$assemblySegmentId) return collect();
 
         return GeoMandal::where('assembly_segment_id', $assemblySegmentId)->where('is_active', true)->orderBy('name')->get()->map(function ($mdl) {
-            $pres = Volunteer::where('cadre_level', 'mandal_president')
-                ->where('mandal_id', $mdl->id)
-                ->where('status', 'approved')
-                ->where('is_active', true)
-                ->where('geo_mapping_status', 'verified')
-                ->first();
+            $pres = self::getPresidentForUnit('mandal', $mdl->id);
+            $stats = self::getUnitStatistics('mandal', $mdl->id);
 
             return [
-                'unit_id' => $mdl->id,
-                'unit_name' => $mdl->name,
-                'unit_type' => 'Mandal',
-                'president_name' => $pres?->full_name ?? 'Not Assigned',
-                'contact_phone' => $pres?->phone ?? '—',
-                'is_assigned' => $pres !== null,
-                'volunteer_id' => $pres?->volunteer_id,
+                'unit_id'             => $mdl->id,
+                'unit_name'           => $mdl->name,
+                'unit_type'           => 'Mandal',
+                'detail_route'        => route('volunteer.hierarchy.mandal', $mdl->id),
+                'child_count'         => $mdl->panchayats()->where('is_active', true)->count(),
+                'members_count'       => $stats['members_count'],
+                'volunteers_count'    => $stats['volunteers_count'],
+                'events_count'        => $stats['events_count'],
+                'beneficiaries_count' => $stats['beneficiaries_count'],
+                'president_name'      => $pres?->full_name ?? 'Not Assigned',
+                'contact_phone'       => $pres?->phone ?? '—',
+                'is_assigned'         => $pres !== null,
+                'volunteer_id'        => $pres?->volunteer_id,
             ];
         });
     }
 
-    protected static function getSubordinatePanchayats(?int $mandalId): Collection
+    public static function getSubordinatePanchayats(?int $mandalId): Collection
     {
         if (!$mandalId) return collect();
 
         return GeoPanchayat::where('mandal_id', $mandalId)->where('is_active', true)->orderBy('name')->get()->map(function ($pan) {
-            $pres = Volunteer::where('cadre_level', 'panchayat_president')
-                ->where('panchayat_id', $pan->id)
-                ->where('status', 'approved')
-                ->where('is_active', true)
-                ->where('geo_mapping_status', 'verified')
-                ->first();
+            $pres = self::getPresidentForUnit('panchayat', $pan->id);
+            $stats = self::getUnitStatistics('panchayat', $pan->id);
 
             return [
-                'unit_id' => $pan->id,
-                'unit_name' => $pan->name,
-                'unit_type' => 'Grama Panchayat',
-                'president_name' => $pres?->full_name ?? 'Not Assigned',
-                'contact_phone' => $pres?->phone ?? '—',
-                'is_assigned' => $pres !== null,
-                'volunteer_id' => $pres?->volunteer_id,
+                'unit_id'             => $pan->id,
+                'unit_name'           => $pan->name,
+                'unit_type'           => 'Grama Panchayat',
+                'detail_route'        => route('volunteer.hierarchy.panchayat', $pan->id),
+                'members_count'       => $stats['members_count'],
+                'volunteers_count'    => $stats['volunteers_count'],
+                'events_count'        => $stats['events_count'],
+                'beneficiaries_count' => $stats['beneficiaries_count'],
+                'president_name'      => $pres?->full_name ?? 'Not Assigned',
+                'contact_phone'       => $pres?->phone ?? '—',
+                'is_assigned'         => $pres !== null,
+                'volunteer_id'        => $pres?->volunteer_id,
             ];
         });
     }
 
-    protected static function getPanchayatSelfDetails(Volunteer $volunteer): Collection
+    public static function getPanchayatSelfDetails(Volunteer $volunteer): Collection
     {
+        $panchayatId = $volunteer->panchayat_id ?? 0;
+        $stats = $panchayatId ? self::getUnitStatistics('panchayat', $panchayatId) : [
+            'members_count' => 0, 'volunteers_count' => 0, 'events_count' => 0,
+            'upcoming_events_count' => 0, 'completed_events_count' => 0,
+            'participants_count' => 0, 'beneficiaries_count' => 0,
+        ];
+
         return collect([[
-            'unit_id' => $volunteer->panchayat_id ?? 0,
-            'unit_name' => $volunteer->panchayatRelation?->name ?? 'Panchayat',
-            'unit_type' => 'Grama Panchayat',
-            'president_name' => $volunteer->full_name,
-            'contact_phone' => $volunteer->phone,
-            'is_assigned' => true,
-            'volunteer_id' => $volunteer->volunteer_id,
+            'unit_id'             => $panchayatId,
+            'unit_name'           => $volunteer->panchayatRelation?->name ?? ($volunteer->resolved_grama_panchayat ?: 'Panchayat'),
+            'unit_type'           => 'Grama Panchayat',
+            'detail_route'        => $panchayatId ? route('volunteer.hierarchy.panchayat', $panchayatId) : '#',
+            'president_name'      => $volunteer->full_name,
+            'contact_phone'       => $volunteer->phone,
+            'mandal_name'         => $volunteer->mandalRelation?->name ?? ($volunteer->resolved_mandal ?: '—'),
+            'assembly_name'       => $volunteer->assemblySegmentRelation?->name ?? ($volunteer->resolved_assembly_segment ?: '—'),
+            'district_name'       => $volunteer->districtRelation?->name ?? ($volunteer->resolved_district ?: '—'),
+            'state_name'          => $volunteer->stateRelation?->name ?? ($volunteer->resolved_state ?: '—'),
+            'status'              => ($volunteer->status === 'approved' && $volunteer->is_active) ? 'Active' : 'Pending',
+            'is_assigned'         => true,
+            'volunteer_id'        => $volunteer->volunteer_id,
+            'members_count'       => $stats['members_count'],
+            'volunteers_count'    => $stats['volunteers_count'],
+            'events_count'        => $stats['events_count'],
+            'upcoming_events_count' => $stats['upcoming_events_count'],
+            'completed_events_count' => $stats['completed_events_count'],
+            'participants_count'  => $stats['participants_count'],
+            'beneficiaries_count' => $stats['beneficiaries_count'],
         ]]);
     }
 

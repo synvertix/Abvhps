@@ -176,8 +176,10 @@ class VolunteerAuthController extends Controller
     {
         $volunteer = Auth::guard('volunteer')->user();
         $member = $volunteer->membership;
+        $isPresident = \App\Services\VolunteerCadreScopeService::isVerifiedCadre($volunteer) && $volunteer->cadre_level !== 'volunteer';
+        $subordinateUnits = $isPresident ? \App\Services\VolunteerCadreScopeService::subordinateUnitsFor($volunteer) : collect();
 
-        return view('volunteer.dashboard', compact('volunteer', 'member'));
+        return view('volunteer.dashboard', compact('volunteer', 'member', 'isPresident', 'subordinateUnits'));
     }
 
     /**
