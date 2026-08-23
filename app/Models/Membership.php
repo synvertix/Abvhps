@@ -15,7 +15,12 @@ class Membership extends Model
 
     /**
      * The attributes that are mass assignable inside core systems.
-     * Maps perfectly with payment tokens, Aadhaar, and address configurations.
+     *
+     * SECURITY RULE: Security-critical identity verification fields (identity_verified,
+     * identity_verified_name, identity_verification_method, identity_verification_provider,
+     * identity_verification_reference_id, identity_verification_id, identity_document_last4,
+     * identity_verified_at, welcome_email_sent_at) are intentionally EXCLUDED from $fillable
+     * to prevent browser mass-assignment. They are assigned explicitly from trusted server-side results.
      *
      * @var array<int, string>
      */
@@ -59,10 +64,32 @@ class Membership extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'is_aadhaar_verified' => 'boolean',
-        'is_completed' => 'boolean',
-        'aadhaar_verified_at' => 'datetime',
-        'payment_verified_at' => 'datetime',
-        'payment_amount' => 'decimal:2',
+        'is_aadhaar_verified'        => 'boolean',
+        'identity_verified'          => 'boolean',
+        'is_completed'               => 'boolean',
+        'aadhaar_verified_at'        => 'datetime',
+        'identity_verified_at'       => 'datetime',
+        'welcome_email_sent_at'      => 'datetime',
+        'payment_verified_at'        => 'datetime',
+        'payment_amount'             => 'decimal:2',
     ];
+
+    /**
+     * Canonical single source of truth for identity verification.
+     *
+     * Rules:
+     * 1. Generic verification requires: identity_verified=true, non-empty method, non-empty verified name, non-null verified_at.
+     * 2. Legacy Aadhaar verification requires: is_aadhaar_verified=true AND non-empty full_name.
+     */
+    public function hasVerifiedIdentity(): bool
+    {
+        $genericVerified = ($this->identity_verified === true)
+            && !empty($this->identity_verification_method)
+            && !empty($this->identity_verified_name)
+            && !is_null($this->identity_verified_at);
+
+        $legacyAadhaarVerified = ($this->is_aadhaar_verified === true) && !empty($this->full_name);
+
+        return $genericVerified || $legacyAadhaarVerified;
+    }
 }

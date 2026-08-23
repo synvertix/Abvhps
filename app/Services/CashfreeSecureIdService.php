@@ -549,6 +549,468 @@ class CashfreeSecureIdService
     }
 
     /**
+     * Normalize a verified name for database storage and safe display.
+     *
+     * Rules:
+     * - Trim leading/trailing whitespace
+     * - Collapse multiple internal spaces
+     * - Limit to 255 chars
+     * - Return null if empty
+     */
+    public static function normalizeVerifiedName(?string $name): ?string
+    {
+        if ($name === null) {
+            return null;
+        }
+        $trimmed = trim($name);
+        $collapsed = preg_replace('/\s+/', ' ', $trimmed);
+        if (empty($collapsed)) {
+            return null;
+        }
+        return mb_substr($collapsed, 0, 255);
+    }
+
+    /**
+     * Verify PAN via Cashfree Secure ID Verification Suite (Sync API).
+     *
+     * Endpoint: POST /pan
+     * Payload: ['pan' => $panNumber]
+     *
+     * @param string $panNumber 10-character PAN number
+     * @return array Standardized result array
+     */
+    public function verifyPan(string $panNumber): array
+    {
+        if (!$this->isConfigured) {
+            Log::warning('CashfreeSecureId: Secure ID credentials not configured. PAN verification skipped.');
+            return [
+                'success' => false,
+                'status'  => 'UNCONFIGURED',
+                'message' => 'Cashfree Secure ID credentials are not configured. Please contact the administrator.',
+            ];
+        }
+
+        try {
+            $endpoint = "{$this->baseUrl}/pan";
+            $payload = [
+                'pan' => strtoupper(trim($panNumber)),
+            ];
+
+            Log::info('CashfreeSecureId: Initiating PAN verification request.');
+
+            $response = Http::withHeaders([
+                'x-client-id'     => $this->clientId,
+                'x-client-secret' => $this->clientSecret,
+                'Content-Type'    => 'application/json',
+                'Accept'          => 'application/json',
+            ])->timeout(15)->post($endpoint, $payload);
+
+            $statusCode = $response->status();
+            $body = $response->json() ?? [];
+
+            if ($statusCode === 401) {
+                return [
+                    'success' => false,
+                    'status'  => 'AUTH_ERROR',
+                    'message' => 'Identity verification service authentication failed.',
+                ];
+            }
+
+            if ($statusCode === 403) {
+                return [
+                    'success' => false,
+                    'status'  => 'UNAVAILABLE',
+                    'message' => 'This verification method is currently unavailable. Please choose another verification method.',
+                ];
+            }
+
+            if ($response->successful() && is_array($body)) {
+                $isValid = ($body['valid'] ?? null) === true
+                    || strtoupper((string) ($body['pan_status'] ?? $body['status'] ?? '')) === 'VALID';
+
+                if ($isValid) {
+                    $rawName = (string) ($body['registered_name'] ?? $body['name_pan_card'] ?? '');
+                    $verifiedName = self::normalizeVerifiedName($rawName);
+
+                    if (empty($verifiedName)) {
+                        Log::warning('CashfreeSecureId: PAN is valid but provider returned empty registered name.');
+                        return [
+                            'success'      => false,
+                            'status'       => 'INVALID_NAME',
+                            'reference_id' => (string) ($body['reference_id'] ?? ''),
+                            'message'      => 'Provider could not verify full legal name on the document.',
+                        ];
+                    }
+
+                    return [
+                        'success'       => true,
+                        'status'        => 'VALID',
+                        'reference_id'  => (string) ($body['reference_id'] ?? ''),
+                        'verified_name' => $verifiedName,
+                        'message'       => 'PAN verified successfully.',
+                    ];
+                }
+
+                return [
+                    'success'      => false,
+                    'status'       => (string) ($body['pan_status'] ?? $body['status'] ?? 'INVALID'),
+                    'reference_id' => (string) ($body['reference_id'] ?? ''),
+                    'message'      => 'PAN verification failed. Please check the PAN number and try again.',
+                ];
+            }
+
+            return [
+                'success' => false,
+                'status'  => 'GATEWAY_ERROR',
+                'message' => 'PAN verification failed. Please check the PAN number and try again.',
+            ];
+        } catch (\Throwable $e) {
+            Log::error('CashfreeSecureId: PAN verification service exception.', [
+                'exception_type' => get_class($e),
+            ]);
+            return [
+                'success' => false,
+                'status'  => 'SERVICE_EXCEPTION',
+                'message' => 'Unable to communicate with the verification service. Please try again later.',
+            ];
+        }
+    }
+
+    /**
+     * Verify Voter ID via Cashfree Secure ID Verification Suite.
+     *
+     * Endpoint: POST /voter-id
+     * Payload: ['epic_number' => $epicNumber, 'verification_id' => $verificationId]
+     *
+     * @param string $epicNumber EPIC / Voter ID number
+     * @param string $verificationId Unique verification ID
+     * @return array Standardized result array
+     */
+    public function verifyVoterId(string $epicNumber, string $verificationId): array
+    {
+        if (!$this->isConfigured) {
+            Log::warning('CashfreeSecureId: Secure ID credentials not configured. Voter ID verification skipped.');
+            return [
+                'success' => false,
+                'status'  => 'UNCONFIGURED',
+                'message' => 'Cashfree Secure ID credentials are not configured. Please contact the administrator.',
+            ];
+        }
+
+        try {
+            $endpoint = "{$this->baseUrl}/voter-id";
+            $payload = [
+                'epic_number'     => strtoupper(trim($epicNumber)),
+                'verification_id' => $verificationId,
+            ];
+
+            Log::info("CashfreeSecureId: Initiating Voter ID verification (Ref: {$verificationId}).");
+
+            $response = Http::withHeaders([
+                'x-client-id'     => $this->clientId,
+                'x-client-secret' => $this->clientSecret,
+                'Content-Type'    => 'application/json',
+                'Accept'          => 'application/json',
+            ])->timeout(15)->post($endpoint, $payload);
+
+            $statusCode = $response->status();
+            $body = $response->json() ?? [];
+
+            if ($statusCode === 401) {
+                return [
+                    'success' => false,
+                    'status'  => 'AUTH_ERROR',
+                    'message' => 'Identity verification service authentication failed.',
+                ];
+            }
+
+            if ($statusCode === 403) {
+                return [
+                    'success' => false,
+                    'status'  => 'UNAVAILABLE',
+                    'message' => 'This verification method is currently unavailable. Please choose another verification method.',
+                ];
+            }
+
+            if ($response->successful() && is_array($body)) {
+                $status = strtoupper((string) ($body['status'] ?? ''));
+
+                if ($status === 'VALID') {
+                    $rawName = (string) ($body['name'] ?? '');
+                    $verifiedName = self::normalizeVerifiedName($rawName);
+
+                    if (empty($verifiedName)) {
+                        Log::warning('CashfreeSecureId: Voter ID is valid but provider returned empty name.');
+                        return [
+                            'success'         => false,
+                            'status'          => 'INVALID_NAME',
+                            'verification_id' => $verificationId,
+                            'reference_id'    => (string) ($body['reference_id'] ?? ''),
+                            'message'         => 'Provider could not verify full legal name on the document.',
+                        ];
+                    }
+
+                    return [
+                        'success'         => true,
+                        'status'          => 'VALID',
+                        'verification_id' => $verificationId,
+                        'reference_id'    => (string) ($body['reference_id'] ?? ''),
+                        'verified_name'   => $verifiedName,
+                        'message'         => 'Voter ID verified successfully.',
+                    ];
+                }
+
+                return [
+                    'success'         => false,
+                    'status'          => $status ?: 'INVALID',
+                    'verification_id' => $verificationId,
+                    'reference_id'    => (string) ($body['reference_id'] ?? ''),
+                    'message'         => 'Voter ID verification failed. Please check the EPIC number and try again.',
+                ];
+            }
+
+            return [
+                'success' => false,
+                'status'  => 'GATEWAY_ERROR',
+                'message' => 'Voter ID verification failed. Please check the EPIC number and try again.',
+            ];
+        } catch (\Throwable $e) {
+            Log::error('CashfreeSecureId: Voter ID verification service exception.', [
+                'exception_type' => get_class($e),
+            ]);
+            return [
+                'success' => false,
+                'status'  => 'SERVICE_EXCEPTION',
+                'message' => 'Unable to communicate with the verification service. Please try again later.',
+            ];
+        }
+    }
+
+    /**
+     * Verify Driving Licence via Cashfree Secure ID Verification Suite.
+     *
+     * Endpoint: POST /driving-license
+     * Payload: ['dl_number' => $dlNumber, 'dob' => $dob, 'verification_id' => $verificationId]
+     *
+     * @param string $dlNumber Driving licence number
+     * @param string $dob Date of birth (YYYY-MM-DD)
+     * @param string $verificationId Unique verification ID
+     * @return array Standardized result array
+     */
+    public function verifyDrivingLicence(string $dlNumber, string $dob, string $verificationId): array
+    {
+        if (!$this->isConfigured) {
+            Log::warning('CashfreeSecureId: Secure ID credentials not configured. Driving Licence verification skipped.');
+            return [
+                'success' => false,
+                'status'  => 'UNCONFIGURED',
+                'message' => 'Cashfree Secure ID credentials are not configured. Please contact the administrator.',
+            ];
+        }
+
+        try {
+            $endpoint = "{$this->baseUrl}/driving-license";
+            $payload = [
+                'dl_number'       => strtoupper(trim($dlNumber)),
+                'dob'             => trim($dob),
+                'verification_id' => $verificationId,
+            ];
+
+            Log::info("CashfreeSecureId: Initiating Driving Licence verification (Ref: {$verificationId}).");
+
+            $response = Http::withHeaders([
+                'x-client-id'     => $this->clientId,
+                'x-client-secret' => $this->clientSecret,
+                'Content-Type'    => 'application/json',
+                'Accept'          => 'application/json',
+            ])->timeout(15)->post($endpoint, $payload);
+
+            $statusCode = $response->status();
+            $body = $response->json() ?? [];
+
+            if ($statusCode === 401) {
+                return [
+                    'success' => false,
+                    'status'  => 'AUTH_ERROR',
+                    'message' => 'Identity verification service authentication failed.',
+                ];
+            }
+
+            if ($statusCode === 403) {
+                return [
+                    'success' => false,
+                    'status'  => 'UNAVAILABLE',
+                    'message' => 'This verification method is currently unavailable. Please choose another verification method.',
+                ];
+            }
+
+            if ($response->successful() && is_array($body)) {
+                $status = strtoupper((string) ($body['status'] ?? ''));
+
+                if ($status === 'VALID') {
+                    $rawName = (string) ($body['details_of_driving_licence']['name'] ?? $body['name'] ?? '');
+                    $verifiedName = self::normalizeVerifiedName($rawName);
+
+                    if (empty($verifiedName)) {
+                        Log::warning('CashfreeSecureId: Driving Licence is valid but provider returned empty name.');
+                        return [
+                            'success'         => false,
+                            'status'          => 'INVALID_NAME',
+                            'verification_id' => $verificationId,
+                            'reference_id'    => (string) ($body['reference_id'] ?? ''),
+                            'message'         => 'Provider could not verify full legal name on the document.',
+                        ];
+                    }
+
+                    return [
+                        'success'         => true,
+                        'status'          => 'VALID',
+                        'verification_id' => $verificationId,
+                        'reference_id'    => (string) ($body['reference_id'] ?? ''),
+                        'verified_name'   => $verifiedName,
+                        'message'         => 'Driving Licence verified successfully.',
+                    ];
+                }
+
+                return [
+                    'success'         => false,
+                    'status'          => $status ?: 'INVALID',
+                    'verification_id' => $verificationId,
+                    'reference_id'    => (string) ($body['reference_id'] ?? ''),
+                    'message'         => 'Driving Licence verification failed. Please check the details and try again.',
+                ];
+            }
+
+            return [
+                'success' => false,
+                'status'  => 'GATEWAY_ERROR',
+                'message' => 'Driving Licence verification failed. Please check the details and try again.',
+            ];
+        } catch (\Throwable $e) {
+            Log::error('CashfreeSecureId: Driving Licence verification service exception.', [
+                'exception_type' => get_class($e),
+            ]);
+            return [
+                'success' => false,
+                'status'  => 'SERVICE_EXCEPTION',
+                'message' => 'Unable to communicate with the verification service. Please try again later.',
+            ];
+        }
+    }
+
+    /**
+     * Verify Passport via Cashfree Secure ID Verification Suite.
+     *
+     * Endpoint: POST /passport
+     * Payload: ['file_number' => $fileNumber, 'dob' => $dob, 'verification_id' => $verificationId]
+     *
+     * @param string $fileNumber Passport file number
+     * @param string $dob Date of birth (YYYY-MM-DD)
+     * @param string $verificationId Unique verification ID
+     * @return array Standardized result array
+     */
+    public function verifyPassport(string $fileNumber, string $dob, string $verificationId): array
+    {
+        if (!$this->isConfigured) {
+            Log::warning('CashfreeSecureId: Secure ID credentials not configured. Passport verification skipped.');
+            return [
+                'success' => false,
+                'status'  => 'UNCONFIGURED',
+                'message' => 'Cashfree Secure ID credentials are not configured. Please contact the administrator.',
+            ];
+        }
+
+        try {
+            $endpoint = "{$this->baseUrl}/passport";
+            $payload = [
+                'file_number'     => strtoupper(trim($fileNumber)),
+                'dob'             => trim($dob),
+                'verification_id' => $verificationId,
+            ];
+
+            Log::info("CashfreeSecureId: Initiating Passport verification (Ref: {$verificationId}).");
+
+            $response = Http::withHeaders([
+                'x-client-id'     => $this->clientId,
+                'x-client-secret' => $this->clientSecret,
+                'Content-Type'    => 'application/json',
+                'Accept'          => 'application/json',
+            ])->timeout(15)->post($endpoint, $payload);
+
+            $statusCode = $response->status();
+            $body = $response->json() ?? [];
+
+            if ($statusCode === 401) {
+                return [
+                    'success' => false,
+                    'status'  => 'AUTH_ERROR',
+                    'message' => 'Identity verification service authentication failed.',
+                ];
+            }
+
+            if ($statusCode === 403) {
+                return [
+                    'success' => false,
+                    'status'  => 'UNAVAILABLE',
+                    'message' => 'This verification method is currently unavailable. Please choose another verification method.',
+                ];
+            }
+
+            if ($response->successful() && is_array($body)) {
+                $status = strtoupper((string) ($body['status'] ?? ''));
+
+                if ($status === 'VALID') {
+                    $rawName = (string) ($body['name'] ?? '');
+                    $verifiedName = self::normalizeVerifiedName($rawName);
+
+                    if (empty($verifiedName)) {
+                        Log::warning('CashfreeSecureId: Passport is valid but provider returned empty name.');
+                        return [
+                            'success'         => false,
+                            'status'          => 'INVALID_NAME',
+                            'verification_id' => $verificationId,
+                            'reference_id'    => (string) ($body['reference_id'] ?? ''),
+                            'message'         => 'Provider could not verify full legal name on the document.',
+                        ];
+                    }
+
+                    return [
+                        'success'         => true,
+                        'status'          => 'VALID',
+                        'verification_id' => $verificationId,
+                        'reference_id'    => (string) ($body['reference_id'] ?? ''),
+                        'verified_name'   => $verifiedName,
+                        'message'         => 'Passport verified successfully.',
+                    ];
+                }
+
+                return [
+                    'success'         => false,
+                    'status'          => $status ?: 'INVALID',
+                    'verification_id' => $verificationId,
+                    'reference_id'    => (string) ($body['reference_id'] ?? ''),
+                    'message'         => 'Passport verification failed. Please check the details and try again.',
+                ];
+            }
+
+            return [
+                'success' => false,
+                'status'  => 'GATEWAY_ERROR',
+                'message' => 'Passport verification failed. Please check the details and try again.',
+            ];
+        } catch (\Throwable $e) {
+            Log::error('CashfreeSecureId: Passport verification service exception.', [
+                'exception_type' => get_class($e),
+            ]);
+            return [
+                'success' => false,
+                'status'  => 'SERVICE_EXCEPTION',
+                'message' => 'Unable to communicate with the verification service. Please try again later.',
+            ];
+        }
+    }
+
+    /**
      * Verify Aadhaar via Cashfree Secure ID Verification Suite.
      *
      * In live/sandbox environments, communicates with Cashfree Verification API.

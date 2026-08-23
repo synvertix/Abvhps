@@ -24,17 +24,37 @@
                 <span class="text-sm font-bold text-brandGray">+91 {{ $phone }}</span>
             </div>
         </div>
-        <!-- Section A: Aadhaar & Name Verification Desk -->
+        <!-- Section A: Official Identity Verification Desk -->
         <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4">
-            <h3 class="text-xs font-bold text-brandGray uppercase tracking-wider border-b border-gray-200 pb-2">Section A: Aadhaar & Name Verification</h3>
+            @php
+                $isVerified = $member->hasVerifiedIdentity();
+                $methodLabel = match($member->identity_verification_method ?? ($member->is_aadhaar_verified ? 'aadhaar' : 'none')) {
+                    'aadhaar'         => 'Aadhaar Card (DigiLocker)',
+                    'pan'             => 'PAN Card',
+                    'voter_id'        => 'Voter ID Card (EPIC)',
+                    'driving_licence' => 'Driving Licence',
+                    'passport'        => 'Indian Passport',
+                    default           => 'Government Official ID',
+                };
+                $verifiedName = $member->identity_verified_name ?? ($member->full_name ?? '');
+            @endphp
+
+            <div class="flex items-center justify-between border-b border-gray-200 pb-2">
+                <h3 class="text-xs font-bold text-brandGray uppercase tracking-wider">Section A: Identity Verification</h3>
+                @if($isVerified)
+                    <span class="text-[10px] font-black text-emerald-700 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                        ✓ {{ $methodLabel }} Verified
+                    </span>
+                @endif
+            </div>
             
             <!-- Dynamic State Banners -->
-            <div id="aadhaar_success_box" class="{{ !empty($member->is_aadhaar_verified) ? '' : 'hidden' }} p-4 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-800">
+            <div id="aadhaar_success_box" class="{{ $isVerified ? '' : 'hidden' }} p-4 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-800">
                 <div class="flex items-center space-x-2 font-bold text-sm">
                     <span class="text-emerald-600 text-base font-extrabold">✓</span>
-                    <span class="tracking-wide">AADHAAR & NAME VERIFIED</span>
+                    <span class="tracking-wide">IDENTITY &amp; NAME VERIFIED ({{ strtoupper($methodLabel) }})</span>
                 </div>
-                <p class="text-xs text-emerald-700 mt-1 font-medium">Verified via Cashfree DigiLocker. Authoritative name and identity data populated automatically.</p>
+                <p class="text-xs text-emerald-700 mt-1 font-medium">Authoritative provider-verified legal name populated automatically from government records.</p>
             </div>
 
             @if(session('error') || session('warning'))
@@ -52,42 +72,37 @@
                     <span class="text-amber-600 text-base font-extrabold">⚠️</span>
                     <span id="aadhaar_error_title" class="tracking-wide">VERIFICATION FAILED</span>
                 </div>
-                <p id="aadhaar_error_msg" class="text-xs text-amber-700 mt-1 font-medium">Aadhaar verification failed. Please check the Aadhaar number and try again.</p>
+                <p id="aadhaar_error_msg" class="text-xs text-amber-700 mt-1 font-medium">Identity verification failed. Please check the details and try again.</p>
             </div>
 
             <!-- Aadhaar & Name Input Row -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label for="full_name" class="block text-xs font-bold text-brandGray uppercase mb-1">Full Name (Auto-filled from Verified Aadhaar) *</label>
+                    <label for="full_name" class="block text-xs font-bold text-brandGray uppercase mb-1">Full Name (Provider Verified) *</label>
                     <input type="text" id="full_name" name="full_name" required readonly
-                        value="{{ old('full_name', $member->full_name ?? '') }}"
-                        class="block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm font-semibold text-brandGray focus:ring-brandOrange focus:border-brandOrange"
-                        placeholder="Will be filled automatically after Aadhaar verification">
+                        value="{{ old('full_name', $verifiedName) }}"
+                        class="block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm font-bold text-brandDarkGray uppercase cursor-not-allowed"
+                        placeholder="Verified full name">
                 </div>
                 <div>
-                    <label for="aadhaar_number" class="block text-xs font-bold text-brandGray uppercase mb-1">Aadhaar Number *</label>
-                    <input type="text" id="aadhaar_number" name="aadhaar_number" maxlength="12" required
+                    <label for="aadhaar_number" class="block text-xs font-bold text-brandGray uppercase mb-1">
+                        Aadhaar Number {{ ($member->identity_verification_method ?? '') === 'aadhaar' ? '*' : '(Optional)' }}
+                    </label>
+                    <input type="text" id="aadhaar_number" name="aadhaar_number" maxlength="12"
                         value="{{ old('aadhaar_number', $member->aadhaar_number ?? '') }}"
                         {{ !empty($member->is_aadhaar_verified) ? 'readonly' : '' }}
-                        class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-semibold tracking-widest text-brandGray focus:ring-brandOrange focus:border-brandOrange"
-                        placeholder="Enter 12 Digit Aadhaar Number">
+                        class="block w-full px-3 py-2 {{ !empty($member->is_aadhaar_verified) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white' }} border border-gray-300 rounded-md text-sm font-semibold tracking-widest text-brandGray focus:ring-brandOrange focus:border-brandOrange"
+                        placeholder="12 Digit Aadhaar Number (Optional)">
                 </div>
             </div>
 
-            <!-- Verification Action Trigger Button -->
+            @if(!$isVerified)
             <div>
-                @if(!empty($member->is_aadhaar_verified))
-                <button type="button" disabled
-                    class="w-full py-2.5 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-emerald-600 transition shadow-sm flex items-center justify-center space-x-2 cursor-not-allowed">
-                    <span>✓ Aadhaar & Name Verified</span>
-                </button>
-                @else
-                <button type="button" id="btn_verify_aadhaar" onclick="executeAadhaarVerification()"
-                    class="w-full py-2.5 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-brandOrange hover:bg-opacity-90 transition shadow-sm cursor-pointer flex items-center justify-center space-x-2">
-                    <span id="btn_verify_text">Verify Aadhaar via DigiLocker</span>
-                </button>
-                @endif
+                <a href="{{ url('/membership/identity') }}" class="w-full py-2.5 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-brandOrange hover:bg-orange-600 transition shadow-sm flex items-center justify-center space-x-2">
+                    <span>Verify Identity Document &rarr;</span>
+                </a>
             </div>
+            @endif
 
             <!-- Aadhaar Auto-fill Row 1: Father/Husband Name, DOB, Gender -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-gray-200">

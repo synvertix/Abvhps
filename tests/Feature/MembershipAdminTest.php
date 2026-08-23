@@ -235,8 +235,8 @@ class MembershipAdminTest extends TestCase
             'otp' => '654321'
         ]);
 
-        // Should directly resume at /membership/application, NOT /membership/payment
-        $otpResponse->assertRedirect('/membership/application');
+        // Should directly resume at /membership/identity (since identity verification is pending)
+        $otpResponse->assertRedirect('/membership/identity');
         $otpResponse->assertSessionHas('verified_membership_phone', $phone);
     }
 
@@ -244,7 +244,7 @@ class MembershipAdminTest extends TestCase
     {
         $phone = '9876501234';
         
-        // Paid pending member with verified Aadhaar and real Razorpay audit fields
+        // Paid pending member with verified identity and real Razorpay audit fields
         Membership::create([
             'membership_id'       => '123456789012',
             'phone'               => $phone,
@@ -256,6 +256,7 @@ class MembershipAdminTest extends TestCase
             'payment_verified_at' => now(),
             'is_completed'        => 0,
             'is_aadhaar_verified' => true,
+            'full_name'           => 'LAKSHMI DEVI',
         ]);
 
         // Submit form with Female gender
@@ -300,6 +301,7 @@ class MembershipAdminTest extends TestCase
         Membership::create([
             'membership_id'       => '123456789013',
             'phone'               => $phone,
+            'full_name'           => 'RAMESH KUMAR',
             'payment_status'      => 'success',
             'payment_gateway'     => 'razorpay',
             'payment_id'          => 'pay_NOGENDER01',

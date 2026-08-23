@@ -425,7 +425,12 @@ class DonationController extends Controller
             abort(404);
         }
 
-        return view('donations.payment_status', compact('donation'));
+        $activeCertificates = [];
+        if ($donation->payment_status === 'paid') {
+            $activeCertificates = \App\Models\TaxCertificate::activeComplianceCertificates();
+        }
+
+        return view('donations.payment_status', compact('donation', 'activeCertificates'));
     }
 
     // =========================================================================
@@ -560,7 +565,9 @@ class DonationController extends Controller
      */
     private function markDonationPaid(Donation $donation, string $paymentId, string $reference): void
     {
-        DB::transaction(function () use ($donation, $paymentId, $reference) {
+        $transitionedToPaid = false;
+
+        DB::transaction(function () use ($donation, $paymentId, $reference, &$transitionedToPaid) {
             // Lock the row to prevent concurrent updates
             $locked = Donation::lockForUpdate()->find($donation->id);
 
@@ -589,9 +596,13 @@ class DonationController extends Controller
                     ]);
             }
 
-            // Send confirmation notification (idempotent — NotificationLog prevents duplicates)
-            $this->sendDonationConfirmation($locked);
+            $transitionedToPaid = true;
         });
+
+        // Trigger confirmation email OUTSIDE database transaction on genuine transition
+        if ($transitionedToPaid) {
+            $this->sendDonationConfirmation($donation->fresh());
+        }
     }
 
     // =========================================================================
@@ -619,11 +630,16 @@ class DonationController extends Controller
         }
 
         $receiptToken = hash_hmac('sha256', $donation->id . '|' . $donation->created_at . '|' . $donation->phone, config('app.key'));
+        $activeCertificates = \App\Models\TaxCertificate::activeComplianceCertificates();
 
         try {
             Mail::send(
                 'emails.donation_confirmation',
-                ['donation' => $donation, 'receiptToken' => $receiptToken],
+                [
+                    'donation'           => $donation,
+                    'receiptToken'       => $receiptToken,
+                    'activeCertificates' => $activeCertificates,
+                ],
                 function ($message) use ($donation) {
                     $message->to($donation->email, $donation->name)
                             ->subject('🙏 ABVHPS — Donation Receipt & Confirmation');
