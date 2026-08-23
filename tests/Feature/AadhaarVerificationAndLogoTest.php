@@ -167,7 +167,7 @@ class AadhaarVerificationAndLogoTest extends TestCase
     }
 
     /**
-     * Test CASE 4: Fresh application without prior verification -> No default fake name appears.
+     * Test CASE 4: Fresh application without prior verification -> Identity page shows no default fake name.
      */
     public function test_case_4_fresh_application_form_does_not_contain_hardcoded_srinivasa_rao(): void
     {
@@ -184,7 +184,7 @@ class AadhaarVerificationAndLogoTest extends TestCase
         ]);
 
         $response = $this->withSession(['verified_membership_phone' => '9444444444'])
-            ->get('/membership/application');
+            ->get('/membership/identity');
 
         $response->assertStatus(200);
         $response->assertDontSee('SRINIVASA RAO');
@@ -197,19 +197,21 @@ class AadhaarVerificationAndLogoTest extends TestCase
     public function test_case_5_applicant_a_data_does_not_leak_to_applicant_b(): void
     {
         $applicantA = Membership::create([
-            'membership_id' => '111100001111',
-            'phone' => '9555555555',
-            'payment_status' => 'success',
-            'full_name' => 'APPLICANT A PERSON',
-            'is_completed' => 1
+            'membership_id'       => '111100001111',
+            'phone'               => '9555555555',
+            'payment_status'      => 'success',
+            'full_name'           => 'APPLICANT A PERSON',
+            'is_aadhaar_verified' => true,
+            'is_completed'        => 1
         ]);
 
         $applicantB = Membership::create([
-            'membership_id' => '222200002222',
-            'phone' => '9666666666',
-            'payment_status' => 'success',
-            'full_name' => 'APPLICANT B PERSON',
-            'is_completed' => 1
+            'membership_id'       => '222200002222',
+            'phone'               => '9666666666',
+            'payment_status'      => 'success',
+            'full_name'           => 'APPLICANT B PERSON',
+            'is_aadhaar_verified' => true,
+            'is_completed'        => 1
         ]);
 
         // Session of applicant B should only get applicant B's data

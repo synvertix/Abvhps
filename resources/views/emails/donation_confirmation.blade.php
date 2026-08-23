@@ -58,11 +58,28 @@
             </table>
 
             <!-- Button -->
-            <div style="text-align: center; margin: 28px 0;">
+            <div style="text-align: center; margin: 28px 0 15px;">
                 <a href="{{ route('donations.receipt', !empty($receiptToken) ? ['id' => $donation->id, 'token' => $receiptToken] : $donation->id) }}" style="background-color: #FF6600; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-size: 13px; font-weight: bold; display: inline-block; text-transform: uppercase; letter-spacing: 0.5px;">
                     View &amp; Download Official Receipt
                 </a>
             </div>
+
+            @if(!empty($activeCertificates) && count($activeCertificates) > 0)
+            <div style="margin: 20px 0; padding: 14px 18px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <p style="margin: 0 0 8px; font-size: 12px; font-weight: bold; color: #334155; text-transform: uppercase;">
+                    📜 View ABVHPS Compliance Certificates
+                </p>
+                <div style="font-size: 12px; line-height: 1.8;">
+                    @foreach($activeCertificates as $cert)
+                        <div>
+                            • <a href="{{ $cert->file_url }}" target="_blank" rel="noopener noreferrer" style="color: #ea580c; text-decoration: none; font-weight: bold;">
+                                {{ $cert->title }} ({{ $cert->certificate_type }})
+                            </a>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+            @endif
 
             <p style="font-size: 12px; color: #6b7280; line-height: 1.5;">
                 This contribution is dedicated towards temple renovations, goshala developments, youth welfare, and Hindu community empowerment initiatives.

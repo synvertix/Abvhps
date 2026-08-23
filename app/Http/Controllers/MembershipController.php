@@ -97,7 +97,10 @@ class MembershipController extends Controller
         }
 
         if (self::hasVerifiedMembershipPayment($member)) {
-            return redirect('/membership/application')->with('success', 'Welcome back! Your payment is already verified.');
+            if (self::hasVerifiedMembershipIdentity($member)) {
+                return redirect('/membership/application')->with('success', 'Welcome back! Your payment & identity are verified.');
+            }
+            return redirect('/membership/identity')->with('success', 'Welcome back! Your payment is already verified. Please complete identity verification.');
         }
 
         return redirect('/membership/payment');
@@ -136,6 +139,14 @@ class MembershipController extends Controller
         }
 
         return (bool) $member->is_completed || self::hasVerifiedMembershipPayment($member);
+    }
+
+    /**
+     * Helper check: Delegates to canonical Membership::hasVerifiedIdentity() model method.
+     */
+    public static function hasVerifiedMembershipIdentity(?Membership $member): bool
+    {
+        return $member?->hasVerifiedIdentity() ?? false;
     }
 
     // 4. Display the ₹1 Payment Screen
@@ -309,6 +320,407 @@ class MembershipController extends Controller
         ]);
     }
 
+    // 5c. Render Identity Verification Page
+    public function showIdentityPage()
+    {
+        $phone = session('verified_membership_phone');
+
+        if (!$phone) {
+            return redirect('/membership')->with('error', 'Please verify your mobile number first.');
+        }
+
+        $member = Membership::where('phone', $phone)->first();
+
+        if (!self::hasValidMembershipAccess($member)) {
+            return redirect('/membership/payment')->with('error', 'Please complete membership payment before identity verification.');
+        }
+
+        if (self::hasVerifiedMembershipIdentity($member)) {
+            return redirect('/membership/application')->with('info', 'Your identity is already verified.');
+        }
+
+        return view('membership_identity', compact('member', 'phone'));
+    }
+
+    /**
+     * Atomically persist verified identity on member only if not already verified.
+     *
+     * SECURITY INVARIANTS:
+     * 1. Cashfree HTTP call is made BEFORE acquiring the DB row lock.
+     * 2. DB::transaction with lockForUpdate ensures the first successful verification is permanent.
+     * 3. Concurrent or delayed verifications cannot overwrite an already verified identity.
+     *
+     * @return array ['persisted' => bool, 'member' => Membership]
+     */
+    private function persistVerifiedIdentityIfUnverified(
+        int $memberId,
+        string $method,
+        string $provider,
+        ?string $refId,
+        string $verifiedName,
+        ?string $last4 = null,
+        ?string $verificationId = null,
+        array $extraAttributes = []
+    ): array {
+        return DB::transaction(function () use ($memberId, $method, $provider, $refId, $verifiedName, $last4, $verificationId, $extraAttributes) {
+            $lockedMember = Membership::lockForUpdate()->findOrFail($memberId);
+
+            if ($lockedMember->hasVerifiedIdentity()) {
+                return [
+                    'persisted' => false,
+                    'member'    => $lockedMember,
+                ];
+            }
+
+            if (!empty($extraAttributes)) {
+                $lockedMember->fill($extraAttributes);
+            }
+
+            $now = Carbon::now('Asia/Kolkata');
+
+            $lockedMember->identity_verified                  = true;
+            $lockedMember->identity_verification_method        = $method;
+            $lockedMember->identity_verification_provider      = $provider;
+            $lockedMember->identity_verification_reference_id = $refId;
+            $lockedMember->identity_verification_id           = $verificationId;
+            $lockedMember->identity_verified_name             = $verifiedName;
+            $lockedMember->identity_document_last4            = $last4;
+            $lockedMember->identity_verified_at               = $now;
+
+            if ($method === 'aadhaar') {
+                $lockedMember->is_aadhaar_verified      = true;
+                $lockedMember->aadhaar_verification_ref = $refId;
+                $lockedMember->aadhaar_verified_at      = $now;
+                $lockedMember->full_name                = $verifiedName;
+            }
+
+            $lockedMember->save();
+
+            return [
+                'persisted' => true,
+                'member'    => $lockedMember,
+            ];
+        });
+    }
+
+    /**
+     * Verify PAN for Membership Identity.
+     */
+    public function verifyPanIdentity(Request $request)
+    {
+        $phone = session('verified_membership_phone');
+        if (!$phone) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Active membership session not found. Please verify your phone number first.',
+            ], 401);
+        }
+
+        $member = Membership::where('phone', $phone)->first();
+        if (!$member || !self::hasVerifiedMembershipPayment($member)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Membership payment is required before identity verification.',
+            ], 403);
+        }
+
+        if ($member->hasVerifiedIdentity()) {
+            return response()->json([
+                'status'        => 'already_verified',
+                'verified_name' => $member->identity_verified_name ?? $member->full_name,
+                'message'       => 'Identity is already successfully verified.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'pan_number' => 'required|string|size:10|regex:/^[A-Z]{5}[0-9]{4}[A-Z]$/i',
+        ]);
+
+        $pan = strtoupper(trim($validated['pan_number']));
+        $secureIdService = new \App\Services\CashfreeSecureIdService();
+        $result = $secureIdService->verifyPan($pan);
+
+        if (!$result['success']) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => $result['message'] ?? 'PAN verification failed. Please check the PAN number and try again.',
+            ], 422);
+        }
+
+        $verifiedName = $result['verified_name'] ?? null;
+        if (empty($verifiedName)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Provider could not verify full legal name on the document.',
+            ], 422);
+        }
+
+        $saveResult = $this->persistVerifiedIdentityIfUnverified(
+            $member->id,
+            'pan',
+            'cashfree',
+            $result['reference_id'] ?? null,
+            $verifiedName,
+            substr($pan, -4),
+            null
+        );
+
+        if (!$saveResult['persisted']) {
+            return response()->json([
+                'status'        => 'already_verified',
+                'verified_name' => $saveResult['member']->identity_verified_name ?? $saveResult['member']->full_name,
+                'message'       => 'Identity is already verified with another document.',
+            ]);
+        }
+
+        return response()->json([
+            'status'        => 'success',
+            'verified_name' => $verifiedName,
+            'message'       => 'PAN verified successfully!',
+        ]);
+    }
+
+    /**
+     * Verify Voter ID for Membership Identity.
+     */
+    public function verifyVoterIdIdentity(Request $request)
+    {
+        $phone = session('verified_membership_phone');
+        if (!$phone) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Active membership session not found. Please verify your phone number first.',
+            ], 401);
+        }
+
+        $member = Membership::where('phone', $phone)->first();
+        if (!$member || !self::hasVerifiedMembershipPayment($member)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Membership payment is required before identity verification.',
+            ], 403);
+        }
+
+        if ($member->hasVerifiedIdentity()) {
+            return response()->json([
+                'status'        => 'already_verified',
+                'verified_name' => $member->identity_verified_name ?? $member->full_name,
+                'message'       => 'Identity is already successfully verified.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'voter_id' => 'required|string|min:3|max:30|regex:/^[A-Za-z0-9\/-]+$/',
+        ]);
+
+        $epic = strtoupper(trim($validated['voter_id']));
+        $verificationId = 'ABV_' . (string) Str::uuid();
+
+        $secureIdService = new \App\Services\CashfreeSecureIdService();
+        $result = $secureIdService->verifyVoterId($epic, $verificationId);
+
+        if (!$result['success']) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => $result['message'] ?? 'Voter ID verification failed. Please check the EPIC number and try again.',
+            ], 422);
+        }
+
+        $verifiedName = $result['verified_name'] ?? null;
+        if (empty($verifiedName)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Provider could not verify full legal name on the document.',
+            ], 422);
+        }
+
+        $saveResult = $this->persistVerifiedIdentityIfUnverified(
+            $member->id,
+            'voter_id',
+            'cashfree',
+            $result['reference_id'] ?? null,
+            $verifiedName,
+            substr($epic, -4),
+            $verificationId
+        );
+
+        if (!$saveResult['persisted']) {
+            return response()->json([
+                'status'        => 'already_verified',
+                'verified_name' => $saveResult['member']->identity_verified_name ?? $saveResult['member']->full_name,
+                'message'       => 'Identity is already verified with another document.',
+            ]);
+        }
+
+        return response()->json([
+            'status'        => 'success',
+            'verified_name' => $verifiedName,
+            'message'       => 'Voter ID verified successfully!',
+        ]);
+    }
+
+    /**
+     * Verify Driving Licence for Membership Identity.
+     */
+    public function verifyDrivingLicenceIdentity(Request $request)
+    {
+        $phone = session('verified_membership_phone');
+        if (!$phone) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Active membership session not found. Please verify your phone number first.',
+            ], 401);
+        }
+
+        $member = Membership::where('phone', $phone)->first();
+        if (!$member || !self::hasVerifiedMembershipPayment($member)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Membership payment is required before identity verification.',
+            ], 403);
+        }
+
+        if ($member->hasVerifiedIdentity()) {
+            return response()->json([
+                'status'        => 'already_verified',
+                'verified_name' => $member->identity_verified_name ?? $member->full_name,
+                'message'       => 'Identity is already successfully verified.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'dl_number' => 'required|string|min:5|max:30',
+            'dob'       => 'required|date_format:Y-m-d|before:today',
+        ]);
+
+        $dlNumber = strtoupper(trim($validated['dl_number']));
+        $dob      = trim($validated['dob']);
+        $verificationId = 'ABV_' . (string) Str::uuid();
+
+        $secureIdService = new \App\Services\CashfreeSecureIdService();
+        $result = $secureIdService->verifyDrivingLicence($dlNumber, $dob, $verificationId);
+
+        if (!$result['success']) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => $result['message'] ?? 'Driving Licence verification failed. Please check the details and try again.',
+            ], 422);
+        }
+
+        $verifiedName = $result['verified_name'] ?? null;
+        if (empty($verifiedName)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Provider could not verify full legal name on the document.',
+            ], 422);
+        }
+
+        $saveResult = $this->persistVerifiedIdentityIfUnverified(
+            $member->id,
+            'driving_licence',
+            'cashfree',
+            $result['reference_id'] ?? null,
+            $verifiedName,
+            substr($dlNumber, -4),
+            $verificationId
+        );
+
+        if (!$saveResult['persisted']) {
+            return response()->json([
+                'status'        => 'already_verified',
+                'verified_name' => $saveResult['member']->identity_verified_name ?? $saveResult['member']->full_name,
+                'message'       => 'Identity is already verified with another document.',
+            ]);
+        }
+
+        return response()->json([
+            'status'        => 'success',
+            'verified_name' => $verifiedName,
+            'message'       => 'Driving Licence verified successfully!',
+        ]);
+    }
+
+    /**
+     * Verify Passport for Membership Identity.
+     */
+    public function verifyPassportIdentity(Request $request)
+    {
+        $phone = session('verified_membership_phone');
+        if (!$phone) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Active membership session not found. Please verify your phone number first.',
+            ], 401);
+        }
+
+        $member = Membership::where('phone', $phone)->first();
+        if (!$member || !self::hasVerifiedMembershipPayment($member)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Membership payment is required before identity verification.',
+            ], 403);
+        }
+
+        if ($member->hasVerifiedIdentity()) {
+            return response()->json([
+                'status'        => 'already_verified',
+                'verified_name' => $member->identity_verified_name ?? $member->full_name,
+                'message'       => 'Identity is already successfully verified.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'file_number' => 'required|string|min:8|max:20',
+            'dob'         => 'required|date_format:Y-m-d|before:today',
+        ]);
+
+        $fileNumber = strtoupper(trim($validated['file_number']));
+        $dob        = trim($validated['dob']);
+        $verificationId = 'ABV_' . (string) Str::uuid();
+
+        $secureIdService = new \App\Services\CashfreeSecureIdService();
+        $result = $secureIdService->verifyPassport($fileNumber, $dob, $verificationId);
+
+        if (!$result['success']) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => $result['message'] ?? 'Passport verification failed. Please check the details and try again.',
+            ], 422);
+        }
+
+        $verifiedName = $result['verified_name'] ?? null;
+        if (empty($verifiedName)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Provider could not verify full legal name on the document.',
+            ], 422);
+        }
+
+        $saveResult = $this->persistVerifiedIdentityIfUnverified(
+            $member->id,
+            'passport',
+            'cashfree',
+            $result['reference_id'] ?? null,
+            $verifiedName,
+            substr($fileNumber, -4),
+            $verificationId
+        );
+
+        if (!$saveResult['persisted']) {
+            return response()->json([
+                'status'        => 'already_verified',
+                'verified_name' => $saveResult['member']->identity_verified_name ?? $saveResult['member']->full_name,
+                'message'       => 'Identity is already verified with another document.',
+            ]);
+        }
+
+        return response()->json([
+            'status'        => 'success',
+            'verified_name' => $verifiedName,
+            'message'       => 'Passport verified successfully!',
+        ]);
+    }
+
     // 6. Show Registration Application Form (Linking directly to original layout file)
     public function showApplicationForm()
     {
@@ -322,6 +734,10 @@ class MembershipController extends Controller
 
         if (!self::hasValidMembershipAccess($member)) {
             return redirect('/membership/payment')->with('error', 'Please complete the membership payment first.');
+        }
+
+        if (!self::hasVerifiedMembershipIdentity($member)) {
+            return redirect('/membership/identity')->with('warning', 'Please complete identity verification before accessing the application form.');
         }
 
         // 4-4-4 formatted layout with spaces (e.g., 4318 2764 1156)
@@ -346,6 +762,9 @@ class MembershipController extends Controller
      * 5. Perform strict server-side normalized name comparison.
      * 6. If match: Persist verified Cashfree identity & return auto-population data.
      * 7. If mismatch: Reject verification, do NOT save unverified identity, return name mismatch response.
+     */
+    /**
+     * @deprecated Legacy unrouted offline Aadhaar verification method. Active flow uses DigiLocker startAadhaarVerification.
      */
     public function verifyAadhaar(Request $request)
     {
@@ -403,6 +822,15 @@ class MembershipController extends Controller
             ], 403);
         }
 
+        if ($member->hasVerifiedIdentity()) {
+            return response()->json([
+                'status'              => 'success',
+                'is_name_matched'     => true,
+                'is_aadhaar_verified' => true,
+                'message'             => 'Identity is already verified with an official document.',
+            ]);
+        }
+
         // Server-controlled verification reference
         $verificationId = 'ABVHPS_AADHAAR_' . $member->id . '_' . time();
 
@@ -452,51 +880,54 @@ class MembershipController extends Controller
             ], 200);
         }
 
-        // 6. Name MATCHES: Build update payload using authoritative Cashfree identity data
-        $updatePayload = [
-            'aadhaar_number'          => $aadhaar,
-            'full_name'               => $verifiedName, // Authoritative Cashfree verified name
-            'is_aadhaar_verified'     => true,
-            'aadhaar_verification_ref' => $cfResult['ref_id'] ?? $verificationId,
-            'aadhaar_verified_at'     => \Carbon\Carbon::now('Asia/Kolkata'),
+        // 6. Name MATCHES: Build extra payload using authoritative Cashfree identity data
+        $extraPayload = [
+            'aadhaar_number' => $aadhaar,
         ];
 
         $cfData = $cfResult['data'] ?? [];
 
         if (!empty($cfData['dob'])) {
-            $updatePayload['dob'] = $cfData['dob'];
+            $extraPayload['dob'] = $cfData['dob'];
         }
         if (!empty($cfData['gender'])) {
-            $updatePayload['gender'] = $cfData['gender'];
+            $extraPayload['gender'] = $cfData['gender'];
         }
         if (!empty($cfData['father_or_husband_name'])) {
-            $updatePayload['father_or_husband_name'] = $cfData['father_or_husband_name'];
+            $extraPayload['father_or_husband_name'] = $cfData['father_or_husband_name'];
         }
         if (!empty($cfData['permanent_address'])) {
-            $updatePayload['permanent_address'] = $cfData['permanent_address'];
+            $extraPayload['permanent_address'] = $cfData['permanent_address'];
         }
         if (!empty($cfData['pincode'])) {
-            $updatePayload['pincode'] = $cfData['pincode'];
+            $extraPayload['pincode'] = $cfData['pincode'];
         }
         if (!empty($cfData['district'])) {
-            $updatePayload['district'] = $cfData['district'];
+            $extraPayload['district'] = $cfData['district'];
         }
         if (!empty($cfData['state'])) {
-            $updatePayload['state'] = $cfData['state'];
+            $extraPayload['state'] = $cfData['state'];
         }
 
-        // Perform database persistence
-        try {
-            $member->update($updatePayload);
-            $member->refresh();
-        } catch (\Throwable $e) {
-            Log::error("Aadhaar Verification: Persistence failed for member {$maskedPhone}: " . $e->getMessage());
+        // Perform atomic persistence
+        $saveResult = $this->persistVerifiedIdentityIfUnverified(
+            $member->id,
+            'aadhaar',
+            'cashfree',
+            $cfResult['ref_id'] ?? $verificationId,
+            $verifiedName,
+            substr($aadhaar, -4),
+            $verificationId,
+            $extraPayload
+        );
+
+        if (!$saveResult['persisted']) {
             return response()->json([
-                'status'              => 'error',
-                'is_name_matched'     => false,
-                'is_aadhaar_verified' => false,
-                'message'             => 'Failed to save verified Aadhaar identity data to database. Please retry.',
-            ], 500);
+                'status'              => 'success',
+                'is_name_matched'     => true,
+                'is_aadhaar_verified' => true,
+                'message'             => 'Identity was already verified with another document.',
+            ]);
         }
 
         Log::info("Aadhaar Verification: Successfully verified and persisted Aadhaar & Name for member {$maskedPhone}.", [
@@ -786,39 +1217,43 @@ class MembershipController extends Controller
         }
 
         // Authoritative server-side persistence of verified identity
-        $updatePayload = [
-            'aadhaar_number'           => $decryptedAadhaar,
-            'full_name'                => $verifiedName,
-            'is_aadhaar_verified'      => true,
-            'aadhaar_verification_ref' => $docResult['reference_id'] ?? $referenceId ?? $verificationId,
-            'aadhaar_verified_at'      => Carbon::now('Asia/Kolkata'),
+        $extraPayload = [
+            'aadhaar_number' => $decryptedAadhaar,
         ];
 
         if (!empty($verifiedData['dob'])) {
-            $updatePayload['dob'] = $verifiedData['dob'];
+            $extraPayload['dob'] = $verifiedData['dob'];
         }
         if (!empty($verifiedData['gender'])) {
-            $updatePayload['gender'] = $verifiedData['gender'];
+            $extraPayload['gender'] = $verifiedData['gender'];
         }
         if (!empty($verifiedData['care_of']) || !empty($verifiedData['father_or_husband_name'])) {
-            $updatePayload['father_or_husband_name'] = $verifiedData['care_of'] ?? $verifiedData['father_or_husband_name'];
+            $extraPayload['father_or_husband_name'] = $verifiedData['care_of'] ?? $verifiedData['father_or_husband_name'];
         }
         if (!empty($verifiedData['permanent_address']) || !empty($verifiedData['address'])) {
-            $updatePayload['permanent_address'] = $verifiedData['permanent_address'] ?? $verifiedData['address'];
+            $extraPayload['permanent_address'] = $verifiedData['permanent_address'] ?? $verifiedData['address'];
         }
         if (!empty($verifiedData['pincode'])) {
-            $updatePayload['pincode'] = $verifiedData['pincode'];
+            $extraPayload['pincode'] = $verifiedData['pincode'];
         }
         if (!empty($verifiedData['district'])) {
-            $updatePayload['district'] = $verifiedData['district'];
+            $extraPayload['district'] = $verifiedData['district'];
         }
         if (!empty($verifiedData['state'])) {
-            $updatePayload['state'] = $verifiedData['state'];
+            $extraPayload['state'] = $verifiedData['state'];
         }
 
         try {
-            $member->update($updatePayload);
-            $member->refresh();
+            $saveResult = $this->persistVerifiedIdentityIfUnverified(
+                $member->id,
+                'aadhaar',
+                'cashfree',
+                $docResult['reference_id'] ?? $referenceId ?? $verificationId,
+                $verifiedName,
+                substr($decryptedAadhaar, -4),
+                $verificationId,
+                $extraPayload
+            );
         } catch (\Throwable $e) {
             $this->clearDigiLockerSession();
             Log::error("DigiLocker Callback: Database update failed for member ID {$member->id}: " . $e->getMessage());
@@ -827,6 +1262,11 @@ class MembershipController extends Controller
 
         // Security Requirement 8: Clear temporary DigiLocker session state after successful verification
         $this->clearDigiLockerSession();
+
+        if (!$saveResult['persisted']) {
+            Log::info("DigiLocker Callback: Member ID {$member->id} already has verified identity; preserved existing.");
+            return redirect('/membership/application')->with('warning', 'Identity was already verified with another document.');
+        }
 
         Log::info("DigiLocker Callback: Successfully verified and persisted Aadhaar & Name for member ID {$member->id}.");
 
@@ -872,16 +1312,16 @@ class MembershipController extends Controller
             ], 403);
         }
 
-        if ($member->is_aadhaar_verified) {
+        if ($member->hasVerifiedIdentity()) {
             // Security Requirement 5 & 13: Never return full Aadhaar in JSON
             $maskedAadhaar = $member->aadhaar_number ? ('XXXX-XXXX-' . substr($member->aadhaar_number, -4)) : null;
 
             return response()->json([
                 'is_verified'    => true,
-                'verified_name'  => $member->full_name,
+                'verified_name'  => $member->identity_verified_name ?? $member->full_name,
                 'masked_aadhaar' => $maskedAadhaar,
                 'data'           => array_filter([
-                    'full_name'              => $member->full_name,
+                    'full_name'              => $member->identity_verified_name ?? $member->full_name,
                     'dob'                    => $member->dob,
                     'gender'                 => $member->gender,
                     'father_or_husband_name' => $member->father_or_husband_name,
@@ -890,25 +1330,26 @@ class MembershipController extends Controller
                     'district'               => $member->district,
                     'state'                  => $member->state,
                 ], fn($v) => !is_null($v)),
-                'message'        => 'Aadhaar & Name Verified Successfully!',
+                'message'        => 'Identity Verified Successfully!',
             ]);
         }
 
         return response()->json([
             'is_verified'   => false,
             'verified_name' => null,
-            'message'       => 'Aadhaar not verified yet.',
+            'message'       => 'Identity not verified yet.',
         ]);
     }
 
-    // 7. Store Registration Form Data supporting both Web Forms and Mobile App API requests
+    /**
+     * Final Membership Form Submission Desk (Strict Verification Guard Enforced)
+     */
     public function submitApplication(Request $request)
     {
-        // Security Requirement 1: MUST use ONLY session('verified_membership_phone') for web membership flow
         $phone = session('verified_membership_phone');
         if (!$phone) {
-            if ($request->wantsJson()) {
-                return response()->json(['status' => 'error', 'message' => 'Phone verification metrics missing.'], 401);
+            if ($request->wantsJson() || $request->is('api/*')) {
+                return response()->json(['status' => 'error', 'message' => 'Unauthenticated session.'], 401);
             }
             return redirect('/membership')->with('error', 'Please verify your mobile number first.');
         }
@@ -917,38 +1358,32 @@ class MembershipController extends Controller
 
         if (!self::hasValidMembershipAccess($memberRecord)) {
             if ($request->wantsJson() || $request->is('api/*')) {
-                return response()->json([
-                    'status'  => 'error',
-                    'message' => 'Membership payment is required before submitting your application.',
-                ], 403);
+                return response()->json(['status' => 'error', 'message' => 'Membership payment not verified.'], 403);
             }
             return redirect('/membership/payment')->with('error', 'Please complete membership payment before submitting the application.');
         }
 
-        // Form Submission Security Requirement: Server-side validation that Aadhaar is verified in DB
-        if (!$memberRecord || !$memberRecord->is_aadhaar_verified) {
+        // Security Guard: Gating on verified identity
+        if (!self::hasVerifiedMembershipIdentity($memberRecord)) {
             if ($request->wantsJson() || $request->is('api/*')) {
-                return response()->json([
-                    'status'  => 'error',
-                    'message' => 'Aadhaar verification is required before submitting your membership application.',
-                ], 422);
+                return response()->json(['status' => 'error', 'message' => 'Identity verification is required before submitting your membership application.'], 422);
             }
-            return redirect()->back()->with('error', 'Please complete Aadhaar verification before submitting the application.');
+            return redirect('/membership/identity')->with('error', 'Identity verification is required before submitting your application.');
         }
 
-        // Standard Indian form validation rules tracking inputs including optional email
+        // Strict Pre-submission Validation
         $request->validate([
-            'aadhaar_number'         => 'required|digits:12',
-            'full_name'              => 'required|string|max:255',
-            'gender'                 => 'required|string|in:Male,Female,Other',
+            'aadhaar_number'         => 'nullable|string|size:12',
+            'full_name'              => 'nullable|string|max:255',
+            'gender'                 => 'required|in:Male,Female,Other',
             'dob'                    => 'required|string|max:20',
             'father_or_husband_name' => 'required|string|max:255',
-            'permanent_address'      => 'nullable|string|max:1000',
-            'present_address'        => 'nullable|string|max:1000',
             'gotram'                 => 'required|string|max:255',
             'occupation'             => 'required|string|max:255',
             'blood_group'            => 'nullable|string|max:10',
-            'pincode'                => 'required|digits:6',
+            'permanent_address'      => 'nullable|string|max:1000',
+            'present_address'        => 'nullable|string|max:1000',
+            'pincode'                => 'required|string|max:10',
             'grama_panchayat'        => 'required|string|max:255',
             'mandal'                 => 'required|string|max:255',
             'district'               => 'required|string|max:255',
@@ -962,25 +1397,32 @@ class MembershipController extends Controller
             $photoPath = $request->file('photo')->store('member_photos', 'public');
         }
 
-        $stateInput = $request->input('state');
-        $emailInput = $request->input('email');
-        $addressToggle = $request->input('address_toggle', 'same');
-        $permanentAddress = $request->input('permanent_address');
-        $presentAddress = ($addressToggle === 'different' && !empty($request->input('present_address')))
-            ? $request->input('present_address')
-            : $permanentAddress;
+        // Security Requirement: PROTECT VERIFIED IDENTITY FIELDS ON SUBMISSION
+        // Resolve verified name exclusively from provider-controlled database values — never from browser input!
+        if ($memberRecord->identity_verified && !empty($memberRecord->identity_verified_name)) {
+            $finalFullName = $memberRecord->identity_verified_name;
+        } elseif ($memberRecord->is_aadhaar_verified && !empty($memberRecord->full_name)) {
+            $finalFullName = $memberRecord->full_name;
+        } else {
+            return redirect('/membership/identity')->with('error', 'Identity verification is required before submitting your application.');
+        }
 
-        // Security Requirement 11: PROTECT VERIFIED IDENTITY FIELDS ON SUBMISSION
-        // Always preserve verified server/database values when non-empty — do not let request inputs overwrite them!
-        $finalFullName    = $memberRecord->full_name ?: strtoupper(trim($request->input('full_name')));
-        $finalAadhaar     = $memberRecord->aadhaar_number ?: $request->input('aadhaar_number');
+        // Security Rule 3: Never store unverified Aadhaar from browser application form.
+        // aadhaar_number is ONLY populated if genuine Aadhaar verification occurred.
+        $finalAadhaar     = $memberRecord->aadhaar_number;
         $finalDob         = $memberRecord->dob ?: $request->input('dob');
         $finalGender      = $memberRecord->gender ?: $request->input('gender');
         $finalCareOf      = $memberRecord->father_or_husband_name ?: $request->input('father_or_husband_name');
-        $finalPermAddress = $memberRecord->permanent_address ?: $permanentAddress;
+        $finalPermAddress = $memberRecord->permanent_address ?: $request->input('permanent_address');
         $finalPincode     = $memberRecord->pincode ?: $request->input('pincode');
         $finalDistrict    = $memberRecord->district ?: $request->input('district');
-        $finalState       = $memberRecord->state ?: $request->input('state');
+        $stateInput       = $request->input('state');
+        $finalState       = $memberRecord->state ?: $stateInput;
+        $emailInput       = $request->input('email');
+        $addressToggle    = $request->input('address_toggle', 'same');
+        $presentAddress   = ($addressToggle === 'different' && !empty($request->input('present_address')))
+            ? $request->input('present_address')
+            : $finalPermAddress;
 
         // Updating final record fields safely inside the database row tracking system
         $updatePayload = [
@@ -1010,6 +1452,10 @@ class MembershipController extends Controller
         }
 
         Membership::where('phone', $phone)->update($updatePayload);
+        $memberRecord->refresh();
+
+        // Send membership welcome email outside the database transaction
+        $this->sendMembershipWelcomeEmail($memberRecord);
 
         // STATE LANGUAGE DETECTION LOGIC: Selecting language dynamically based on mapped input state
         $selectedLanguage = 'en'; 
@@ -1020,19 +1466,17 @@ class MembershipController extends Controller
             $selectedLanguage = 'kn'; 
         }
 
-        // TRIGGER OPTIONAL EMAIL SYSTEM: If email id exists, fire the automated dispatch tracker
         if (!empty($emailInput)) {
             $mailLogMetrics = [
                 'recipient_email' => $emailInput,
                 'assigned_language' => $selectedLanguage,
-                'status' => 'queued_with_id_card_attachment'
+                'status' => 'dispatched'
             ];
             session(['last_email_log' => $mailLogMetrics]);
         }
 
         // DUAL CHANNELS CONNECTIVITY RESPONSE: Supporting web views and mobile app endpoints simultaneously
         if ($request->wantsJson() || $request->is('api/*')) {
-            $memberRecord = Membership::where('phone', $phone)->first();
             return response()->json([
                 'status' => 'success',
                 'message' => 'Registration completed successfully.',
@@ -1044,6 +1488,64 @@ class MembershipController extends Controller
 
         session(['verified_membership_phone' => $phone]);
         return redirect('/membership/view-card')->with('success', 'Registration completed successfully!');
+    }
+
+    /**
+     * Dispatch membership welcome email with canonical NotificationLog idempotency claim.
+     */
+    private function sendMembershipWelcomeEmail(Membership $member): void
+    {
+        if (empty($member->email) || !filter_var($member->email, FILTER_VALIDATE_EMAIL)) {
+            return;
+        }
+
+        // Canonical idempotency claim via NotificationLog unique index
+        try {
+            $claim = \App\Models\NotificationLog::create([
+                'event_type'      => 'membership_welcome',
+                'notifiable_type' => Membership::class,
+                'notifiable_id'   => $member->id,
+                'channel'         => 'email',
+                'recipient_email' => $member->email,
+                'subject'         => '🙏 Welcome to ABVHPS — Your Membership ID: ' . ($member->membership_id ?? 'MEMBER'),
+                'message'         => 'Membership welcome confirmation sent for ID: ' . ($member->membership_id ?? 'MEMBER'),
+                'status'          => 'pending',
+                'sent_at'         => null,
+            ]);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            // Already claimed or sent
+            return;
+        } catch (\Throwable $e) {
+            Log::error("MembershipWelcomeMail: Claim creation failed for member {$member->id}: " . $e->getMessage());
+            return;
+        }
+
+        $memberData = [
+            'full_name'     => $member->identity_verified_name ?? $member->full_name,
+            'membership_id' => $member->membership_id,
+            'formatted_id'  => implode(' ', str_split($member->membership_id ?? '', 4)),
+            'status'        => 'Active / Completed',
+        ];
+
+        try {
+            \Illuminate\Support\Facades\Mail::to($member->email)->send(new \App\Mail\MembershipWelcomeMail($memberData));
+
+            $status = config('mail.default') === 'log' ? 'logged' : 'sent';
+            $claim->update([
+                'status'  => $status,
+                'sent_at' => now(),
+            ]);
+
+            $member->welcome_email_sent_at = now();
+            $member->save();
+        } catch (\Throwable $e) {
+            Log::error("MembershipWelcomeMail: Send failed for member {$member->id}: " . $e->getMessage());
+            try {
+                $claim->delete();
+            } catch (\Throwable $delEx) {
+                // ignore
+            }
+        }
     }
 
     // 8. Render ID Card Screen showing mapped database values

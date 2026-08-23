@@ -366,6 +366,41 @@
                     </p>
                 </div>
 
+                {{-- ABVHPS Official Statutory Compliance Certificates (Paid Donations Only) --}}
+                @if($isPaid && isset($activeCertificates) && count($activeCertificates) > 0)
+                <div class="bg-white rounded-2xl border border-amber-200 shadow-2xs p-4 sm:p-5 space-y-3">
+                    <div class="flex items-center justify-between border-b border-amber-100 pb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base">📜</span>
+                            <h4 class="text-xs font-black uppercase tracking-wider text-slate-900">ABVHPS Compliance Certificates</h4>
+                        </div>
+                        <span class="text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                            Statutory Disclosures
+                        </span>
+                    </div>
+                    <p class="text-[11px] text-slate-600 leading-relaxed">
+                        View our official Trust statutory registration, Section 12A exemption, and Section 80G tax compliance documents:
+                    </p>
+                    <div class="space-y-2 pt-1">
+                        @foreach($activeCertificates as $cert)
+                            <a href="{{ $cert->file_url }}" target="_blank" rel="noopener noreferrer" class="group flex items-center justify-between p-2.5 rounded-xl border border-slate-200 hover:border-amber-400 bg-slate-50/60 hover:bg-amber-50/40 transition">
+                                <div class="space-y-0.5">
+                                    <div class="text-xs font-bold text-slate-800 group-hover:text-amber-900">
+                                        {{ $cert->title }}
+                                    </div>
+                                    <div class="text-[10px] text-slate-500 font-mono">
+                                        {{ $cert->certificate_type }} @if($cert->document_number) • Reg: {{ $cert->document_number }} @endif
+                                    </div>
+                                </div>
+                                <span class="text-xs text-amber-700 font-bold group-hover:translate-x-0.5 transition-transform">
+                                    View &rarr;
+                                </span>
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
             </div>
 
         </div>

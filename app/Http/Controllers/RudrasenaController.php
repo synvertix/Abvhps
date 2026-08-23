@@ -385,7 +385,7 @@ class RudrasenaController extends Controller
                     'updated_at' => Carbon::now()
                 ]);
 
-                // Dispatch Welcome Email with Attached PDF ID Card
+                // Dispatch Welcome Email with Attached PDF ID Card (Idempotent)
                 $membership = DB::table('memberships')->where('membership_id', $member->membership_id)->first();
                 $cardData = [
                     'id' => $member->id,
@@ -402,20 +402,36 @@ class RudrasenaController extends Controller
                     'status' => 'verified'
                 ];
 
-                try {
-                    $pdf = Pdf::loadView('pdf.rudrasena_card_pdf', compact('cardData'));
-                    $pdfContent = $pdf->output();
+                if (!empty($member->email) && !\App\Models\NotificationLog::alreadySent(\App\Models\RudrasenaMember::class, $id, 'email', 'rudrasena_welcome')) {
+                    $pdfContent = null;
+                    try {
+                        $pdf = Pdf::loadView('pdf.rudrasena_card_pdf', compact('cardData'));
+                        $pdfContent = $pdf->output();
 
-                    Mail::to($member->email)->send(new RudrasenaWelcomeMail($cardData, $pdfContent));
-                } catch (\Throwable $e) {
-                    Log::error('Rudrasena welcome email generation/dispatch error: ' . $e->getMessage());
+                        Mail::to($member->email)->send(new RudrasenaWelcomeMail($cardData, $pdfContent));
+
+                        $mailStatus = config('mail.default') === 'log' ? 'logged' : 'sent';
+                        \App\Models\NotificationLog::record([
+                            'event_type'      => 'rudrasena_welcome',
+                            'notifiable_type' => \App\Models\RudrasenaMember::class,
+                            'notifiable_id'   => $id,
+                            'channel'         => 'email',
+                            'recipient_email' => $member->email,
+                            'subject'         => 'Welcome to ABVHPS Rudrasena Dal',
+                            'message'         => 'Rudrasena welcome email sent with ID: ' . $generatedId,
+                            'status'          => $mailStatus,
+                            'sent_at'         => now(),
+                        ]);
+                    } catch (\Throwable $e) {
+                        Log::error('Rudrasena welcome email generation/dispatch error: ' . $e->getMessage());
+                    }
+
+                    session(['last_rudrasena_email_log' => [
+                        'recipient_email' => $member->email,
+                        'rudrasena_id' => $generatedId,
+                        'status' => 'dispatched'
+                    ]]);
                 }
-
-                session(['last_rudrasena_email_log' => [
-                    'recipient_email' => $member->email,
-                    'rudrasena_id' => $generatedId,
-                    'status' => 'dispatched'
-                ]]);
             } else {
                 DB::table('rudrasena_members')->where('id', $id)->update([
                     'status' => 'verified',

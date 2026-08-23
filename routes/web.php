@@ -35,6 +35,13 @@ Route::get('/membership/payment', [MembershipController::class, 'showPaymentPage
 Route::post('/membership/payment/razorpay/initiate', [MembershipController::class, 'initiateRazorpayPayment'])->name('membership.payment.razorpay.initiate');
 Route::post('/membership/payment/razorpay/verify', [MembershipController::class, 'verifyRazorpayPayment'])->name('membership.payment.razorpay.verify');
 
+// 2b. Membership Identity Verification Routes (Any ONE of 5 methods)
+Route::get('/membership/identity', [MembershipController::class, 'showIdentityPage'])->name('membership.identity');
+Route::post('/membership/identity/pan/verify', [MembershipController::class, 'verifyPanIdentity'])->name('membership.identity.pan.verify')->middleware('throttle:10,1');
+Route::post('/membership/identity/voter-id/verify', [MembershipController::class, 'verifyVoterIdIdentity'])->name('membership.identity.voter.verify')->middleware('throttle:10,1');
+Route::post('/membership/identity/driving-license/verify', [MembershipController::class, 'verifyDrivingLicenceIdentity'])->name('membership.identity.dl.verify')->middleware('throttle:10,1');
+Route::post('/membership/identity/passport/verify', [MembershipController::class, 'verifyPassportIdentity'])->name('membership.identity.passport.verify')->middleware('throttle:10,1');
+
 // 3. Render Membership Final Data Registration Form Desk
 Route::get('/membership/application', [MembershipController::class, 'showApplicationForm']);
 Route::post('/membership/verify-aadhaar', [MembershipController::class, 'startAadhaarVerification'])->name('membership.verify_aadhaar');

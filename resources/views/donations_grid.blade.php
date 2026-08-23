@@ -310,8 +310,8 @@
                     </label>
 
                     <!-- Custom Amount Input -->
-                    <div class="relative pt-2">
-                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 font-black text-base pt-2">
+                    <div class="relative mt-2">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 font-black text-base">
                             ₹
                         </div>
                         <input type="number" id="donation_amount" name="amount" min="1" max="500000" step="1" required
