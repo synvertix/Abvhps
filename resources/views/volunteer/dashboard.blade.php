@@ -23,7 +23,7 @@
             <div class="flex flex-wrap items-center gap-2 sm:gap-3">
                 <a href="{{ route('volunteer.change_password') }}"
                    class="bg-white/15 hover:bg-white/25 border border-white/20 text-white text-xs font-bold px-4 py-2 rounded-xl uppercase tracking-wider transition min-h-[44px] inline-flex items-center">
-                    🔑 Change Password
+                    Change Password
                 </a>
                 <form action="{{ route('volunteer.logout') }}" method="POST" class="inline">
                     @csrf
@@ -159,38 +159,38 @@
                 <div class="space-y-2">
                     <a href="{{ route('volunteer.events.index') }}"
                        class="w-full bg-brandOrange hover:bg-orange-600 text-white font-black text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-between">
-                        <span>🏆 Events &amp; Service Activities</span>
+                        <span>Events &amp; Service Activities</span>
                         <span>&rarr;</span>
                     </a>
 
                     <a href="{{ route('volunteer.member_search') }}"
                        class="w-full bg-white hover:bg-orange-100 text-brandOrange border border-orange-300 font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-between">
-                        <span>🔍 Search Member by ID</span>
+                        <span>Search Member by ID</span>
                         <span>&rarr;</span>
                     </a>
 
                     <a href="{{ route('volunteer.member_data') }}"
                        class="w-full bg-white hover:bg-orange-100 text-gray-800 border border-orange-200 font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-between">
-                        <span>📋 Area-wise Member Data</span>
+                        <span>Area-wise Member Data</span>
                         <span>&rarr;</span>
                     </a>
 
                     <a href="{{ route('public.team', ['search' => $volunteer->volunteer_id]) }}"
                        target="_blank"
                        class="w-full bg-white hover:bg-orange-100 text-brandOrange border border-orange-300 font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-between">
-                        <span>👥 View in Public Directory</span>
+                        <span>View in Public Directory</span>
                         <span>&rarr;</span>
                     </a>
 
                     <a href="{{ route('volunteer.profile') }}"
                        class="w-full bg-white hover:bg-orange-100 text-gray-800 border border-orange-200 font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-between">
-                        <span>📄 View Full Dossier</span>
+                        <span>View Full Dossier</span>
                         <span>&rarr;</span>
                     </a>
 
                     <a href="{{ route('volunteer.change_password') }}"
                        class="w-full bg-white hover:bg-orange-100 text-gray-800 border border-orange-200 font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-between">
-                        <span>🔑 Manage Password</span>
+                        <span>Manage Password</span>
                         <span>&rarr;</span>
                     </a>
                 </div>
