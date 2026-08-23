@@ -414,30 +414,47 @@
                         <span class="text-red-500">*</span>
                     </label>
 
+                    <!-- Gateway Advisory Banner (Shows when Cashfree clicked) -->
+                    <div id="cf_gateway_advisory" class="hidden p-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-xs font-bold shadow-xs flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span>ℹ️</span>
+                            <span>Cashfree Payments is coming soon. Please use Razorpay to continue.</span>
+                        </div>
+                        <button type="button" onclick="this.parentElement.classList.add('hidden')" class="text-amber-700 hover:text-amber-900 font-black text-sm px-1">✕</button>
+                    </div>
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <!-- Option A: Cashfree -->
-                        <label class="gateway-option-card relative flex items-center p-4 rounded-2xl border-2 cursor-pointer transition select-none border-brandOrange bg-orange-50/60 ring-2 ring-brandOrange/20" id="gw_card_cashfree">
-                            <input type="radio" name="payment_gateway" value="cashfree" checked onchange="handleGatewayChange('cashfree')" class="sr-only">
+                        <!-- Option A: Cashfree (Gated - Upcoming) -->
+                        <div class="gateway-option-card relative flex items-center p-4 rounded-2xl border-2 transition select-none border-gray-200 bg-gray-50/80 cursor-pointer hover:border-amber-300"
+                             id="gw_card_cashfree"
+                             onclick="handleCashfreeCardClick(event)"
+                             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();handleCashfreeCardClick(event);}"
+                             tabindex="0"
+                             role="button"
+                             aria-disabled="true"
+                             aria-label="Cashfree Payments - Upcoming">
+                            <input type="radio" name="payment_gateway" value="cashfree" id="radio_cashfree" disabled class="sr-only">
                             <div class="flex items-center gap-3 w-full">
-                                <div class="w-5 h-5 rounded-full border-2 border-brandOrange flex items-center justify-center shrink-0">
-                                    <div class="w-2.5 h-2.5 rounded-full bg-brandOrange" id="gw_dot_cashfree"></div>
+                                <div class="w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center shrink-0 bg-gray-100">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-transparent" id="gw_dot_cashfree"></div>
                                 </div>
                                 <div class="flex-1">
                                     <div class="flex items-center justify-between">
-                                        <span class="text-xs sm:text-sm font-black text-gray-900 uppercase">Cashfree Payments</span>
-                                        <span class="text-[9px] font-black bg-orange-200 text-orange-900 px-2 py-0.5 rounded uppercase">Instant</span>
+                                        <span class="text-xs sm:text-sm font-black text-gray-700 uppercase">Cashfree Payments</span>
+                                        <span class="text-[9px] font-black bg-gray-200 text-gray-700 px-2 py-0.5 rounded uppercase">UPCOMING</span>
                                     </div>
                                     <span class="text-[10px] text-gray-500 font-semibold block mt-0.5">UPI, Google Pay, PhonePe, Cards, NetBanking</span>
                                 </div>
                             </div>
-                        </label>
+                        </div>
 
-                        <!-- Option B: Razorpay -->
-                        <label class="gateway-option-card relative flex items-center p-4 rounded-2xl border-2 cursor-pointer transition select-none border-gray-200 bg-gray-50/50 hover:border-orange-300" id="gw_card_razorpay">
-                            <input type="radio" name="payment_gateway" value="razorpay" onchange="handleGatewayChange('razorpay')" class="sr-only">
+                        <!-- Option B: Razorpay (Active by default) -->
+                        <label class="gateway-option-card relative flex items-center p-4 rounded-2xl border-2 cursor-pointer transition select-none border-brandOrange bg-orange-50/60 ring-2 ring-brandOrange/20"
+                               id="gw_card_razorpay">
+                            <input type="radio" name="payment_gateway" value="razorpay" id="radio_razorpay" checked onchange="handleGatewayChange('razorpay')" class="sr-only">
                             <div class="flex items-center gap-3 w-full">
-                                <div class="w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center shrink-0">
-                                    <div class="w-2.5 h-2.5 rounded-full bg-transparent" id="gw_dot_razorpay"></div>
+                                <div class="w-5 h-5 rounded-full border-2 border-brandOrange flex items-center justify-center shrink-0">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-brandOrange" id="gw_dot_razorpay"></div>
                                 </div>
                                 <div class="flex-1">
                                     <div class="flex items-center justify-between">
@@ -562,26 +579,39 @@
         }
     }
 
-    let selectedGateway = 'cashfree';
+    let selectedGateway = 'razorpay';
+
+    function handleCashfreeCardClick(event) {
+        if (event) {
+            event.preventDefault();
+        }
+        const advisory = document.getElementById('cf_gateway_advisory');
+        if (advisory) {
+            advisory.classList.remove('hidden');
+        }
+        showToast('Notice', 'Cashfree Payments is coming soon. Please use Razorpay to continue.', 'ℹ️');
+        handleGatewayChange('razorpay');
+    }
 
     function handleGatewayChange(gw) {
-        selectedGateway = gw;
+        if (gw === 'cashfree') {
+            handleCashfreeCardClick();
+            return;
+        }
+
+        selectedGateway = 'razorpay';
+        const radioRzp = document.getElementById('radio_razorpay');
+        if (radioRzp) radioRzp.checked = true;
+
         const cardCf = document.getElementById('gw_card_cashfree');
         const cardRzp = document.getElementById('gw_card_razorpay');
         const dotCf = document.getElementById('gw_dot_cashfree');
         const dotRzp = document.getElementById('gw_dot_razorpay');
 
-        if (gw === 'cashfree') {
-            cardCf.className = 'gateway-option-card relative flex items-center p-4 rounded-2xl border-2 cursor-pointer transition select-none border-brandOrange bg-orange-50/60 ring-2 ring-brandOrange/20';
-            cardRzp.className = 'gateway-option-card relative flex items-center p-4 rounded-2xl border-2 cursor-pointer transition select-none border-gray-200 bg-gray-50/50 hover:border-orange-300';
-            dotCf.className = 'w-2.5 h-2.5 rounded-full bg-brandOrange';
-            dotRzp.className = 'w-2.5 h-2.5 rounded-full bg-transparent';
-        } else {
-            cardRzp.className = 'gateway-option-card relative flex items-center p-4 rounded-2xl border-2 cursor-pointer transition select-none border-brandOrange bg-orange-50/60 ring-2 ring-brandOrange/20';
-            cardCf.className = 'gateway-option-card relative flex items-center p-4 rounded-2xl border-2 cursor-pointer transition select-none border-gray-200 bg-gray-50/50 hover:border-orange-300';
-            dotRzp.className = 'w-2.5 h-2.5 rounded-full bg-brandOrange';
-            dotCf.className = 'w-2.5 h-2.5 rounded-full bg-transparent';
-        }
+        if (cardRzp) cardRzp.className = 'gateway-option-card relative flex items-center p-4 rounded-2xl border-2 cursor-pointer transition select-none border-brandOrange bg-orange-50/60 ring-2 ring-brandOrange/20';
+        if (cardCf) cardCf.className = 'gateway-option-card relative flex items-center p-4 rounded-2xl border-2 transition select-none border-gray-200 bg-gray-50/80 cursor-pointer hover:border-amber-300';
+        if (dotRzp) dotRzp.className = 'w-2.5 h-2.5 rounded-full bg-brandOrange';
+        if (dotCf) dotCf.className = 'w-2.5 h-2.5 rounded-full bg-transparent';
     }
 
     function showToast(title, message, icon = 'ℹ️') {
@@ -623,6 +653,11 @@
         const campaignId = document.getElementById('campaign_id').value;
         const message = document.getElementById('donor_message').value.trim();
 
+        if (selectedGateway === 'cashfree') {
+            handleCashfreeCardClick();
+            return;
+        }
+
         if (!name || !phone || !email || !amount) {
             showToast('Missing Details', 'Please fill all required fields before proceeding.', '⚠️');
             return;
@@ -653,40 +688,15 @@
 
         try {
             if (selectedGateway === 'cashfree') {
-                // Cashfree Flow
-                const res = await fetch('{{ route("donations.initiate_cashfree") }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken
-                    },
-                    body: JSON.stringify(payload)
-                });
+                handleCashfreeCardClick();
+                submitBtn.disabled = false;
+                btnIcon.innerText = '🔒';
+                updateButtonLabel(amount);
+                return;
+            }
 
-                const data = await res.json();
-                if (!data.success) {
-                    throw new Error(data.message || 'Failed to initialize Cashfree session.');
-                }
-
-                const sessionId = data.session_data?.payment_session_id;
-
-                if (data.is_simulated || !sessionId) {
-                    showToast('Simulation Mode', 'Directing to confirmation...', '⚡');
-                    window.location.href = `{{ url('/donations/cashfree-return') }}?order_id=${data.session_data.order_id}&donation_id=${data.donation_id}`;
-                    return;
-                }
-
-                // Open Cashfree PG Checkout
-                const cashfree = Cashfree({ mode: '{{ config("services.cashfree.environment", "sandbox") }}' === 'production' ? 'production' : 'sandbox' });
-                cashfree.checkout({
-                    paymentSessionId: sessionId,
-                    redirectTarget: '_self'
-                });
-
-            } else {
-                // Razorpay Flow
-                const res = await fetch('{{ route("donations.initiate_razorpay") }}', {
+            // Razorpay Flow
+            const res = await fetch('{{ route("donations.initiate_razorpay") }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

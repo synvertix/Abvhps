@@ -115,17 +115,29 @@ class MembershipController extends Controller
             return false;
         }
 
-        $validAmounts = [
-            RazorpayPaymentService::MEMBERSHIP_AMOUNT_RUPEES,
-            RazorpayPaymentService::LEGACY_MEMBERSHIP_AMOUNT_RUPEES,
-        ];
-
-        return $member->payment_status === 'success'
+        $hasAuditFields = $member->payment_status === 'success'
             && $member->payment_gateway === 'razorpay'
             && !empty($member->payment_order_id)
             && !empty($member->payment_id)
-            && !is_null($member->payment_verified_at)
-            && in_array((float) $member->payment_amount, $validAmounts, true);
+            && !is_null($member->payment_verified_at);
+
+        if (!$hasAuditFields) {
+            return false;
+        }
+
+        $amount = (float) $member->payment_amount;
+
+        // Canonical current amount (₹100.00) unlocks the current registration/application flow
+        if ($amount === (float) RazorpayPaymentService::MEMBERSHIP_AMOUNT_RUPEES) {
+            return true;
+        }
+
+        // Historical temporary test fee (₹1.00) is accepted ONLY for already completed historical records
+        if ($amount === (float) RazorpayPaymentService::LEGACY_TEST_MEMBERSHIP_AMOUNT_RUPEES && (bool) $member->is_completed) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -149,7 +161,7 @@ class MembershipController extends Controller
         return $member?->hasVerifiedIdentity() ?? false;
     }
 
-    // 4. Display the ₹1 Payment Screen
+    // 4. Display the Membership Payment Screen
     public function showPaymentPage()
     {
         $phone = session('verified_membership_phone');
@@ -170,7 +182,7 @@ class MembershipController extends Controller
     }
 
     /**
-     * 5. Initiate Razorpay Order for ₹1 Membership Payment.
+     * 5. Initiate Razorpay Order for ₹100 Membership Payment.
      */
     public function initiateRazorpayPayment(Request $request)
     {

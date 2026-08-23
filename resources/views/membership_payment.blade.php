@@ -11,7 +11,7 @@
         
         <div class="my-8 p-6 bg-brandLightOrange rounded-lg border border-orange-100">
             <span class="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Total Amount Payable</span>
-            <span class="text-4xl font-black text-brandOrange">₹1.00</span>
+            <span class="text-4xl font-black text-brandOrange">₹100.00</span>
             <div class="h-[1px] bg-orange-200 my-3"></div>
             <p class="text-xs text-brandGray font-medium">Verified Phone: <strong class="tracking-wider">+91 {{ session('verified_membership_phone') }}</strong></p>
         </div>
@@ -22,12 +22,12 @@
 
         <div class="space-y-4">
             <p class="text-xs text-gray-500 leading-relaxed">
-                Complete your ₹1 membership fee payment securely via Razorpay Checkout. Upon successful verification, your 12-digit membership registration process will proceed to Aadhaar verification.
+                Complete your ₹100 membership fee payment securely via Razorpay Checkout. Upon successful verification, your 12-digit membership registration process will proceed to Aadhaar verification.
             </p>
 
             <button type="button" id="pay-button" onclick="startMembershipPayment()"
                 class="w-full flex justify-center items-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-brandOrange hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brandOrange shadow transition disabled:opacity-50">
-                <span id="button-text">Pay ₹1 Securely Now</span>
+                <span id="button-text">Pay ₹100 Securely Now</span>
                 <span id="button-spinner" class="hidden ml-2">
                     <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

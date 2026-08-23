@@ -99,8 +99,10 @@ class DonationPaymentIntegrationTest extends TestCase
         $response->assertSee('Active Fundraising Campaigns');
         $response->assertSee('TEMPLE RENOVATION AKKALREDDYPALLI');
         $response->assertSee('Cashfree Payments');
+        $response->assertSee('UPCOMING');
         $response->assertSee('Razorpay Payments');
         $response->assertSee('Donation Amount');
+        $response->assertSee('Cashfree Payments is coming soon. Please use Razorpay to continue.');
     }
 
     public function test_single_campaign_page_renders_with_og_tags(): void
@@ -115,11 +117,39 @@ class DonationPaymentIntegrationTest extends TestCase
     }
 
     // =========================================================================
-    // 2. CASHFREE ORDER CREATION TESTS
+    // 2. CASHFREE GATING & ORDER CREATION TESTS
     // =========================================================================
 
-    public function test_cashfree_order_initiation_creates_pending_donation(): void
+    public function test_cashfree_order_initiation_blocked_when_gated(): void
     {
+        config(['services.cashfree.payments_enabled' => false]);
+        $campaign = $this->createCampaign();
+
+        $response = $this->postDonationJson('/donations/initiate-cashfree', [
+            'donor_name'  => 'Sri Rama Devotee',
+            'email'       => 'devotee@abvhps.org',
+            'phone'       => '9876543210',
+            'amount'      => 500,
+            'campaign_id' => $campaign->id,
+            'pan_number'  => 'ABCDE1234F',
+            'guardian'    => 'Dasaratha',
+            'message'     => 'Temple Seva Contribution',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJson([
+            'success' => false,
+            'message' => 'Cashfree Payments is coming soon. Please use Razorpay to continue.',
+        ]);
+
+        $this->assertDatabaseMissing('donations', [
+            'email' => 'devotee@abvhps.org',
+        ]);
+    }
+
+    public function test_cashfree_order_initiation_creates_pending_donation_when_enabled(): void
+    {
+        config(['services.cashfree.payments_enabled' => true]);
         $campaign = $this->createCampaign();
 
         $response = $this->postDonationJson('/donations/initiate-cashfree', [
@@ -187,7 +217,7 @@ class DonationPaymentIntegrationTest extends TestCase
 
     public function test_accepts_donation_amount_one_rupee(): void
     {
-        $response = $this->postDonationJson('/donations/initiate-cashfree', [
+        $response = $this->postDonationJson('/donations/initiate-razorpay', [
             'donor_name' => 'Rupee Bhakta',
             'email'      => 'rupee@abvhps.org',
             'phone'      => '9876543210',
@@ -195,7 +225,7 @@ class DonationPaymentIntegrationTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson(['success' => true, 'gateway' => 'cashfree']);
+        $response->assertJson(['success' => true, 'gateway' => 'razorpay']);
 
         $this->assertDatabaseHas('donations', [
             'email'  => 'rupee@abvhps.org',
@@ -205,7 +235,7 @@ class DonationPaymentIntegrationTest extends TestCase
 
     public function test_rejects_amount_below_one_rupee(): void
     {
-        $response = $this->postDonationJson('/donations/initiate-cashfree', [
+        $response = $this->postDonationJson('/donations/initiate-razorpay', [
             'donor_name' => 'Bhakta',
             'email'      => 'bhakta@abvhps.org',
             'phone'      => '9876543210',
@@ -219,7 +249,7 @@ class DonationPaymentIntegrationTest extends TestCase
 
     public function test_rejects_amount_zero(): void
     {
-        $response = $this->postDonationJson('/donations/initiate-cashfree', [
+        $response = $this->postDonationJson('/donations/initiate-razorpay', [
             'donor_name' => 'Bhakta',
             'email'      => 'bhakta@abvhps.org',
             'phone'      => '9876543210',
@@ -232,7 +262,7 @@ class DonationPaymentIntegrationTest extends TestCase
 
     public function test_rejects_negative_amount(): void
     {
-        $response = $this->postDonationJson('/donations/initiate-cashfree', [
+        $response = $this->postDonationJson('/donations/initiate-razorpay', [
             'donor_name' => 'Bhakta',
             'email'      => 'bhakta@abvhps.org',
             'phone'      => '9876543210',
@@ -245,7 +275,7 @@ class DonationPaymentIntegrationTest extends TestCase
 
     public function test_accepts_five_lakh_maximum_donation(): void
     {
-        $response = $this->postDonationJson('/donations/initiate-cashfree', [
+        $response = $this->postDonationJson('/donations/initiate-razorpay', [
             'donor_name' => 'Major Donor',
             'email'      => 'major@abvhps.org',
             'phone'      => '9876543210',
@@ -276,6 +306,7 @@ class DonationPaymentIntegrationTest extends TestCase
 
     public function test_cashfree_initiation_uses_one_rupee_donation_record(): void
     {
+        config(['services.cashfree.payments_enabled' => true]);
         Http::fake();
 
         $response = $this->postDonationJson('/donations/initiate-cashfree', [
@@ -313,7 +344,7 @@ class DonationPaymentIntegrationTest extends TestCase
 
     public function test_browser_or_request_cannot_bypass_server_validation(): void
     {
-        $response = $this->postDonationJson('/donations/initiate-cashfree', [
+        $response = $this->postDonationJson('/donations/initiate-razorpay', [
             'donor_name' => 'Bypasser',
             'email'      => 'bypasser@abvhps.org',
             'phone'      => '9876543210',
@@ -329,7 +360,7 @@ class DonationPaymentIntegrationTest extends TestCase
 
     public function test_rejects_invalid_pan_number(): void
     {
-        $response = $this->postDonationJson('/donations/initiate-cashfree', [
+        $response = $this->postDonationJson('/donations/initiate-razorpay', [
             'donor_name' => 'Bhakta',
             'email'      => 'bhakta@abvhps.org',
             'phone'      => '9876543210',

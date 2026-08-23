@@ -128,16 +128,16 @@ class MembershipRazorpayPaymentTest extends TestCase
     }
 
     /**
-     * Test 6: Initiate ignores any browser-supplied amount and forces 100 paise (₹1.00).
+     * Test 6: Initiate ignores any browser-supplied amount and forces 10000 paise (₹100.00).
      */
-    public function test_initiate_forces_server_controlled_100_paise(): void
+    public function test_initiate_forces_server_controlled_10000_paise(): void
     {
         $phone = '9876543210';
 
         Http::fake([
             'https://api.razorpay.com/v1/orders' => Http::response([
                 'id'       => 'order_RZP123456',
-                'amount'   => 100,
+                'amount'   => 10000,
                 'currency' => 'INR',
             ], 200),
         ]);
@@ -152,13 +152,13 @@ class MembershipRazorpayPaymentTest extends TestCase
             'success'      => true,
             'key_id'       => $this->keyId,
             'order_id'     => 'order_RZP123456',
-            'amount_paise' => 100,
+            'amount_paise' => 10000,
             'currency'     => 'INR',
         ]);
 
         Http::assertSent(function ($request) {
             $data = json_decode($request->body(), true);
-            return $data['amount'] === 100;
+            return $data['amount'] === 10000;
         });
     }
 
@@ -203,7 +203,7 @@ class MembershipRazorpayPaymentTest extends TestCase
         $member = Membership::where('phone', $phone)->first();
         $this->assertEquals('order_RZP999888', $member->payment_order_id);
         $this->assertEquals('razorpay', $member->payment_gateway);
-        $this->assertEquals(1.00, (float) $member->payment_amount);
+        $this->assertEquals(100.00, (float) $member->payment_amount);
     }
 
     /**
@@ -316,7 +316,7 @@ class MembershipRazorpayPaymentTest extends TestCase
             "https://api.razorpay.com/v1/payments/{$paymentId}" => Http::response([
                 'id'       => $paymentId,
                 'status'   => 'authorized', // Not captured!
-                'amount'   => 100,
+                'amount'   => 10000,
                 'currency' => 'INR',
                 'order_id' => $orderId,
             ], 200),
@@ -356,7 +356,7 @@ class MembershipRazorpayPaymentTest extends TestCase
             "https://api.razorpay.com/v1/payments/{$paymentId}" => Http::response([
                 'id'       => $paymentId,
                 'status'   => 'failed',
-                'amount'   => 100,
+                'amount'   => 10000,
                 'currency' => 'INR',
                 'order_id' => $orderId,
             ], 200),
@@ -372,7 +372,7 @@ class MembershipRazorpayPaymentTest extends TestCase
     }
 
     /**
-     * Test 15: Valid signature but amount != 100 cannot mark paid.
+     * Test 15: Valid signature but amount != 10000 cannot mark paid.
      */
     public function test_amount_mismatch_cannot_mark_paid(): void
     {
@@ -392,7 +392,7 @@ class MembershipRazorpayPaymentTest extends TestCase
             "https://api.razorpay.com/v1/payments/{$paymentId}" => Http::response([
                 'id'       => $paymentId,
                 'status'   => 'captured',
-                'amount'   => 5000, // ₹50 instead of ₹1
+                'amount'   => 5000, // ₹50 instead of ₹100
                 'currency' => 'INR',
                 'order_id' => $orderId,
             ], 200),
@@ -428,7 +428,7 @@ class MembershipRazorpayPaymentTest extends TestCase
             "https://api.razorpay.com/v1/payments/{$paymentId}" => Http::response([
                 'id'       => $paymentId,
                 'status'   => 'captured',
-                'amount'   => 100,
+                'amount'   => 10000,
                 'currency' => 'USD',
                 'order_id' => $orderId,
             ], 200),
@@ -464,7 +464,7 @@ class MembershipRazorpayPaymentTest extends TestCase
             "https://api.razorpay.com/v1/payments/{$paymentId}" => Http::response([
                 'id'       => $paymentId,
                 'status'   => 'captured',
-                'amount'   => 100,
+                'amount'   => 10000,
                 'currency' => 'INR',
                 'order_id' => 'order_DIFFERENT_999',
             ], 200),
@@ -530,14 +530,14 @@ class MembershipRazorpayPaymentTest extends TestCase
             "https://api.razorpay.com/v1/payments/{$paymentId}" => Http::response([
                 'id'       => $paymentId,
                 'status'   => 'captured',
-                'amount'   => 100,
+                'amount'   => 10000,
                 'currency' => 'INR',
                 'order_id' => $orderId,
             ], 200),
             "https://api.razorpay.com/v1/orders/{$orderId}" => Http::response([
                 'id'       => $orderId,
                 'status'   => 'paid',
-                'amount'   => 100,
+                'amount'   => 10000,
                 'currency' => 'INR',
             ], 200),
         ]);
@@ -559,7 +559,7 @@ class MembershipRazorpayPaymentTest extends TestCase
         $this->assertEquals('success', $member->payment_status);
         $this->assertEquals('razorpay', $member->payment_gateway);
         $this->assertEquals($paymentId, $member->payment_id);
-        $this->assertEquals(1.00, (float) $member->payment_amount);
+        $this->assertEquals(100.00, (float) $member->payment_amount);
         $this->assertNotNull($member->payment_verified_at);
     }
 
@@ -584,14 +584,14 @@ class MembershipRazorpayPaymentTest extends TestCase
             "https://api.razorpay.com/v1/payments/{$paymentId}" => Http::response([
                 'id'       => $paymentId,
                 'status'   => 'captured',
-                'amount'   => 100,
+                'amount'   => 10000,
                 'currency' => 'INR',
                 'order_id' => $orderId,
             ], 200),
             "https://api.razorpay.com/v1/orders/{$orderId}" => Http::response([
                 'id'       => $orderId,
                 'status'   => 'paid',
-                'amount'   => 100,
+                'amount'   => 10000,
                 'currency' => 'INR',
             ], 200),
         ]);
@@ -631,14 +631,14 @@ class MembershipRazorpayPaymentTest extends TestCase
             "https://api.razorpay.com/v1/payments/{$paymentId}" => Http::response([
                 'id'       => $paymentId,
                 'status'   => 'captured',
-                'amount'   => 100,
+                'amount'   => 10000,
                 'currency' => 'INR',
                 'order_id' => $orderId,
             ], 200),
             "https://api.razorpay.com/v1/orders/{$orderId}" => Http::response([
                 'id'       => $orderId,
                 'status'   => 'paid',
-                'amount'   => 100,
+                'amount'   => 10000,
                 'currency' => 'INR',
             ], 200),
         ]);
@@ -668,7 +668,7 @@ class MembershipRazorpayPaymentTest extends TestCase
             'payment_gateway'     => 'razorpay',
             'payment_id'          => $paymentId,
             'payment_order_id'    => 'order_MEMBER1',
-            'payment_amount'      => 1.00,
+            'payment_amount'      => 100.00,
             'payment_verified_at' => now(),
         ]);
 
@@ -688,14 +688,14 @@ class MembershipRazorpayPaymentTest extends TestCase
             "https://api.razorpay.com/v1/payments/{$paymentId}" => Http::response([
                 'id'       => $paymentId,
                 'status'   => 'captured',
-                'amount'   => 100,
+                'amount'   => 10000,
                 'currency' => 'INR',
                 'order_id' => $orderId2,
             ], 200),
             "https://api.razorpay.com/v1/orders/{$orderId2}" => Http::response([
                 'id'       => $orderId2,
                 'status'   => 'paid',
-                'amount'   => 100,
+                'amount'   => 10000,
                 'currency' => 'INR',
             ], 200),
         ]);
@@ -886,7 +886,7 @@ class MembershipRazorpayPaymentTest extends TestCase
         Http::fake([
             'https://api.razorpay.com/v1/orders' => Http::response([
                 'id'       => 'order_HIST_INIT',
-                'amount'   => 100,
+                'amount'   => 10000,
                 'currency' => 'INR',
             ], 200),
         ]);
@@ -946,13 +946,13 @@ class MembershipRazorpayPaymentTest extends TestCase
     }
 
     /**
-     * Test 33: 10000 paise (legacy ₹100) fails current payment verification.
+     * Test 33: 100 paise (old ₹1 test fee) fails current payment verification.
      */
-    public function test_10000_paise_fails_current_payment_verification(): void
+    public function test_100_paise_fails_current_payment_verification(): void
     {
         $phone = '9876543210';
-        $orderId = 'order_RZP10000PAISE';
-        $paymentId = 'pay_10000PAISE';
+        $orderId = 'order_RZP100PAISE';
+        $paymentId = 'pay_100PAISE';
 
         Membership::create([
             'phone'            => $phone,
@@ -966,7 +966,7 @@ class MembershipRazorpayPaymentTest extends TestCase
             "https://api.razorpay.com/v1/payments/{$paymentId}" => Http::response([
                 'id'       => $paymentId,
                 'status'   => 'captured',
-                'amount'   => 10000, // ₹100 instead of current ₹1 (100 paise)
+                'amount'   => 100, // Old ₹1 testing amount
                 'currency' => 'INR',
                 'order_id' => $orderId,
             ], 200),
@@ -987,12 +987,12 @@ class MembershipRazorpayPaymentTest extends TestCase
     }
 
     /**
-     * Test 34: 99 paise and 101 paise fail payment verification.
+     * Test 34: 9900 paise (₹99) and 10100 paise (₹101) fail payment verification.
      */
-    public function test_99_paise_and_101_paise_fail_payment_verification(): void
+    public function test_99_rupees_and_101_rupees_fail_payment_verification(): void
     {
-        foreach ([99, 101] as $testAmount) {
-            $phone = '98765432' . $testAmount;
+        foreach ([9900, 10100] as $testAmount) {
+            $phone = '98765432' . ($testAmount / 100);
             $orderId = 'order_RZP_' . $testAmount;
             $paymentId = 'pay_' . $testAmount;
 
@@ -1026,7 +1026,7 @@ class MembershipRazorpayPaymentTest extends TestCase
     }
 
     /**
-     * Test 35: Genuine ₹1 verified record is accepted.
+     * Test 35: Genuine historical COMPLETED ₹1 verified record is accepted.
      */
     public function test_genuine_one_rupee_verified_record_accepted(): void
     {
@@ -1040,6 +1040,7 @@ class MembershipRazorpayPaymentTest extends TestCase
             'payment_order_id'    => 'order_VERIFIED_1RUPEE',
             'payment_amount'      => 1.00,
             'payment_verified_at' => now(),
+            'is_completed'        => true, // Explicitly represents historical completed record
         ]);
 
         $this->assertTrue(\App\Http\Controllers\MembershipController::hasVerifiedMembershipPayment($member));
@@ -1051,9 +1052,9 @@ class MembershipRazorpayPaymentTest extends TestCase
     }
 
     /**
-     * Test 36: Genuine legacy ₹100 verified record is accepted.
+     * Test 36: Genuine current ₹100 verified record is accepted.
      */
-    public function test_genuine_legacy_100_rupee_verified_record_accepted(): void
+    public function test_genuine_current_100_rupee_verified_record_accepted(): void
     {
         $phone = '9876543210';
         $member = Membership::create([
@@ -1065,6 +1066,7 @@ class MembershipRazorpayPaymentTest extends TestCase
             'payment_order_id'    => 'order_VERIFIED_100RUPEE',
             'payment_amount'      => 100.00,
             'payment_verified_at' => now(),
+            'is_completed'        => false, // Unlocks ongoing flow even before completion
         ]);
 
         $this->assertTrue(\App\Http\Controllers\MembershipController::hasVerifiedMembershipPayment($member));
@@ -1101,9 +1103,9 @@ class MembershipRazorpayPaymentTest extends TestCase
     }
 
     /**
-     * Test 38: Membership payment page displays ₹1.00 and does not display ₹100 payment CTA.
+     * Test 38: Membership payment page displays ₹100.00 and does not display ₹1.00 payment CTA.
      */
-    public function test_membership_payment_page_displays_1_rupee_and_not_100_rupee_cta(): void
+    public function test_membership_payment_page_displays_100_rupee_and_not_1_rupee_cta(): void
     {
         $phone = '9876543210';
 
@@ -1111,10 +1113,55 @@ class MembershipRazorpayPaymentTest extends TestCase
             ->get('/membership/payment');
 
         $response->assertOk();
-        $response->assertSee('₹1.00');
-        $response->assertSee('₹1 membership fee');
-        $response->assertSee('Pay ₹1 Securely Now');
-        $response->assertDontSee('Pay ₹100 Securely Now');
-        $response->assertDontSee('₹100.00');
+        $response->assertSee('₹100.00');
+        $response->assertSee('₹100 membership fee');
+        $response->assertSee('Pay ₹100 Securely Now');
+        $response->assertDontSee('Pay ₹1 Securely Now');
+        $response->assertDontSee('₹1.00');
+    }
+
+    /**
+     * Test 39: Incomplete audited ₹1 record (is_completed=false or 0) is REJECTED from payment gate.
+     */
+    public function test_incomplete_audited_one_rupee_record_rejected_from_payment_gate(): void
+    {
+        // Case A: is_completed = false
+        $phoneA = '9876543210';
+        $memberA = Membership::create([
+            'membership_id'       => '100020003099',
+            'phone'               => $phoneA,
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_AUDITED_1RUPEE_INCOMPLETE',
+            'payment_order_id'    => 'order_AUDITED_1RUPEE_INCOMPLETE',
+            'payment_amount'      => 1.00,
+            'payment_verified_at' => now(),
+            'is_completed'        => false,
+        ]);
+
+        $this->assertFalse(\App\Http\Controllers\MembershipController::hasVerifiedMembershipPayment($memberA));
+
+        $responseA = $this->withSession(['verified_membership_phone' => $phoneA])
+            ->get('/membership/application');
+        $responseA->assertRedirect('/membership/payment');
+
+        // Case B: default created record without completion
+        $phoneB = '9876543211';
+        $memberB = Membership::create([
+            'membership_id'       => '100020003098',
+            'phone'               => $phoneB,
+            'payment_status'      => 'success',
+            'payment_gateway'     => 'razorpay',
+            'payment_id'          => 'pay_AUDITED_1RUPEE_DEFAULT',
+            'payment_order_id'    => 'order_AUDITED_1RUPEE_DEFAULT',
+            'payment_amount'      => 1.00,
+            'payment_verified_at' => now(),
+        ]);
+
+        $this->assertFalse(\App\Http\Controllers\MembershipController::hasVerifiedMembershipPayment($memberB));
+
+        $responseB = $this->withSession(['verified_membership_phone' => $phoneB])
+            ->get('/membership/application');
+        $responseB->assertRedirect('/membership/payment');
     }
 }
