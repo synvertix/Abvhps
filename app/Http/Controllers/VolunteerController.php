@@ -9,7 +9,16 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Volunteer;
+use App\Models\Membership;
+use App\Models\GeoState;
+use App\Models\GeoDistrict;
+use App\Models\GeoAssemblySegment;
+use App\Models\GeoMandal;
+use App\Models\GeoPanchayat;
+use App\Services\VolunteerCadreScopeService;
+use App\Services\GeoHierarchyBackfillService;
 use App\Mail\VolunteerWelcomeMail;
+use Illuminate\Support\Facades\Auth;
 
 class VolunteerController extends Controller
 {
@@ -353,24 +362,124 @@ class VolunteerController extends Controller
     // 9. Cadder / Status Update Form (Screen 3)
     public function cadreEditForm($id)
     {
-        $volunteer = DB::table('volunteers')
-            ->leftJoin('memberships', 'volunteers.membership_id', '=', 'memberships.membership_id')
-            ->select(
-                'volunteers.*',
-                'memberships.full_name as member_full_name',
-                'memberships.photo_path as member_photo_path',
-                'memberships.district as member_district',
-                'memberships.mandal as member_mandal',
-                'memberships.grama_panchayat as member_grama_panchayat'
-            )
-            ->where('volunteers.id', $id)
-            ->first();
+        $volunteer = Volunteer::with([
+            'membership',
+            'stateRelation',
+            'districtRelation',
+            'assemblySegmentRelation',
+            'mandalRelation',
+            'panchayatRelation'
+        ])->find($id);
 
         if (!$volunteer) {
             abort(404, 'Volunteer record not found');
         }
 
-        return view('admin.volunteer_cadre_update', compact('volunteer'));
+        // Prefill logic: if canonical IDs are not yet set, attempt deterministic lookup from legacy strings
+        $prefilledStateId = $volunteer->state_id;
+        $prefilledDistrictId = $volunteer->district_id;
+        $prefilledAssemblyId = $volunteer->assembly_segment_id;
+        $prefilledMandalId = $volunteer->mandal_id;
+        $prefilledPanchayatId = $volunteer->panchayat_id;
+
+        if (!$prefilledStateId && $volunteer->resolved_state) {
+            $matchedState = GeoState::whereRaw('LOWER(name) = ?', [GeoHierarchyBackfillService::normalize($volunteer->resolved_state)])->first();
+            $prefilledStateId = $matchedState?->id;
+        }
+
+        if (!$prefilledDistrictId && $volunteer->resolved_district && $prefilledStateId) {
+            $normDist = GeoHierarchyBackfillService::normalize($volunteer->resolved_district);
+            $matchedDistrict = GeoDistrict::where('state_id', $prefilledStateId)->whereRaw('LOWER(name) = ?', [$normDist])->first();
+            if (!$matchedDistrict) {
+                $alias = \App\Models\GeoAlias::where('entity_type', 'district')->where('state_id', $prefilledStateId)->whereRaw('LOWER(alias_name) = ?', [$normDist])->first();
+                if ($alias) {
+                    $matchedDistrict = GeoDistrict::find($alias->canonical_id);
+                }
+            }
+            $prefilledDistrictId = $matchedDistrict?->id;
+        }
+
+        if (!$prefilledAssemblyId && $volunteer->resolved_assembly_segment && $prefilledDistrictId) {
+            $matchedAssembly = GeoAssemblySegment::where('district_id', $prefilledDistrictId)->whereRaw('LOWER(name) = ?', [GeoHierarchyBackfillService::normalize($volunteer->resolved_assembly_segment)])->first();
+            $prefilledAssemblyId = $matchedAssembly?->id;
+        }
+
+        if (!$prefilledMandalId && $volunteer->resolved_mandal && $prefilledDistrictId) {
+            $matchedMandal = GeoMandal::where('district_id', $prefilledDistrictId)->whereRaw('LOWER(name) = ?', [GeoHierarchyBackfillService::normalize($volunteer->resolved_mandal)])->first();
+            $prefilledMandalId = $matchedMandal?->id;
+            if (!$prefilledAssemblyId && $matchedMandal?->assembly_segment_id) {
+                $prefilledAssemblyId = $matchedMandal->assembly_segment_id;
+            }
+        }
+
+        if (!$prefilledPanchayatId && $volunteer->resolved_grama_panchayat && $prefilledMandalId) {
+            $matchedPanchayat = GeoPanchayat::where('mandal_id', $prefilledMandalId)->whereRaw('LOWER(name) = ?', [GeoHierarchyBackfillService::normalize($volunteer->resolved_grama_panchayat)])->first();
+            $prefilledPanchayatId = $matchedPanchayat?->id;
+        }
+
+        $states = GeoState::where('is_active', true)->orderBy('name')->get();
+        $districts = $prefilledStateId ? GeoDistrict::where('state_id', $prefilledStateId)->where('is_active', true)->orderBy('name')->get() : collect();
+        $assemblySegments = $prefilledDistrictId ? GeoAssemblySegment::where('district_id', $prefilledDistrictId)->where('is_active', true)->orderBy('name')->get() : collect();
+        $mandals = $prefilledDistrictId ? GeoMandal::where('district_id', $prefilledDistrictId)->where('is_active', true)->orderBy('name')->get() : collect();
+        $panchayats = $prefilledMandalId ? GeoPanchayat::where('mandal_id', $prefilledMandalId)->where('is_active', true)->orderBy('name')->get() : collect();
+
+        $cadreLevels = [
+            'panchayat_president' => 'Panchayat President',
+            'mandal_president'    => 'Mandal President',
+            'assembly_president'  => 'Taluka President / Assembly Segment President',
+            'district_president'  => 'District President',
+            'state_president'     => 'State President',
+            'national_president'  => 'National President',
+            'volunteer'           => 'Volunteer',
+        ];
+
+        return view('admin.volunteer_cadre_update', compact(
+            'volunteer',
+            'states',
+            'districts',
+            'assemblySegments',
+            'mandals',
+            'panchayats',
+            'cadreLevels',
+            'prefilledStateId',
+            'prefilledDistrictId',
+            'prefilledAssemblyId',
+            'prefilledMandalId',
+            'prefilledPanchayatId'
+        ));
+    }
+
+    // 9b. AJAX endpoint for cascading geography selectors
+    public function getGeoHierarchyAjax(Request $request)
+    {
+        $stateId = $request->query('state_id');
+        $districtId = $request->query('district_id');
+        $assemblyId = $request->query('assembly_segment_id');
+        $mandalId = $request->query('mandal_id');
+
+        if ($mandalId) {
+            $panchayats = GeoPanchayat::where('mandal_id', $mandalId)->where('is_active', true)->orderBy('name')->get(['id', 'name', 'pincode']);
+            return response()->json(['panchayats' => $panchayats]);
+        }
+
+        if ($assemblyId) {
+            $mandals = GeoMandal::where('assembly_segment_id', $assemblyId)->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+            return response()->json(['mandals' => $mandals]);
+        }
+
+        if ($districtId) {
+            $assemblies = GeoAssemblySegment::where('district_id', $districtId)->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+            $mandals = GeoMandal::where('district_id', $districtId)->where('is_active', true)->orderBy('name')->get(['id', 'name', 'assembly_segment_id']);
+            return response()->json(['assembly_segments' => $assemblies, 'mandals' => $mandals]);
+        }
+
+        if ($stateId) {
+            $districts = GeoDistrict::where('state_id', $stateId)->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+            return response()->json(['districts' => $districts]);
+        }
+
+        $states = GeoState::where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        return response()->json(['states' => $states]);
     }
 
     // 10. Process Cadder / Status Update & ID Generation (Screen 3)
@@ -392,18 +501,58 @@ class VolunteerController extends Controller
         $request->merge(['status' => $mappedStatus]);
 
         $request->validate([
-            'status' => 'required|string|in:approved,rejected,pending',
-            'cadre' => 'required|string|max:255',
-            'locality' => 'required|string|max:255'
+            'status'               => 'required|string|in:approved,rejected,pending',
+            'cadre_level'          => 'nullable|string|in:national_president,state_president,district_president,assembly_president,mandal_president,panchayat_president,volunteer',
+            'cadre'                => 'nullable|string|max:255',
+            'locality'             => 'nullable|string|max:255',
+            'state_id'             => 'nullable|integer|exists:geo_states,id',
+            'district_id'          => 'nullable|integer|exists:geo_districts,id',
+            'assembly_segment_id'  => 'nullable|integer|exists:geo_assembly_segments,id',
+            'mandal_id'            => 'nullable|integer|exists:geo_mandals,id',
+            'panchayat_id'         => 'nullable|integer|exists:geo_panchayats,id',
         ]);
 
-        $cadre = $request->input('cadre');
-        $locality = $request->input('locality');
+        $volunteer = Volunteer::findOrFail($id);
+        $cadreLevel = $request->input('cadre_level') ?: 'volunteer';
+        $stateId = $request->input('state_id') ? (int)$request->input('state_id') : null;
+        $districtId = $request->input('district_id') ? (int)$request->input('district_id') : null;
+        $assemblyId = $request->input('assembly_segment_id') ? (int)$request->input('assembly_segment_id') : null;
+        $mandalId = $request->input('mandal_id') ? (int)$request->input('mandal_id') : null;
+        $panchayatId = $request->input('panchayat_id') ? (int)$request->input('panchayat_id') : null;
 
-        $volunteer = DB::table('volunteers')->where('id', $id)->first();
-        if (!$volunteer) {
-            abort(404, 'Volunteer not found');
+        if ($mappedStatus === 'approved') {
+            // Validate required jurisdiction IDs based on cadre level
+            if ($cadreLevel === 'panchayat_president' && (!$panchayatId || !$mandalId || !$districtId || !$stateId)) {
+                return back()->withInput()->withErrors(['panchayat_id' => 'Panchayat President requires valid State, District, Mandal, and Panchayat selections.']);
+            }
+            if ($cadreLevel === 'mandal_president' && (!$mandalId || !$districtId || !$stateId)) {
+                return back()->withInput()->withErrors(['mandal_id' => 'Mandal President requires valid State, District, and Mandal selections.']);
+            }
+            if ($cadreLevel === 'assembly_president' && (!$assemblyId || !$districtId || !$stateId)) {
+                return back()->withInput()->withErrors(['assembly_segment_id' => 'Taluka / Assembly Segment President requires valid State, District, and Assembly Segment selections.']);
+            }
+            if ($cadreLevel === 'district_president' && (!$districtId || !$stateId)) {
+                return back()->withInput()->withErrors(['district_id' => 'District President requires valid State and District selections.']);
+            }
+            if ($cadreLevel === 'state_president' && !$stateId) {
+                return back()->withInput()->withErrors(['state_id' => 'State President requires a valid State selection.']);
+            }
+
+            // Parent-child hierarchy check
+            $hierarchyError = VolunteerCadreScopeService::validateParentChildGeography($stateId, $districtId, $assemblyId, $mandalId, $panchayatId);
+            if ($hierarchyError) {
+                return back()->withInput()->withErrors(['hierarchy' => $hierarchyError]);
+            }
+
+            // Duplicate active president check
+            $dupError = VolunteerCadreScopeService::checkDuplicateActivePresident($cadreLevel, $stateId, $districtId, $assemblyId, $mandalId, $panchayatId, $volunteer->id);
+            if ($dupError) {
+                return back()->withInput()->withErrors(['duplicate' => $dupError]);
+            }
         }
+
+        $cadreTitle = $request->input('cadre') ?: Volunteer::cadreLevelToPublicTitle($cadreLevel);
+        $locality = $request->input('locality') ?: ($volunteer->jurisdiction_summary ?? 'HQ');
 
         if ($mappedStatus === 'approved') {
             $assignedVolunteerId = null;
@@ -412,10 +561,20 @@ class VolunteerController extends Controller
             $plainPassword = null;
             $member = null;
 
-            DB::transaction(function () use ($id, $cadre, $locality, $volunteer, $isFirstTimeApproval, &$assignedVolunteerId, &$assignedLoginId, &$plainPassword, &$member) {
+            DB::transaction(function () use ($id, $cadreLevel, $cadreTitle, $locality, $stateId, $districtId, $assemblyId, $mandalId, $panchayatId, $volunteer, $isFirstTimeApproval, &$assignedVolunteerId, &$assignedLoginId, &$plainPassword, &$member) {
                 $member = DB::table('memberships')->where('membership_id', $volunteer->membership_id)->first();
 
-                $syncLocation = [];
+                $syncLocation = [
+                    'state_id' => $stateId,
+                    'district_id' => $districtId,
+                    'assembly_segment_id' => $assemblyId,
+                    'mandal_id' => $mandalId,
+                    'panchayat_id' => $panchayatId,
+                    'cadre_level' => $cadreLevel,
+                    'geo_mapping_status' => 'verified',
+                    'geo_mapping_notes' => 'Approved and verified by Admin on ' . now()->format('Y-m-d H:i:s'),
+                ];
+
                 if ($member) {
                     $syncLocation['country'] = $volunteer->country ?: ($member->country ?: 'India');
                     $syncLocation['state'] = $volunteer->state ?: $member->state;
@@ -439,9 +598,9 @@ class VolunteerController extends Controller
                     DB::table('volunteers')->where('id', $id)->update(array_merge([
                         'status' => 'approved',
                         'is_active' => true,
-                        'cadre' => $cadre,
+                        'cadre' => $cadreTitle,
                         'locality' => $locality,
-                        'designation' => $cadre,
+                        'designation' => $cadreTitle,
                         'volunteer_id' => $assignedVolunteerId,
                         'volunteer_login_id' => $assignedLoginId,
                         'password' => $encryptedPassword,
@@ -460,9 +619,9 @@ class VolunteerController extends Controller
                     DB::table('volunteers')->where('id', $id)->update(array_merge([
                         'status' => 'approved',
                         'is_active' => true,
-                        'cadre' => $cadre,
+                        'cadre' => $cadreTitle,
                         'locality' => $locality,
-                        'designation' => $cadre,
+                        'designation' => $cadreTitle,
                         'updated_at' => now()
                     ], $syncLocation));
                 }
@@ -471,8 +630,8 @@ class VolunteerController extends Controller
             if ($isFirstTimeApproval && $assignedVolunteerId && $plainPassword) {
                 $mailOathMetrics = [
                     'recipient_email' => $volunteer->email,
-                    'assigned_role' => $volunteer->role ?? 'village_president',
-                    'assigned_designation' => $cadre,
+                    'assigned_role' => $cadreLevel,
+                    'assigned_designation' => $cadreTitle,
                     'assigned_locality' => $locality,
                     'formatted_volunteer_id' => $assignedVolunteerId,
                     'clean_volunteer_id' => $assignedVolunteerId,
@@ -493,7 +652,7 @@ class VolunteerController extends Controller
                     'email' => $volunteer->email,
                     'phone' => $volunteer->phone,
                     'plainPassword' => $plainPassword,
-                    'designation' => $cadre,
+                    'designation' => $cadreTitle,
                     'locality' => $locality,
                     'blood_group' => $member->blood_group ?? 'N/A',
                     'photo_path' => $member->photo_path ?? null,
@@ -532,13 +691,18 @@ class VolunteerController extends Controller
             }
 
             \App\Services\AuditLogger::log($isFirstTimeApproval ? 'VOLUNTEER_APPROVED' : 'VOLUNTEER_CADRE_UPDATED', 'Volunteer', (string)$assignedVolunteerId, [
-                'cadre' => $cadre,
+                'cadre_level' => $cadreLevel,
+                'cadre' => $cadreTitle,
                 'locality' => $locality,
+                'state_id' => $stateId,
+                'district_id' => $districtId,
+                'mandal_id' => $mandalId,
+                'panchayat_id' => $panchayatId,
                 'volunteer_id' => $assignedVolunteerId
             ]);
 
             return redirect('/admin/volunteer/view-card/' . $assignedVolunteerId)
-                ->with('success', 'Volunteer status verified & approved successfully with 6-digit login ID #' . $assignedLoginId . '!');
+                ->with('success', 'Volunteer status verified & approved successfully as ' . $cadreTitle . ' (Login ID #' . $assignedLoginId . ')!');
         }
 
         // Processing Rejected or Pending states
@@ -862,94 +1026,95 @@ class VolunteerController extends Controller
         session()->forget(['auth_volunteer_db_id', 'auth_volunteer_code', 'auth_volunteer_role', 'auth_volunteer_locality']);
         return redirect('/volunteer/login')->with('success', 'Logged out from central pipeline desk successfully.');
     }
-        // 12. Show Village President Dashboard Layout with Live Analytics Count Cards
+    // 12. Show Village / Panchayat President Dashboard Layout with Live Analytics Count Cards
     public function showVillageDashboard()
     {
-        if (session('auth_volunteer_role') !== 'village_president') {
-            return redirect('/volunteer/login')->with('error', 'Unauthorized dashboard access slot.');
+        $volunteer = Auth::guard('volunteer')->user();
+        $isSessionAuth = session('auth_volunteer_role') === 'village_president';
+
+        if (!$isSessionAuth && (!$volunteer || !VolunteerCadreScopeService::isVerifiedCadre($volunteer, 'panchayat_president'))) {
+            abort(403, 'Unauthorized dashboard access slot.');
         }
 
-        $volunteerLocality = session('auth_volunteer_locality');
+        $volunteerLocality = session('auth_volunteer_locality') ?: ($volunteer?->resolved_grama_panchayat ?? 'Panchayat');
 
-        // Mapped counter tracking overall members registered from this specific locality zone
-        $totalMembersCount = DB::table('memberships')
-            ->where('payment_status', 'success')
-            ->count(); // In production, this tracks ->where('mandal', $volunteerLocality) dynamically
+        $totalMembersCount = $volunteer
+            ? VolunteerCadreScopeService::membersFor($volunteer)->where('payment_status', 'success')->count()
+            : DB::table('memberships')->where('payment_status', 'success')->count();
 
-        // Mapped counter tracking overall benefits delivered historically from this zone row records
         $totalBenefitsCount = DB::table('seva_orders_history')->count();
+        $groupEvents = DB::table('group_events_history')->where('volunteer_id', session('auth_volunteer_code') ?: $volunteer?->volunteer_id)->get();
+        $subordinateUnits = $volunteer ? VolunteerCadreScopeService::subordinateUnitsFor($volunteer) : collect();
 
-        $groupEvents = DB::table('group_events_history')->where('volunteer_id', session('auth_volunteer_code'))->get();
-return view('volunteer_village_dashboard', compact('totalMembersCount', 'totalBenefitsCount', 'groupEvents'));
-
+        return view('volunteer_village_dashboard', compact('totalMembersCount', 'totalBenefitsCount', 'groupEvents', 'subordinateUnits', 'volunteer'));
     }
-
 
     // 13. Fetch Member Profile Records matching the 12-Digit Input Key ID
     public function searchMember(Request $request)
     {
-        if (session('auth_volunteer_role') !== 'village_president') {
-            return redirect('/volunteer/login')->with('error', 'Unauthorized entry.');
+        $volunteer = Auth::guard('volunteer')->user();
+        $isSessionAuth = session('auth_volunteer_role') === 'village_president';
+
+        if (!$isSessionAuth && (!$volunteer || !VolunteerCadreScopeService::isVerifiedCadre($volunteer, 'panchayat_president'))) {
+            abort(403, 'Unauthorized entry.');
         }
 
         $request->validate(['member_id' => 'required|digits:12']);
         $memberId = $request->input('member_id');
 
-        $searchedMember = DB::table('memberships')
-            ->where('membership_id', $memberId)
-            ->where('payment_status', 'success')
-            ->first();
+        $query = $volunteer ? VolunteerCadreScopeService::membersFor($volunteer) : DB::table('memberships');
+        $searchedMember = $query->where('membership_id', $memberId)->first();
 
         if (!$searchedMember) {
-            return redirect('/volunteer/dashboard/village')->with('error', 'Active Membership ID record metrics not found on server.');
+            return redirect('/volunteer/dashboard/village')->with('error', 'Active Membership ID record metrics not found on server within your jurisdiction.');
         }
 
-        $totalMembersCount = DB::table('memberships')->where('payment_status', 'success')->count();
+        $totalMembersCount = $volunteer
+            ? VolunteerCadreScopeService::membersFor($volunteer)->where('payment_status', 'success')->count()
+            : DB::table('memberships')->where('payment_status', 'success')->count();
         $totalBenefitsCount = DB::table('seva_orders_history')->count();
-        $groupEvents = DB::table('group_events_history')->where('volunteer_id', session('auth_volunteer_code'))->get();
-return view('volunteer_village_dashboard', compact('searchedMember', 'totalMembersCount', 'totalBenefitsCount', 'groupEvents'));
+        $groupEvents = DB::table('group_events_history')->where('volunteer_id', session('auth_volunteer_code') ?: $volunteer?->volunteer_id)->get();
+        $subordinateUnits = $volunteer ? VolunteerCadreScopeService::subordinateUnitsFor($volunteer) : collect();
 
-
+        return view('volunteer_village_dashboard', compact('searchedMember', 'totalMembersCount', 'totalBenefitsCount', 'groupEvents', 'subordinateUnits', 'volunteer'));
     }
 
     // 14. Core Image 1KB-2KB Compression Engine and Seva Delivery History Record Function
     public function deliverSeva(Request $request)
     {
-        if (session('auth_volunteer_role') !== 'village_president') {
-            return redirect('/volunteer/login')->with('error', 'Unauthorized execution rules.');
+        $volunteer = Auth::guard('volunteer')->user();
+        $isSessionAuth = session('auth_volunteer_role') === 'village_president';
+
+        if (!$isSessionAuth && (!$volunteer || !VolunteerCadreScopeService::isVerifiedCadre($volunteer, 'panchayat_president'))) {
+            abort(403, 'Unauthorized execution rules.');
         }
 
         $request->validate([
             'member_id' => 'required|digits:12',
             'service_type' => 'required|string|max:255',
-            'proof_photo' => 'required|image|mimes:jpeg,png,jpg|max:5120' // Supports up to 5MB mobile photos entry
+            'proof_photo' => 'required|image|mimes:jpeg,png,jpg|max:5120'
         ]);
 
         $memberId = $request->input('member_id');
         $serviceType = $request->input('service_type');
-        $volunteerCode = session('auth_volunteer_code');
-        $volunteerRole = session('auth_volunteer_role');
+        $volunteerCode = session('auth_volunteer_code') ?: $volunteer?->volunteer_id;
+        $volunteerRole = session('auth_volunteer_role') ?: ($volunteer?->cadre_level ?? 'panchayat_president');
 
         $uploadedFile = $request->file('proof_photo');
         
-        // --- NATIVE ULTRA IMAGE COMPRESSION LOGIC TO FORCE BELOW 2KB SIZE ---
-        // Creating blank pixel template matrix sized 100x100 stamps format
         $targetWidth = 100;
         $targetHeight = 100;
         $compressedImage = imagecreatetruecolor($targetWidth, $targetHeight);
 
-        // Capturing incoming file format types safely inside native GD layout graphics engine
         $sourceType = $uploadedFile->getClientOriginalExtension();
-        if (string_contains(strtolower($sourceType), 'png')) {
+        if (str_contains(strtolower($sourceType), 'png')) {
             $sourceImage = imagecreatefrompng($uploadedFile->getRealPath());
         } else {
             $sourceImage = imagecreatefromjpeg($uploadedFile->getRealPath());
         }
 
-        // Resizing raw camera pixels into strict 100x100 grid format layout block
         imagecopyresampled($compressedImage, $sourceImage, 0, 0, 0, 0, $targetWidth, $targetHeight, imagesx($sourceImage), imagesy($sourceImage));
 
-        // Setting up target naming path markers inside public local directories storage folder
         $fileName = 'seva_proof_' . time() . '_' . $memberId . '.jpg';
         $storageDir = storage_path('app/public/seva_proofs');
         
@@ -959,16 +1124,13 @@ return view('volunteer_village_dashboard', compact('searchedMember', 'totalMembe
         
         $finalTargetFilePath = $storageDir . '/' . $fileName;
 
-        // Writing file data down with compressed quality ratio 20% to achieve pure 1KB-2KB target limits
         imagejpeg($compressedImage, $finalTargetFilePath, 20);
 
-        // Clears standard active system memory channels
         imagedestroy($sourceImage);
         imagedestroy($compressedImage);
 
         $savedDatabasePath = 'seva_proofs/' . $fileName;
 
-        // Inserting the clean delivery records data securely into seva master dashboard history rows table
         DB::table('seva_orders_history')->insert([
             'member_id' => $memberId,
             'volunteer_id' => $volunteerCode,
@@ -981,30 +1143,38 @@ return view('volunteer_village_dashboard', compact('searchedMember', 'totalMembe
 
         return redirect('/volunteer/dashboard/village')->with('success', 'Seva delivery recorded with 1KB digital photo evidence history proof successfully!');
     }
-        // 15. Show Mandal President Dashboard with Anti-Fraud Audit and Multi-Village Group Gallery
+
+    // 15. Show Mandal President Dashboard with Anti-Fraud Audit and Subordinate Directory
     public function showMandalDashboard(Request $request)
     {
-        if (session('auth_volunteer_role') !== 'mandal_president') {
-            return redirect('/volunteer/login')->with('error', 'Unauthorized dashboard access slot.');
+        $volunteer = Auth::guard('volunteer')->user();
+        $isSessionAuth = session('auth_volunteer_role') === 'mandal_president';
+
+        if (!$isSessionAuth && (!$volunteer || !VolunteerCadreScopeService::isVerifiedCadre($volunteer, 'mandal_president'))) {
+            abort(403, 'Unauthorized dashboard access slot.');
         }
 
-        $mandalLocality = session('auth_volunteer_locality');
+        $mandalLocality = session('auth_volunteer_locality') ?: ($volunteer?->resolved_mandal ?? 'Mandal');
 
-        // Core Counts gathering metrics from active boundaries tracking rows
-        $totalMandalMembers = DB::table('memberships')->where('payment_status', 'success')->count();
-        $totalPanchayatsCount = DB::table('memberships')->where('payment_status', 'success')->distinct('grama_panchayat')->count('grama_panchayat');
-        if($totalPanchayatsCount == 0) { $totalPanchayatsCount = 12; }
+        $totalMandalMembers = $volunteer
+            ? VolunteerCadreScopeService::membersFor($volunteer)->where('payment_status', 'success')->count()
+            : DB::table('memberships')->where('payment_status', 'success')->count();
+
+        $totalPanchayatsCount = $volunteer
+            ? VolunteerCadreScopeService::panchayatsFor($volunteer)->count()
+            : DB::table('memberships')->where('payment_status', 'success')->distinct('grama_panchayat')->count('grama_panchayat');
+
         $totalMandalBenefits = DB::table('seva_orders_history')->count();
-        $villagePresidents = DB::table('volunteers')->where('role', 'village_president')->get();
-        $mandalMembers = DB::table('memberships')->where('payment_status', 'success')->get();
+        $subordinateUnits = $volunteer ? VolunteerCadreScopeService::subordinateUnitsFor($volunteer) : collect();
 
-        // AUTOMATED GALLERY QUERY: Fetching all mass activity group events published from this mandal boundaries
+        $villagePresidents = DB::table('volunteers')->where('cadre_level', 'panchayat_president')->orWhere('role', 'village_president')->get();
+        $mandalMembers = $volunteer ? VolunteerCadreScopeService::membersFor($volunteer)->where('payment_status', 'success')->get() : DB::table('memberships')->where('payment_status', 'success')->get();
+
         $mandalGroupEvents = DB::table('group_events_history')
             ->where('mandal', $mandalLocality)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // ANTI-FRAUD AUDIT LOOKUP ENGINE
         $searchedAuditMember = null;
         $sevaHistoryRecords = collect();
 
@@ -1028,34 +1198,44 @@ return view('volunteer_village_dashboard', compact('searchedMember', 'totalMembe
             'mandalMembers',
             'searchedAuditMember',
             'sevaHistoryRecords',
-            'mandalGroupEvents'
+            'mandalGroupEvents',
+            'subordinateUnits',
+            'volunteer'
         ));
     }
 
-       // 16. Show Assembly Segment President Dashboard with Anti-Fraud Audit and Group Gallery
+    // 16. Show Assembly Segment President Dashboard with Subordinate Directory
     public function showAssemblyDashboard(Request $request)
     {
-        if (session('auth_volunteer_role') !== 'assembly_president') {
-            return redirect('/volunteer/login')->with('error', 'Unauthorized dashboard access slot.');
+        $volunteer = Auth::guard('volunteer')->user();
+        $isSessionAuth = session('auth_volunteer_role') === 'assembly_president';
+
+        if (!$isSessionAuth && (!$volunteer || !VolunteerCadreScopeService::isVerifiedCadre($volunteer, 'assembly_president'))) {
+            abort(403, 'Unauthorized dashboard access slot.');
         }
 
-        $assemblyLocality = session('auth_volunteer_locality');
+        $assemblyLocality = session('auth_volunteer_locality') ?: ($volunteer?->resolved_assembly_segment ?? 'Assembly Segment');
 
-        // Core Counts gathering metrics from constituency boundaries rows
-        $totalAssemblyMembers = DB::table('memberships')->where('payment_status', 'success')->count();
+        $totalAssemblyMembers = $volunteer
+            ? VolunteerCadreScopeService::membersFor($volunteer)->where('payment_status', 'success')->count()
+            : DB::table('memberships')->where('payment_status', 'success')->count();
+
         $totalAssemblyBenefits = DB::table('seva_orders_history')->count();
-        $totalAssemblyMandals = 7; // Fixed numerical benchmark mapping
+        $totalAssemblyMandals = $volunteer
+            ? VolunteerCadreScopeService::mandalsFor($volunteer)->count()
+            : 7;
 
         $mandalPresidents = DB::table('volunteers')
-            ->where('role', 'mandal_president')
+            ->where('cadre_level', 'mandal_president')
+            ->orWhere('role', 'mandal_president')
             ->get();
 
-        // AUTOMATED GALLERY QUERY: Fetching all mass activity group events for this assembly segment
+        $subordinateUnits = $volunteer ? VolunteerCadreScopeService::subordinateUnitsFor($volunteer) : collect();
+
         $assemblyGroupEvents = DB::table('group_events_history')
             ->orderBy('created_at', 'desc')
-            ->get(); // In production, this filters ->where('assembly_segment', $assemblyLocality) dynamically
+            ->get();
 
-        // GLOBAL ANTI-FRAUD AUDIT LOOKUP ENGINE
         $searchedAuditMember = null;
         $sevaHistoryRecords = collect();
 
@@ -1080,30 +1260,40 @@ return view('volunteer_village_dashboard', compact('searchedMember', 'totalMembe
             'mandalPresidents',
             'searchedAuditMember',
             'sevaHistoryRecords',
-            'assemblyGroupEvents'
+            'assemblyGroupEvents',
+            'subordinateUnits',
+            'volunteer'
         ));
     }
 
-    // 17. Show District President Dashboard gathering automated supervisory data metrics
+    // 17. Show District President Dashboard with Subordinate Directory
     public function showDistrictDashboard(Request $request)
     {
-        if (session('auth_volunteer_role') !== 'district_president') {
-            return redirect('/volunteer/login')->with('error', 'Unauthorized dashboard access slot.');
+        $volunteer = Auth::guard('volunteer')->user();
+        $isSessionAuth = session('auth_volunteer_role') === 'district_president';
+
+        if (!$isSessionAuth && (!$volunteer || !VolunteerCadreScopeService::isVerifiedCadre($volunteer, 'district_president'))) {
+            abort(403, 'Unauthorized dashboard access slot.');
         }
 
-        $districtLocality = session('auth_volunteer_locality');
+        $districtLocality = session('auth_volunteer_locality') ?: ($volunteer?->resolved_district ?? 'District');
 
-        // 1. AUTOMATED COUNTS: Gathering data records from district boundaries rows
-        $totalDistrictMembers = DB::table('memberships')->where('payment_status', 'success')->count();
+        $totalDistrictMembers = $volunteer
+            ? VolunteerCadreScopeService::membersFor($volunteer)->where('payment_status', 'success')->count()
+            : DB::table('memberships')->where('payment_status', 'success')->count();
+
         $totalDistrictBenefits = DB::table('seva_orders_history')->count();
-        $totalDistrictAssemblies = 10; // Fixed numerical benchmark mapping
+        $totalDistrictAssemblies = $volunteer
+            ? VolunteerCadreScopeService::assemblySegmentsFor($volunteer)->count()
+            : 10;
 
-        // 2. TIER 3 DIRECTION: Fetching all active assembly presidents registered inside database records
         $assemblyPresidents = DB::table('volunteers')
-            ->where('role', 'assembly_president')
+            ->where('cadre_level', 'assembly_president')
+            ->orWhere('role', 'assembly_president')
             ->get();
 
-        // 3. GLOBAL ANTI-FRAUD AUDIT LOOKUP: Processing input query to fetch 1KB-2KB real deployment photo proofs
+        $subordinateUnits = $volunteer ? VolunteerCadreScopeService::subordinateUnitsFor($volunteer) : collect();
+
         $searchedAuditMember = null;
         $sevaHistoryRecords = collect();
 
@@ -1127,28 +1317,70 @@ return view('volunteer_village_dashboard', compact('searchedMember', 'totalMembe
             'totalDistrictAssemblies',
             'assemblyPresidents',
             'searchedAuditMember',
-            'sevaHistoryRecords'
+            'sevaHistoryRecords',
+            'subordinateUnits',
+            'volunteer'
         ));
     }
-        // 18. Show Global Master Dashboard with Dynamic Pipeline Breakdown Analytics
-    public function showGlobalDashboard(Request $request)
-    {
-        $assignedRole = session('auth_volunteer_role');
-        $assignedLocality = session('auth_volunteer_locality');
 
-        $allowedRoles = ['district_president', 'state_president', 'national_president', 'international_president', 'support_team'];
-        if (!in_array($assignedRole, $allowedRoles)) {
-            return redirect('/volunteer/login')->with('error', 'Unauthorized global dashboard access slot.');
+    // 17b. Show State President Dashboard with Subordinate Directory
+    public function showStateDashboard(Request $request)
+    {
+        $volunteer = Auth::guard('volunteer')->user();
+        $isSessionAuth = session('auth_volunteer_role') === 'state_president';
+
+        if (!$isSessionAuth && (!$volunteer || !VolunteerCadreScopeService::isVerifiedCadre($volunteer, 'state_president'))) {
+            abort(403, 'Unauthorized dashboard access slot.');
         }
 
-        // 1. GLOBAL OVERVIEW COUNTS
+        $totalStateMembers = $volunteer
+            ? VolunteerCadreScopeService::membersFor($volunteer)->where('payment_status', 'success')->count()
+            : DB::table('memberships')->where('payment_status', 'success')->count();
+
+        $totalDistrictsCount = $volunteer
+            ? VolunteerCadreScopeService::districtsFor($volunteer)->count()
+            : GeoDistrict::count();
+
+        $subordinateUnits = $volunteer ? VolunteerCadreScopeService::subordinateUnitsFor($volunteer) : collect();
+
+        return view('volunteer_global_dashboard', [
+            'assignedRole' => 'state_president',
+            'assignedLocality' => $volunteer?->resolved_state ?? 'State',
+            'globalMembersCount' => $totalStateMembers,
+            'globalBenefitsCount' => DB::table('seva_orders_history')->count(),
+            'totalActiveVolunteersCount' => Volunteer::where('state_id', $volunteer?->state_id)->count(),
+            'searchedAuditMember' => null,
+            'sevaHistoryRecords' => collect(),
+            'breakdownData' => collect(),
+            'breakdownHeader' => 'District',
+            'subordinateUnits' => $subordinateUnits,
+            'volunteer' => $volunteer,
+        ]);
+    }
+
+    // 18. Show Global / National Master Dashboard with Dynamic Pipeline Analytics
+    public function showGlobalDashboard(Request $request)
+    {
+        $volunteer = Auth::guard('volunteer')->user();
+        $assignedRole = session('auth_volunteer_role') ?: $volunteer?->cadre_level;
+        $assignedLocality = session('auth_volunteer_locality') ?: ($volunteer?->jurisdiction_summary ?? 'All India');
+
+        $allowedRoles = ['district_president', 'state_president', 'national_president', 'international_president', 'support_team'];
+
+        $isAuthorized = ($volunteer && VolunteerCadreScopeService::isVerifiedCadre($volunteer, 'national_president'))
+            || in_array($assignedRole, $allowedRoles, true);
+
+        if (!$isAuthorized) {
+            abort(403, 'Unauthorized global dashboard access slot.');
+        }
+
         $globalMembersCount = DB::table('memberships')->where('payment_status', 'success')->count();
         $globalBenefitsCount = DB::table('seva_orders_history')->count();
         $totalActiveVolunteersCount = DB::table('volunteers')->count();
+        $subordinateUnits = $volunteer ? VolunteerCadreScopeService::subordinateUnitsFor($volunteer) : collect();
 
-        // 2. DYNAMIC PIPELINE BREAKDOWN ANALYTICS MATRIX
         $breakdownData = collect();
-        $breakdownHeader = 'Sub-Division';
+        $breakdownHeader = 'State';
 
         if ($assignedRole === 'district_president' || $assignedRole === 'support_team') {
             $breakdownHeader = 'Assembly Segment';
@@ -1180,7 +1412,6 @@ return view('volunteer_village_dashboard', compact('searchedMember', 'totalMembe
                 ->get();
         }
 
-        // 3. GLOBAL ANTI-FRAUD AUDIT LOOKUP
         $searchedAuditMember = null;
         $sevaHistoryRecords = collect();
 
@@ -1200,7 +1431,7 @@ return view('volunteer_village_dashboard', compact('searchedMember', 'totalMembe
             'assignedRole', 'assignedLocality', 'globalMembersCount', 
             'globalBenefitsCount', 'totalActiveVolunteersCount', 
             'searchedAuditMember', 'sevaHistoryRecords',
-            'breakdownData', 'breakdownHeader'
+            'breakdownData', 'breakdownHeader', 'subordinateUnits', 'volunteer'
         ));
     }
     // 19. Village Dashboard Base Loader handling Group Events Display metrics

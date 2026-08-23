@@ -28,17 +28,29 @@
             <div class="flex items-center gap-2 text-xs font-bold text-gray-500 border-b border-gray-200 pb-3">
                 <a href="{{ route('admin.dashboard') }}" class="hover:text-brandOrange transition">Home</a>
                 <span>-</span>
-                <a href="{{ route('admin.volunteers.index') }}" class="bg-brandOrange text-white text-[11px] font-black px-3 py-1 rounded shadow-sm uppercase tracking-wide">
-                    Volunteer
-                </a>
+                <a href="{{ route('admin.volunteers.index') }}" class="hover:text-brandOrange transition">Volunteers</a>
+                <span>-</span>
+                <a href="{{ route('admin.geo_review.index') }}" class="hover:text-brandOrange transition">Geo Review</a>
+                <span>-</span>
+                <span class="bg-brandOrange text-white text-[11px] font-black px-3 py-1 rounded shadow-sm uppercase tracking-wide">
+                    Cadre Assignment
+                </span>
             </div>
 
             <!-- Page Title & Header -->
             <div class="flex justify-between items-center">
-                <h2 class="text-xl font-black text-brandGray tracking-tight">Volunteer Approval Details</h2>
-                <a href="{{ route('admin.volunteers.index') }}" class="bg-gray-800 hover:bg-gray-900 text-white font-black text-[10px] px-4 py-2 rounded-lg shadow-sm uppercase tracking-wide transition">
-                    ← Back to List
-                </a>
+                <div>
+                    <h2 class="text-xl font-black text-brandGray tracking-tight">Volunteer Approval Details &amp; Cadre Scope</h2>
+                    <p class="text-xs text-gray-500 mt-0.5">Assign 6-level President authorization scope and canonical geographic boundaries.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('admin.geo_review.index') }}" class="bg-emerald-700 hover:bg-emerald-800 text-white font-black text-[10px] px-4 py-2 rounded-lg shadow-sm uppercase tracking-wide transition">
+                        🗺️ Geo Review Desk
+                    </a>
+                    <a href="{{ route('admin.volunteers.index') }}" class="bg-gray-800 hover:bg-gray-900 text-white font-black text-[10px] px-4 py-2 rounded-lg shadow-sm uppercase tracking-wide transition">
+                        ← Back to List
+                    </a>
+                </div>
             </div>
 
             <!-- Error Alerts Block -->
@@ -54,46 +66,170 @@
             @endif
 
             <!-- Main Input Form Card -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 max-w-3xl">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 max-w-4xl">
                 <form action="{{ route('admin.volunteers.cadreUpdate', $volunteer->id) }}" method="POST" class="space-y-6">
                     @csrf
 
-                    <!-- 1. Name of Volunteer -->
-                    <div>
-                        <label class="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">Name of Volunteer</label>
-                        <input type="text" name="name" readonly class="w-full bg-gray-100 border border-gray-300 rounded-lg px-4 py-2.5 text-xs font-black text-gray-800 uppercase focus:outline-none cursor-not-allowed" value="{{ $volunteer->member_full_name ?? 'Volunteer' }}">
-                        <p class="text-[10px] text-gray-400 font-semibold mt-1">Linked from Membership ID: {{ implode(' ', str_split($volunteer->membership_id, 4)) }}</p>
+                    {{-- Volunteer Context Header Card --}}
+                    <div class="bg-amber-50/50 border border-amber-200/80 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            @if($volunteer->membership?->photo_path)
+                                <img src="{{ asset('storage/' . $volunteer->membership->photo_path) }}" alt="Photo" class="w-12 h-12 rounded-xl object-cover border border-amber-300 shadow-sm">
+                            @else
+                                <div class="w-12 h-12 rounded-xl bg-orange-200 text-orange-800 flex items-center justify-center font-black text-base border border-amber-300">
+                                    {{ substr($volunteer->full_name, 0, 1) }}
+                                </div>
+                            @endif
+                            <div>
+                                <h3 class="font-black text-gray-900 text-sm uppercase">{{ $volunteer->full_name }}</h3>
+                                <div class="flex flex-wrap items-center gap-2 mt-0.5 text-[11px] text-gray-600 font-medium">
+                                    <span>Mem ID: <strong class="font-mono">{{ implode(' ', str_split($volunteer->membership_id, 4)) }}</strong></span>
+                                    <span>•</span>
+                                    <span>Vol ID: <strong class="font-mono text-orange-700">{{ $volunteer->volunteer_id ?? 'Pending Approval' }}</strong></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-right">
+                            <span class="text-[10px] font-black uppercase tracking-wider text-gray-500 block">Mapping Status</span>
+                            <span class="inline-block mt-0.5 px-2.5 py-0.5 text-[10px] font-black rounded-full uppercase tracking-wider {{ $volunteer->geo_mapping_status === 'verified' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : ($volunteer->geo_mapping_status === 'needs_review' ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-amber-100 text-amber-800 border border-amber-300') }}">
+                                {{ $volunteer->geo_mapping_status ?? 'unmapped' }}
+                            </span>
+                        </div>
                     </div>
 
-                    <!-- 2. Status -->
-                    <div>
-                        <label class="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">Status *</label>
-                        <select name="status" required class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-xs font-bold text-gray-800 focus:outline-none focus:border-brandOrange">
-                            <option value="Verified" {{ old('status', $volunteer->status) === 'approved' ? 'selected' : '' }}>Verified</option>
-                            <option value="Rejected" {{ old('status', $volunteer->status) === 'rejected' ? 'selected' : '' }}>Rejected</option>
-                            <option value="Pending" {{ old('status', $volunteer->status) === 'pending' ? 'selected' : '' }}>Pending</option>
-                        </select>
+                    {{-- Legacy Geographics Reference --}}
+                    <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 text-[11px] text-gray-600">
+                        <span class="font-bold text-gray-800 uppercase block text-[10px] tracking-wider mb-1">Legacy Registration Geography (Reference):</span>
+                        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                            <div><span class="text-gray-400">State:</span> {{ $volunteer->resolved_state ?: '—' }}</div>
+                            <div><span class="text-gray-400">District:</span> {{ $volunteer->resolved_district ?: '—' }}</div>
+                            <div><span class="text-gray-400">Assembly:</span> {{ $volunteer->resolved_assembly_segment ?: '—' }}</div>
+                            <div><span class="text-gray-400">Mandal:</span> {{ $volunteer->resolved_mandal ?: '—' }}</div>
+                            <div><span class="text-gray-400">Panchayat:</span> {{ $volunteer->resolved_grama_panchayat ?: '—' }}</div>
+                        </div>
                     </div>
 
-                    <!-- 3. Volunteer Cadder -->
-                    <div>
-                        <label class="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">Volunteer Cadder *</label>
-                        <input type="text" name="cadre" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-xs font-semibold text-gray-900 focus:outline-none focus:border-brandOrange" placeholder="e.g. National Co-Ordinator, Youth Wing, Core Dal" value="{{ old('cadre', $volunteer->cadre) }}">
+                    {{-- Section 1: Approval Status & Cadre Level --}}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Status -->
+                        <div>
+                            <label class="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">Volunteer Status *</label>
+                            <select name="status" required class="w-full bg-white border border-gray-300 rounded-lg px-3.5 py-2.5 text-xs font-bold text-gray-800 focus:outline-none focus:border-brandOrange">
+                                <option value="approved" {{ old('status', $volunteer->status) === 'approved' ? 'selected' : '' }}>Approved (Active Clearance)</option>
+                                <option value="rejected" {{ old('status', $volunteer->status) === 'rejected' ? 'selected' : '' }}>Rejected</option>
+                                <option value="pending" {{ old('status', $volunteer->status) === 'pending' ? 'selected' : '' }}>Pending</option>
+                            </select>
+                        </div>
+
+                        <!-- Cadre Level -->
+                        <div>
+                            <label class="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">Cadre Authorization Level *</label>
+                            <select name="cadre_level" id="cadre_level_select" required class="w-full bg-white border border-gray-300 rounded-lg px-3.5 py-2.5 text-xs font-bold text-gray-800 focus:outline-none focus:border-brandOrange">
+                                @foreach($cadreLevels as $key => $label)
+                                    <option value="{{ $key }}" {{ old('cadre_level', $volunteer->cadre_level) === $key ? 'selected' : '' }}>
+                                        {{ $label }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
 
-                    <!-- 4. Volunteer Locality -->
-                    <div>
-                        <label class="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">Volunteer Locality *</label>
-                        <input type="text" name="locality" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-xs font-semibold text-gray-900 focus:outline-none focus:border-brandOrange" placeholder="e.g. Porumamilla, Kadapa, Badvel" value="{{ old('locality', $volunteer->locality ?: ($volunteer->member_mandal ?: ($volunteer->member_district ?: 'HQ'))) }}">
+                    {{-- Section 2: Cascading Canonical Geographic Selectors --}}
+                    <div class="border-t border-gray-200 pt-4 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-black text-gray-800 uppercase tracking-wider">Canonical Geographic Jurisdiction</h4>
+                            <span class="text-[10px] text-gray-400 font-medium">Select required tiers based on cadre level</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <!-- Canonical State -->
+                            <div id="geo_state_group">
+                                <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">1. Canonical State</label>
+                                <select name="state_id" id="state_select" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:border-brandOrange">
+                                    <option value="">-- Select State --</option>
+                                    @foreach($states as $st)
+                                        <option value="{{ $st->id }}" {{ (int)old('state_id', $prefilledStateId) === $st->id ? 'selected' : '' }}>
+                                            {{ $st->name }} ({{ $st->code ?? 'IN' }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <!-- Canonical District -->
+                            <div id="geo_district_group">
+                                <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">2. Canonical District</label>
+                                <select name="district_id" id="district_select" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:border-brandOrange">
+                                    <option value="">-- Select District --</option>
+                                    @foreach($districts as $dst)
+                                        <option value="{{ $dst->id }}" {{ (int)old('district_id', $prefilledDistrictId) === $dst->id ? 'selected' : '' }}>
+                                            {{ $dst->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <!-- Canonical Assembly Segment -->
+                            <div id="geo_assembly_group">
+                                <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">3. Assembly Segment</label>
+                                <select name="assembly_segment_id" id="assembly_select" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:border-brandOrange">
+                                    <option value="">-- Select Assembly Segment --</option>
+                                    @foreach($assemblySegments as $asm)
+                                        <option value="{{ $asm->id }}" {{ (int)old('assembly_segment_id', $prefilledAssemblyId) === $asm->id ? 'selected' : '' }}>
+                                            {{ $asm->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <!-- Canonical Mandal -->
+                            <div id="geo_mandal_group">
+                                <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">4. Canonical Mandal</label>
+                                <select name="mandal_id" id="mandal_select" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:border-brandOrange">
+                                    <option value="">-- Select Mandal --</option>
+                                    @foreach($mandals as $mdl)
+                                        <option value="{{ $mdl->id }}" {{ (int)old('mandal_id', $prefilledMandalId) === $mdl->id ? 'selected' : '' }}>
+                                            {{ $mdl->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <!-- Canonical Grama Panchayat -->
+                            <div id="geo_panchayat_group">
+                                <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">5. Grama Panchayat</label>
+                                <select name="panchayat_id" id="panchayat_select" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:border-brandOrange">
+                                    <option value="">-- Select Panchayat --</option>
+                                    @foreach($panchayats as $pan)
+                                        <option value="{{ $pan->id }}" {{ (int)old('panchayat_id', $prefilledPanchayatId) === $pan->id ? 'selected' : '' }}>
+                                            {{ $pan->name }} {{ $pan->pincode ? "({$pan->pincode})" : '' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Section 3: Custom Display Labels (Legacy Compatibility) --}}
+                    <div class="border-t border-gray-200 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">Custom Cadre Title (Optional)</label>
+                            <input type="text" name="cadre" class="w-full border border-gray-300 rounded-lg px-3.5 py-2 text-xs font-medium text-gray-900 focus:outline-none focus:border-brandOrange" placeholder="e.g. Panchayat President" value="{{ old('cadre', $volunteer->cadre) }}">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">Locality Display Text (Optional)</label>
+                            <input type="text" name="locality" class="w-full border border-gray-300 rounded-lg px-3.5 py-2 text-xs font-medium text-gray-900 focus:outline-none focus:border-brandOrange" placeholder="e.g. Akkalareddypalli, Porumamilla" value="{{ old('locality', $volunteer->locality ?: $volunteer->jurisdiction_summary) }}">
+                        </div>
                     </div>
 
                     <!-- Action Buttons -->
-                    <div class="pt-4 border-t border-gray-200 flex items-center justify-end gap-3">
+                    <div class="pt-6 border-t border-gray-200 flex items-center justify-end gap-3">
                         <a href="{{ route('admin.volunteers.index') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-black text-xs px-6 py-2.5 rounded-lg uppercase tracking-wider transition">
                             Cancel
                         </a>
-                        <button type="submit" class="bg-brandOrange hover:bg-orange-700 text-white font-black text-xs px-8 py-2.5 rounded-lg shadow-sm uppercase tracking-wider transition flex items-center gap-1.5">
-                            <span>💾</span> Save Changes
+                        <button type="submit" class="bg-brandOrange hover:bg-orange-700 text-white font-black text-xs px-8 py-2.5 rounded-lg shadow-sm uppercase tracking-wider transition flex items-center gap-1.5 cursor-pointer">
+                            <span>💾</span> Verify &amp; Save Cadre Scope
                         </button>
                     </div>
                 </form>
@@ -102,4 +238,96 @@
         </main>
     </div>
 </div>
+
+{{-- Cascading Dynamic Hierarchy Javascript Engine --}}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const stateSelect = document.getElementById('state_select');
+    const districtSelect = document.getElementById('district_select');
+    const assemblySelect = document.getElementById('assembly_select');
+    const mandalSelect = document.getElementById('mandal_select');
+    const panchayatSelect = document.getElementById('panchayat_select');
+
+    // 1. State Change -> Load Districts
+    stateSelect.addEventListener('change', function () {
+        const stateId = this.value;
+        districtSelect.innerHTML = '<option value="">-- Loading Districts... --</option>';
+        assemblySelect.innerHTML = '<option value="">-- Select Assembly Segment --</option>';
+        mandalSelect.innerHTML = '<option value="">-- Select Mandal --</option>';
+        panchayatSelect.innerHTML = '<option value="">-- Select Panchayat --</option>';
+
+        if (!stateId) {
+            districtSelect.innerHTML = '<option value="">-- Select District --</option>';
+            return;
+        }
+
+        fetch(`{{ route('admin.geo.hierarchy') }}?state_id=${stateId}`)
+            .then(res => res.json())
+            .then(data => {
+                districtSelect.innerHTML = '<option value="">-- Select District --</option>';
+                if (data.districts) {
+                    data.districts.forEach(d => {
+                        districtSelect.innerHTML += `<option value="${d.id}">${d.name}</option>`;
+                    });
+                }
+            })
+            .catch(() => {
+                districtSelect.innerHTML = '<option value="">-- Error Loading Districts --</option>';
+            });
+    });
+
+    // 2. District Change -> Load Assembly Segments & Mandals
+    districtSelect.addEventListener('change', function () {
+        const districtId = this.value;
+        assemblySelect.innerHTML = '<option value="">-- Loading Assembly Segments... --</option>';
+        mandalSelect.innerHTML = '<option value="">-- Loading Mandals... --</option>';
+        panchayatSelect.innerHTML = '<option value="">-- Select Panchayat --</option>';
+
+        if (!districtId) {
+            assemblySelect.innerHTML = '<option value="">-- Select Assembly Segment --</option>';
+            mandalSelect.innerHTML = '<option value="">-- Select Mandal --</option>';
+            return;
+        }
+
+        fetch(`{{ route('admin.geo.hierarchy') }}?district_id=${districtId}`)
+            .then(res => res.json())
+            .then(data => {
+                assemblySelect.innerHTML = '<option value="">-- Select Assembly Segment --</option>';
+                if (data.assembly_segments) {
+                    data.assembly_segments.forEach(a => {
+                        assemblySelect.innerHTML += `<option value="${a.id}">${a.name}</option>`;
+                    });
+                }
+                mandalSelect.innerHTML = '<option value="">-- Select Mandal --</option>';
+                if (data.mandals) {
+                    data.mandals.forEach(m => {
+                        mandalSelect.innerHTML += `<option value="${m.id}">${m.name}</option>`;
+                    });
+                }
+            });
+    });
+
+    // 3. Mandal Change -> Load Panchayats
+    mandalSelect.addEventListener('change', function () {
+        const mandalId = this.value;
+        panchayatSelect.innerHTML = '<option value="">-- Loading Panchayats... --</option>';
+
+        if (!mandalId) {
+            panchayatSelect.innerHTML = '<option value="">-- Select Panchayat --</option>';
+            return;
+        }
+
+        fetch(`{{ route('admin.geo.hierarchy') }}?mandal_id=${mandalId}`)
+            .then(res => res.json())
+            .then(data => {
+                panchayatSelect.innerHTML = '<option value="">-- Select Panchayat --</option>';
+                if (data.panchayats) {
+                    data.panchayats.forEach(p => {
+                        panchayatSelect.innerHTML += `<option value="${p.id}">${p.name} ${p.pincode ? '(' + p.pincode + ')' : ''}</option>`;
+                    });
+                }
+            });
+    });
+});
+</script>
 @endsection

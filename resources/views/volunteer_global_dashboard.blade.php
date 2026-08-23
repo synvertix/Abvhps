@@ -139,6 +139,43 @@
         </div>
     </div>
 
+    <!-- 3.6 Subordinate Jurisdiction Presidents Directory -->
+    @if(isset($subordinateUnits) && count($subordinateUnits) > 0)
+        <div class="bg-white p-5 rounded-xl shadow border border-gray-100 space-y-3">
+            <h3 class="text-xs font-black text-brandGray uppercase tracking-wider border-b border-gray-100 pb-2">📂 Subordinate Geographic Presidents Directory</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs text-brandGray">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200 text-gray-400 font-bold uppercase text-[10px]">
+                            <th class="p-2.5">Territory Unit</th>
+                            <th class="p-2.5">Unit Level</th>
+                            <th class="p-2.5">Assigned President</th>
+                            <th class="p-2.5">Status</th>
+                            <th class="p-2.5">Contact Phone</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach($subordinateUnits as $unit)
+                            <tr class="hover:bg-gray-50 font-medium">
+                                <td class="p-2.5 font-bold text-brandOrange uppercase">{{ $unit['unit_name'] }}</td>
+                                <td class="p-2.5 text-gray-500 font-semibold">{{ $unit['unit_type'] }}</td>
+                                <td class="p-2.5 font-bold uppercase {{ $unit['is_assigned'] ? 'text-brandDarkGray' : 'text-gray-400 italic' }}">
+                                    {{ $unit['president_name'] }}
+                                </td>
+                                <td class="p-2.5">
+                                    <span class="inline-block px-2 py-0.5 text-[9px] font-black rounded uppercase {{ $unit['is_assigned'] ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500' }}">
+                                        {{ $unit['is_assigned'] ? 'Assigned' : 'Vacant' }}
+                                    </span>
+                                </td>
+                                <td class="p-2.5 font-mono text-[11px]">{{ $unit['contact_phone'] }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
+
     <!-- 4. IT Infrastructure System Log Indicators (Strictly shown only for Support Team view logs) -->
     @if($assignedRole === 'support_team')
         <div class="bg-gray-900 p-5 rounded-xl shadow text-gray-200 space-y-3 font-mono text-[11px] border border-gray-800">

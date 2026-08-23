@@ -81,30 +81,45 @@
 
     <!-- 4. Section A: Assembly Presidents (District Tier 3 Force) Directory Table -->
     <div class="bg-white p-5 rounded-xl shadow border border-gray-100 space-y-3">
-        <h3 class="text-xs font-black text-brandGray uppercase tracking-wider border-b border-gray-100 pb-2">📂 Assembly Presidents District Tier-3 Force</h3>
+        <h3 class="text-xs font-black text-brandGray uppercase tracking-wider border-b border-gray-100 pb-2">📂 Assembly Segment Presidents Subordinate Directory</h3>
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse text-xs text-brandGray">
                 <thead>
-                    <tr class="bg-gray-50 border-b border-gray-200 text-gray-400 font-bold uppercase">
+                    <tr class="bg-gray-50 border-b border-gray-200 text-gray-400 font-bold uppercase text-[10px]">
                         <th class="p-2.5">Assembly Jurisdiction</th>
-                        <th class="p-2.5">Assembly Pres ID</th>
-                        <th class="p-2.5">President Name</th>
+                        <th class="p-2.5">Assembly President Name</th>
+                        <th class="p-2.5">Status</th>
                         <th class="p-2.5">Contact Phone</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                    @if(isset($assemblyPresidents) && count($assemblyPresidents) > 0)
+                    @if(isset($subordinateUnits) && count($subordinateUnits) > 0)
+                        @foreach($subordinateUnits as $unit)
+                            <tr class="hover:bg-gray-50 font-medium">
+                                <td class="p-2.5 font-bold text-brandOrange uppercase">{{ $unit['unit_name'] }}</td>
+                                <td class="p-2.5 font-bold uppercase {{ $unit['is_assigned'] ? 'text-brandDarkGray' : 'text-gray-400 italic' }}">
+                                    {{ $unit['president_name'] }}
+                                </td>
+                                <td class="p-2.5">
+                                    <span class="inline-block px-2 py-0.5 text-[9px] font-black rounded uppercase {{ $unit['is_assigned'] ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500' }}">
+                                        {{ $unit['is_assigned'] ? 'Assigned' : 'Vacant' }}
+                                    </span>
+                                </td>
+                                <td class="p-2.5 font-mono text-[11px]">{{ $unit['contact_phone'] }}</td>
+                            </tr>
+                        @endforeach
+                    @elseif(isset($assemblyPresidents) && count($assemblyPresidents) > 0)
                         @foreach($assemblyPresidents as $ap)
                             <tr class="hover:bg-gray-50 font-medium">
                                 <td class="p-2.5 font-bold text-brandOrange uppercase">{{ $ap->locality }}</td>
-                                <td class="p-2.5 tracking-wider">{{ $ap->volunteer_id }}</td>
-                                <td class="p-2.5 uppercase text-brandDarkGray">{{ $ap->full_name ?? 'ASSIGNED ASSEMBLY PRES' }}</td>
-                                <td class="p-2.5">+91 {{ $ap->phone }}</td>
+                                <td class="p-2.5 uppercase text-brandDarkGray font-bold">{{ $ap->full_name ?? 'ASSIGNED PRES' }}</td>
+                                <td class="p-2.5"><span class="inline-block px-2 py-0.5 text-[9px] font-black rounded uppercase bg-emerald-100 text-emerald-800">Assigned</span></td>
+                                <td class="p-2.5 font-mono text-[11px]">+91 {{ $ap->phone }}</td>
                             </tr>
                         @endforeach
                     @else
                         <tr>
-                            <td colspan="4" class="p-4 text-center text-gray-400 font-medium">No active assembly presidents mapped inside this district boundaries yet.</td>
+                            <td colspan="4" class="p-4 text-center text-gray-400 font-medium">No assembly segments mapped inside this district yet.</td>
                         </tr>
                     @endif
                 </tbody>
