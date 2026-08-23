@@ -43,6 +43,7 @@ return [
         'verification_base_url' => env('CASHFREE_VERIFICATION_BASE_URL', ''),
         'api_version'           => env('CASHFREE_API_VERSION', '2023-08-01'),
         'environment'           => env('CASHFREE_ENV', 'sandbox'), // 'sandbox' or 'production'
+        'payments_enabled'      => env('CASHFREE_PAYMENTS_ENABLED', false),
     ],
 
     'razorpay' => [

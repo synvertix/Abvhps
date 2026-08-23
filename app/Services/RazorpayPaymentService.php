@@ -23,9 +23,9 @@ use Illuminate\Support\Facades\Log;
  */
 class RazorpayPaymentService implements PaymentGatewayInterface
 {
-    public const MEMBERSHIP_AMOUNT_PAISE = 100;
-    public const MEMBERSHIP_AMOUNT_RUPEES = 1.00;
-    public const LEGACY_MEMBERSHIP_AMOUNT_RUPEES = 100.00;
+    public const MEMBERSHIP_AMOUNT_PAISE = 10000;
+    public const MEMBERSHIP_AMOUNT_RUPEES = 100.00;
+    public const LEGACY_TEST_MEMBERSHIP_AMOUNT_RUPEES = 1.00;
 
     protected string $keyId;
     protected string $keySecret;
@@ -368,7 +368,7 @@ class RazorpayPaymentService implements PaymentGatewayInterface
 
     /**
      * Create a server-side Razorpay order for ABVHPS Membership Fee.
-     * Fixed test amount = 100 paise (₹1.00). No amount parameter accepted.
+     * Fixed canonical amount = 10000 paise (₹100.00). No amount parameter accepted.
      * FAIL CLOSED when credentials are missing (zero simulation).
      */
     public function createMembershipOrder(string $internalReference, string $phone): array
@@ -385,7 +385,7 @@ class RazorpayPaymentService implements PaymentGatewayInterface
             $response = Http::withBasicAuth($this->keyId, $this->keySecret)
                 ->withHeaders(['Content-Type' => 'application/json'])
                 ->post("{$this->baseUrl}/orders", [
-                    'amount'          => self::MEMBERSHIP_AMOUNT_PAISE, // ₹1.00 test amount
+                    'amount'          => self::MEMBERSHIP_AMOUNT_PAISE, // ₹100.00 (10000 paise)
                     'currency'        => 'INR',
                     'receipt'         => $internalReference,
                     'payment_capture' => 1,

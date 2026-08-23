@@ -215,6 +215,13 @@ class DonationController extends Controller
      */
     public function initiateCashfreePayment(Request $request)
     {
+        if (!config('services.cashfree.payments_enabled', false)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cashfree Payments is coming soon. Please use Razorpay to continue.',
+            ], 422);
+        }
+
         $validated = $this->validateDonationRequest($request);
         $donation  = $this->createPendingDonation($validated, 'cashfree');
         $this->authorizeDonationInSession($request, (int) $donation->id);
