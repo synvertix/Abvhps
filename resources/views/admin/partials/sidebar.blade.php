@@ -10,6 +10,7 @@
     $isApprovedMembers = request()->routeIs('admin.membership.ledger') || (request()->routeIs('admin.membership.*') && !request()->routeIs('admin.membership.pending'));
     $isPendingMembers = request()->routeIs('admin.membership.pending');
     $isVolunteers = request()->routeIs('admin.volunteers.*');
+    $isVolunteerEvents = request()->routeIs('admin.volunteer_events.*');
     $isRudrasena = request()->routeIs('admin.rudrasena.*');
     $isLocalGateways = request()->routeIs('admin.local_gateways.*');
     $isExams = request()->routeIs('admin.exams.*');
@@ -141,6 +142,13 @@
            @if($isVolunteers) aria-current="page" @endif>
             <span class="text-sm shrink-0">🤝</span> 
             <span class="truncate">VOLUNTEER DESK</span>
+        </a>
+
+        <a href="{{ route('admin.volunteer_events.index') }}"
+           class="admin-nav-row flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all duration-200 min-h-[44px] {{ $isVolunteerEvents ? 'bg-brandOrange text-white border-orange-400/50 shadow-md shadow-orange-950/40 font-black' : 'bg-[#374151] border-gray-700/60 hover:bg-[#4b5563] hover:text-white hover:border-gray-500/60 hover:translate-x-1 shadow-xs text-gray-200' }}"
+           @if($isVolunteerEvents) aria-current="page" @endif>
+            <span class="text-sm shrink-0">🏆</span>
+            <span class="truncate">VOLUNTEER EVENTS</span>
         </a>
 
         <a href="{{ route('admin.rudrasena.index') }}" 
@@ -354,6 +362,14 @@
            @if($isVolunteers) aria-current="page" @endif>
             <span class="text-sm shrink-0">🤝</span> 
             <span class="truncate">VOLUNTEER DESK</span>
+        </a>
+
+        <a href="{{ route('admin.volunteer_events.index') }}"
+           onclick="toggleAdminDrawer(false)"
+           class="admin-nav-row flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all duration-200 min-h-[44px] {{ $isVolunteerEvents ? 'bg-brandOrange text-white border-orange-400/50 shadow-md shadow-orange-950/40 font-black' : 'bg-[#374151] border-gray-700/60 hover:bg-[#4b5563] hover:text-white hover:border-gray-500/60 shadow-xs text-gray-200' }}"
+           @if($isVolunteerEvents) aria-current="page" @endif>
+            <span class="text-sm shrink-0">🏆</span>
+            <span class="truncate">VOLUNTEER EVENTS</span>
         </a>
 
         <a href="{{ route('admin.rudrasena.index') }}" 

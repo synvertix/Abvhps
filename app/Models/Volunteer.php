@@ -70,6 +70,47 @@ class Volunteer extends Authenticatable
         return $this->belongsTo(Membership::class, 'membership_id', 'membership_id');
     }
 
+    public function events()
+    {
+        return $this->hasMany(VolunteerEvent::class, 'volunteer_id');
+    }
+
+    // -------------------------------------------------------
+    // Event Statistics Helpers
+    // -------------------------------------------------------
+
+    public function conductedEventsCount(): int
+    {
+        return $this->events()->where('status', 'completed')->count();
+    }
+
+    public function upcomingEventsCount(): int
+    {
+        return $this->events()->where('status', 'upcoming')->count();
+    }
+
+    public function totalEventsCount(): int
+    {
+        return $this->events()->count();
+    }
+
+    public function totalParticipantsCount(): int
+    {
+        return VolunteerEventMember::whereIn('volunteer_event_id', $this->events()->pluck('id'))
+            ->whereIn('participation_status', ['registered', 'participated', 'benefited'])
+            ->count();
+    }
+
+    public function totalBeneficiariesCount(): int
+    {
+        return VolunteerEventMember::whereIn('volunteer_event_id', $this->events()->pluck('id'))
+            ->where(function ($q) {
+                $q->where('participation_type', 'beneficiary')
+                  ->orWhere('participation_status', 'benefited');
+            })
+            ->count();
+    }
+
     // -------------------------------------------------------
     // Scopes
     // -------------------------------------------------------
