@@ -117,6 +117,13 @@ Route::middleware('volunteer.auth')->group(function () {
         // Volunteer Exact Member Search Desk & JSON Lookup
         Route::get('/volunteer/member-search', [\App\Http\Controllers\VolunteerEventController::class, 'memberSearchDesk'])->name('volunteer.member_search');
         Route::post('/volunteer/member-search/lookup', [\App\Http\Controllers\VolunteerEventController::class, 'searchMember'])->name('volunteer.member_search.lookup');
+
+        // 6-Level Hierarchy Secure Unit Drill-Down Routes
+        Route::get('/volunteer/hierarchy/states/{id}', [\App\Http\Controllers\VolunteerHierarchyController::class, 'showState'])->name('volunteer.hierarchy.state');
+        Route::get('/volunteer/hierarchy/districts/{id}', [\App\Http\Controllers\VolunteerHierarchyController::class, 'showDistrict'])->name('volunteer.hierarchy.district');
+        Route::get('/volunteer/hierarchy/assemblies/{id}', [\App\Http\Controllers\VolunteerHierarchyController::class, 'showAssembly'])->name('volunteer.hierarchy.assembly');
+        Route::get('/volunteer/hierarchy/mandals/{id}', [\App\Http\Controllers\VolunteerHierarchyController::class, 'showMandal'])->name('volunteer.hierarchy.mandal');
+        Route::get('/volunteer/hierarchy/panchayats/{id}', [\App\Http\Controllers\VolunteerHierarchyController::class, 'showPanchayat'])->name('volunteer.hierarchy.panchayat');
     });
 });
 
@@ -362,11 +369,8 @@ Route::get('/admin/membership-ledger', [App\Http\Controllers\MembershipControlle
     Route::post('/admin/volunteers/resend-credentials/{id}', [VolunteerController::class, 'resendCredentials'])->name('admin.volunteers.resendCredentials')->middleware('auth:web');
     Route::delete('/admin/volunteers/delete/{id}', [VolunteerController::class, 'deleteVolunteer'])->name('admin.volunteers.delete')->middleware('auth:web');
 
-    // 8c. Geographic Canonical Hierarchy & Review Desk
+    // 8c. Geographic Canonical Hierarchy Cascading Selector Endpoint
     Route::get('/admin/geo/hierarchy', [VolunteerController::class, 'getGeoHierarchyAjax'])->name('admin.geo.hierarchy')->middleware('auth:web');
-    Route::get('/admin/geo-mapping-review', [\App\Http\Controllers\AdminGeoReviewController::class, 'index'])->name('admin.geo_review.index')->middleware('auth:web');
-    Route::post('/admin/geo-mapping-review/update/{type}/{id}', [\App\Http\Controllers\AdminGeoReviewController::class, 'updateMapping'])->name('admin.geo_review.update')->middleware('auth:web');
-    Route::post('/admin/geo-mapping-review/alias', [\App\Http\Controllers\AdminGeoReviewController::class, 'approveAlias'])->name('admin.geo_review.alias')->middleware('auth:web');
 
     // 8b. Volunteer Events Management (Central Admin)
     Route::get('/admin/volunteer-events', [\App\Http\Controllers\AdminVolunteerEventController::class, 'index'])->name('admin.volunteer_events.index')->middleware('auth:web');

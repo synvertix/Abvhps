@@ -1,16 +1,16 @@
 @extends('layouts.app')
 
+@section('title', 'Volunteer Approval & Cadre Assignment | ABVHPS')
+
 @section('content')
-<div class="min-h-screen bg-gray-100/60 flex flex-col md:flex-row select-none">
+<div class="flex h-screen bg-[#111827] overflow-hidden font-sans text-gray-300">
     
-    <!-- BLOCK 1: MASTER ADMINISTRATIVE LEFT SIDEBAR -->
     @include('admin.partials.sidebar')
 
-    <!-- BLOCK 2: MASTER MAIN WORKSPACE VIEWPORT DESK -->
-    <div class="flex-1 flex flex-col overflow-hidden">
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-gray-100">
         
-        <!-- Workspace Top Status Banner Navbar -->
-        <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
+        <!-- Header Bar -->
+        <header class="bg-white border-b border-gray-200 shadow-xs px-6 py-3.5 flex items-center justify-between flex-shrink-0">
             <div class="flex items-center gap-2">
                 @include('admin.partials.header_button')
                 <span class="text-sm font-black text-brandGray uppercase tracking-wider">System View:</span>
@@ -30,8 +30,6 @@
                 <span>-</span>
                 <a href="{{ route('admin.volunteers.index') }}" class="hover:text-brandOrange transition">Volunteers</a>
                 <span>-</span>
-                <a href="{{ route('admin.geo_review.index') }}" class="hover:text-brandOrange transition">Geo Review</a>
-                <span>-</span>
                 <span class="bg-brandOrange text-white text-[11px] font-black px-3 py-1 rounded shadow-sm uppercase tracking-wide">
                     Cadre Assignment
                 </span>
@@ -44,9 +42,6 @@
                     <p class="text-xs text-gray-500 mt-0.5">Assign 6-level President authorization scope and canonical geographic boundaries.</p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <a href="{{ route('admin.geo_review.index') }}" class="bg-emerald-700 hover:bg-emerald-800 text-white font-black text-[10px] px-4 py-2 rounded-lg shadow-sm uppercase tracking-wide transition">
-                        🗺️ Geo Review Desk
-                    </a>
                     <a href="{{ route('admin.volunteers.index') }}" class="bg-gray-800 hover:bg-gray-900 text-white font-black text-[10px] px-4 py-2 rounded-lg shadow-sm uppercase tracking-wide transition">
                         ← Back to List
                     </a>
@@ -136,16 +131,16 @@
                     </div>
 
                     {{-- Section 2: Cascading Canonical Geographic Selectors --}}
-                    <div class="border-t border-gray-200 pt-4 space-y-4">
+                    <div class="border-t border-gray-200 pt-4 space-y-4" id="geo_jurisdiction_section">
                         <div class="flex items-center justify-between">
                             <h4 class="text-xs font-black text-gray-800 uppercase tracking-wider">Canonical Geographic Jurisdiction</h4>
-                            <span class="text-[10px] text-gray-400 font-medium">Select required tiers based on cadre level</span>
+                            <span class="text-[10px] text-gray-400 font-medium" id="geo_guidance_text">Select required tiers based on cadre level</span>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             <!-- Canonical State -->
                             <div id="geo_state_group">
-                                <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">1. Canonical State</label>
+                                <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1" id="state_label">1. Canonical State</label>
                                 <select name="state_id" id="state_select" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:border-brandOrange">
                                     <option value="">-- Select State --</option>
                                     @foreach($states as $st)
@@ -158,7 +153,7 @@
 
                             <!-- Canonical District -->
                             <div id="geo_district_group">
-                                <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">2. Canonical District</label>
+                                <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1" id="district_label">2. Canonical District</label>
                                 <select name="district_id" id="district_select" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:border-brandOrange">
                                     <option value="">-- Select District --</option>
                                     @foreach($districts as $dst)
@@ -171,7 +166,7 @@
 
                             <!-- Canonical Assembly Segment -->
                             <div id="geo_assembly_group">
-                                <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">3. Assembly Segment</label>
+                                <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1" id="assembly_label">3. Assembly Segment</label>
                                 <select name="assembly_segment_id" id="assembly_select" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:border-brandOrange">
                                     <option value="">-- Select Assembly Segment --</option>
                                     @foreach($assemblySegments as $asm)
@@ -184,7 +179,7 @@
 
                             <!-- Canonical Mandal -->
                             <div id="geo_mandal_group">
-                                <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">4. Canonical Mandal</label>
+                                <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1" id="mandal_label">4. Canonical Mandal</label>
                                 <select name="mandal_id" id="mandal_select" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:border-brandOrange">
                                     <option value="">-- Select Mandal --</option>
                                     @foreach($mandals as $mdl)
@@ -197,7 +192,7 @@
 
                             <!-- Canonical Grama Panchayat -->
                             <div id="geo_panchayat_group">
-                                <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">5. Grama Panchayat</label>
+                                <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1" id="panchayat_label">5. Grama Panchayat</label>
                                 <select name="panchayat_id" id="panchayat_select" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:border-brandOrange">
                                     <option value="">-- Select Panchayat --</option>
                                     @foreach($panchayats as $pan)
@@ -242,11 +237,56 @@
 {{-- Cascading Dynamic Hierarchy Javascript Engine --}}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const cadreSelect = document.getElementById('cadre_level_select');
+    const stateGroup = document.getElementById('geo_state_group');
+    const districtGroup = document.getElementById('geo_district_group');
+    const assemblyGroup = document.getElementById('geo_assembly_group');
+    const mandalGroup = document.getElementById('geo_mandal_group');
+    const panchayatGroup = document.getElementById('geo_panchayat_group');
+
     const stateSelect = document.getElementById('state_select');
     const districtSelect = document.getElementById('district_select');
     const assemblySelect = document.getElementById('assembly_select');
     const mandalSelect = document.getElementById('mandal_select');
     const panchayatSelect = document.getElementById('panchayat_select');
+
+    function updateCadreVisibility() {
+        const cadre = cadreSelect.value;
+
+        // Reset visibility
+        stateGroup.style.display = 'block';
+        districtGroup.style.display = 'block';
+        assemblyGroup.style.display = 'block';
+        mandalGroup.style.display = 'block';
+        panchayatGroup.style.display = 'block';
+
+        if (cadre === 'national_president') {
+            stateGroup.style.display = 'none';
+            districtGroup.style.display = 'none';
+            assemblyGroup.style.display = 'none';
+            mandalGroup.style.display = 'none';
+            panchayatGroup.style.display = 'none';
+        } else if (cadre === 'state_president') {
+            districtGroup.style.display = 'none';
+            assemblyGroup.style.display = 'none';
+            mandalGroup.style.display = 'none';
+            panchayatGroup.style.display = 'none';
+        } else if (cadre === 'district_president') {
+            assemblyGroup.style.display = 'none';
+            mandalGroup.style.display = 'none';
+            panchayatGroup.style.display = 'none';
+        } else if (cadre === 'assembly_president') {
+            mandalGroup.style.display = 'none';
+            panchayatGroup.style.display = 'none';
+        } else if (cadre === 'mandal_president') {
+            panchayatGroup.style.display = 'none';
+        }
+    }
+
+    if (cadreSelect) {
+        cadreSelect.addEventListener('change', updateCadreVisibility);
+        updateCadreVisibility();
+    }
 
     // 1. State Change -> Load Districts
     stateSelect.addEventListener('change', function () {
@@ -298,6 +338,43 @@ document.addEventListener('DOMContentLoaded', function () {
                         assemblySelect.innerHTML += `<option value="${a.id}">${a.name}</option>`;
                     });
                 }
+                mandalSelect.innerHTML = '<option value="">-- Select Mandal --</option>';
+                if (data.mandals) {
+                    data.mandals.forEach(m => {
+                        mandalSelect.innerHTML += `<option value="${m.id}">${m.name}</option>`;
+                    });
+                }
+            });
+    });
+
+    // 2b. Assembly Change -> Load Mandals under that Assembly
+    assemblySelect.addEventListener('change', function () {
+        const assemblyId = this.value;
+        mandalSelect.innerHTML = '<option value="">-- Loading Mandals... --</option>';
+        panchayatSelect.innerHTML = '<option value="">-- Select Panchayat --</option>';
+
+        if (!assemblyId) {
+            const districtId = districtSelect.value;
+            if (districtId) {
+                fetch(`{{ route('admin.geo.hierarchy') }}?district_id=${districtId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        mandalSelect.innerHTML = '<option value="">-- Select Mandal --</option>';
+                        if (data.mandals) {
+                            data.mandals.forEach(m => {
+                                mandalSelect.innerHTML += `<option value="${m.id}">${m.name}</option>`;
+                            });
+                        }
+                    });
+            } else {
+                mandalSelect.innerHTML = '<option value="">-- Select Mandal --</option>';
+            }
+            return;
+        }
+
+        fetch(`{{ route('admin.geo.hierarchy') }}?assembly_segment_id=${assemblyId}`)
+            .then(res => res.json())
+            .then(data => {
                 mandalSelect.innerHTML = '<option value="">-- Select Mandal --</option>';
                 if (data.mandals) {
                     data.mandals.forEach(m => {

@@ -24,12 +24,22 @@ class VolunteerEvent extends Model
         'mandal',
         'district',
         'state',
+        'state_id',
+        'district_id',
+        'assembly_segment_id',
+        'mandal_id',
+        'panchayat_id',
         'status',
         'outcome',
     ];
 
     protected $casts = [
         'event_date' => 'date',
+        'state_id' => 'integer',
+        'district_id' => 'integer',
+        'assembly_segment_id' => 'integer',
+        'mandal_id' => 'integer',
+        'panchayat_id' => 'integer',
     ];
 
     // Canonical service types
@@ -59,6 +69,31 @@ class VolunteerEvent extends Model
     public function volunteer(): BelongsTo
     {
         return $this->belongsTo(Volunteer::class, 'volunteer_id');
+    }
+
+    public function stateRelation(): BelongsTo
+    {
+        return $this->belongsTo(GeoState::class, 'state_id');
+    }
+
+    public function districtRelation(): BelongsTo
+    {
+        return $this->belongsTo(GeoDistrict::class, 'district_id');
+    }
+
+    public function assemblySegmentRelation(): BelongsTo
+    {
+        return $this->belongsTo(GeoAssemblySegment::class, 'assembly_segment_id');
+    }
+
+    public function mandalRelation(): BelongsTo
+    {
+        return $this->belongsTo(GeoMandal::class, 'mandal_id');
+    }
+
+    public function panchayatRelation(): BelongsTo
+    {
+        return $this->belongsTo(GeoPanchayat::class, 'panchayat_id');
     }
 
     public function eventMembers(): HasMany

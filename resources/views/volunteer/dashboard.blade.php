@@ -89,6 +89,350 @@
 
         </div>
 
+        {{-- 6-Level President Jurisdictional Hierarchy Table (Directly on Main Dashboard) --}}
+        @if($isPresident)
+            <div class="bg-white rounded-3xl border border-gray-200 shadow-sm p-6 space-y-4">
+                @if($volunteer->cadre_level === 'panchayat_president')
+                    {{-- 1. Panchayat President: Panchayat Details Card/Table --}}
+                    <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                        <h3 class="font-black text-gray-800 text-sm uppercase tracking-wide flex items-center gap-2">
+                            <span>🏛️</span> PANCHAYAT DETAILS
+                        </h3>
+                        <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full uppercase">
+                            Own Jurisdiction
+                        </span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs text-gray-700">
+                            <thead>
+                                <tr class="bg-gray-50 border-b border-gray-200 text-gray-500 font-black uppercase text-[10px] tracking-wider">
+                                    <th class="p-3">Panchayat Name</th>
+                                    <th class="p-3">Panchayat President Name</th>
+                                    <th class="p-3">Contact Number</th>
+                                    <th class="p-3">Mandal</th>
+                                    <th class="p-3">Assembly Segment</th>
+                                    <th class="p-3">District</th>
+                                    <th class="p-3">State</th>
+                                    <th class="p-3 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($subordinateUnits as $unit)
+                                    <tr class="border-b border-gray-100 hover:bg-orange-50/40 font-medium transition">
+                                        <td class="p-3 font-bold text-brandOrange uppercase">
+                                            @if(!empty($unit['detail_route']) && $unit['detail_route'] !== '#')
+                                                <a href="{{ $unit['detail_route'] }}" class="hover:underline flex items-center gap-1">
+                                                    <span>{{ $unit['unit_name'] }}</span>
+                                                    <span class="text-xs">&rarr;</span>
+                                                </a>
+                                            @else
+                                                {{ $unit['unit_name'] }}
+                                            @endif
+                                        </td>
+                                        <td class="p-3 font-bold text-gray-900 uppercase">{{ $unit['president_name'] }}</td>
+                                        <td class="p-3 font-mono font-bold text-gray-800">{{ $unit['contact_phone'] }}</td>
+                                        <td class="p-3 uppercase">{{ $unit['mandal_name'] ?? '—' }}</td>
+                                        <td class="p-3 uppercase">{{ $unit['assembly_name'] ?? '—' }}</td>
+                                        <td class="p-3 uppercase">{{ $unit['district_name'] ?? '—' }}</td>
+                                        <td class="p-3 uppercase">{{ $unit['state_name'] ?? '—' }}</td>
+                                        <td class="p-3 text-center">
+                                            <span class="inline-block px-2.5 py-0.5 text-[9px] font-black rounded-full uppercase bg-emerald-100 text-emerald-800">
+                                                {{ $unit['status'] ?? 'Active' }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                @elseif($volunteer->cadre_level === 'mandal_president')
+                    {{-- 2. Mandal President: Panchayats Under Your Mandal Table --}}
+                    <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                        <h3 class="font-black text-gray-800 text-sm uppercase tracking-wide flex items-center gap-2">
+                            <span>🏘️</span> PANCHAYATS UNDER YOUR MANDAL
+                        </h3>
+                        <span class="text-[10px] bg-orange-100 text-brandOrange font-bold px-2.5 py-0.5 rounded-full uppercase">
+                            Mandal Scope: {{ $volunteer->mandalRelation?->name ?? $volunteer->resolved_mandal }}
+                        </span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs text-gray-700">
+                            <thead>
+                                <tr class="bg-gray-50 border-b border-gray-200 text-gray-500 font-black uppercase text-[10px] tracking-wider">
+                                    <th class="p-3">Panchayat Name</th>
+                                    <th class="p-3">Panchayat President Name</th>
+                                    <th class="p-3">Contact Number</th>
+                                    <th class="p-3 text-center">Members</th>
+                                    <th class="p-3 text-center">Events</th>
+                                    <th class="p-3 text-center">Beneficiaries</th>
+                                    <th class="p-3 text-center">Status / Details</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                @forelse($subordinateUnits as $unit)
+                                    <tr class="hover:bg-orange-50/40 font-medium transition">
+                                        <td class="p-3 font-bold text-brandOrange uppercase">
+                                            <a href="{{ $unit['detail_route'] }}" class="hover:text-orange-700 hover:underline inline-flex items-center gap-1">
+                                                <span>{{ $unit['unit_name'] }}</span>
+                                                <span class="text-xs">&rarr;</span>
+                                            </a>
+                                        </td>
+                                        <td class="p-3 font-bold uppercase {{ $unit['is_assigned'] ? 'text-gray-900' : 'text-gray-400 italic' }}">
+                                            {{ $unit['president_name'] }}
+                                        </td>
+                                        <td class="p-3 font-mono font-bold text-gray-800">{{ $unit['contact_phone'] }}</td>
+                                        <td class="p-3 text-center font-bold text-gray-900">{{ number_format($unit['members_count'] ?? 0) }}</td>
+                                        <td class="p-3 text-center font-bold text-gray-900">{{ number_format($unit['events_count'] ?? 0) }}</td>
+                                        <td class="p-3 text-center font-bold text-emerald-700">{{ number_format($unit['beneficiaries_count'] ?? 0) }}</td>
+                                        <td class="p-3 text-center">
+                                            <span class="inline-block px-2.5 py-0.5 text-[9px] font-black rounded-full uppercase {{ $unit['is_assigned'] ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500' }}">
+                                                {{ $unit['is_assigned'] ? 'Active' : 'Vacant' }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="7" class="p-4 text-center text-gray-400 font-medium">No Panchayats configured under this Mandal yet.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                @elseif($volunteer->cadre_level === 'assembly_president')
+                    {{-- 3. Assembly Segment President: Mandals Under Your Assembly Segment Table --}}
+                    <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                        <h3 class="font-black text-gray-800 text-sm uppercase tracking-wide flex items-center gap-2">
+                            <span>🏛️</span> MANDALS UNDER YOUR ASSEMBLY SEGMENT
+                        </h3>
+                        <span class="text-[10px] bg-orange-100 text-brandOrange font-bold px-2.5 py-0.5 rounded-full uppercase">
+                            Assembly Scope: {{ $volunteer->assemblySegmentRelation?->name ?? $volunteer->resolved_assembly_segment }}
+                        </span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs text-gray-700">
+                            <thead>
+                                <tr class="bg-gray-50 border-b border-gray-200 text-gray-500 font-black uppercase text-[10px] tracking-wider">
+                                    <th class="p-3">Mandal Name</th>
+                                    <th class="p-3">Mandal President Name</th>
+                                    <th class="p-3">Contact Number</th>
+                                    <th class="p-3 text-center">Members</th>
+                                    <th class="p-3 text-center">Events</th>
+                                    <th class="p-3 text-center">Beneficiaries</th>
+                                    <th class="p-3 text-center">Panchayats</th>
+                                    <th class="p-3 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                @forelse($subordinateUnits as $unit)
+                                    <tr class="hover:bg-orange-50/40 font-medium transition">
+                                        <td class="p-3 font-bold text-brandOrange uppercase">
+                                            <a href="{{ $unit['detail_route'] }}" class="hover:text-orange-700 hover:underline inline-flex items-center gap-1">
+                                                <span>{{ $unit['unit_name'] }}</span>
+                                                <span class="text-xs">&rarr;</span>
+                                            </a>
+                                        </td>
+                                        <td class="p-3 font-bold uppercase {{ $unit['is_assigned'] ? 'text-gray-900' : 'text-gray-400 italic' }}">
+                                            {{ $unit['president_name'] }}
+                                        </td>
+                                        <td class="p-3 font-mono font-bold text-gray-800">{{ $unit['contact_phone'] }}</td>
+                                        <td class="p-3 text-center font-bold text-gray-900">{{ number_format($unit['members_count'] ?? 0) }}</td>
+                                        <td class="p-3 text-center font-bold text-gray-900">{{ number_format($unit['events_count'] ?? 0) }}</td>
+                                        <td class="p-3 text-center font-bold text-emerald-700">{{ number_format($unit['beneficiaries_count'] ?? 0) }}</td>
+                                        <td class="p-3 text-center font-bold text-gray-700">{{ $unit['child_count'] ?? 0 }}</td>
+                                        <td class="p-3 text-center">
+                                            <span class="inline-block px-2.5 py-0.5 text-[9px] font-black rounded-full uppercase {{ $unit['is_assigned'] ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500' }}">
+                                                {{ $unit['is_assigned'] ? 'Active' : 'Vacant' }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" class="p-4 text-center text-gray-400 font-medium">No Mandals configured under this Assembly Segment yet.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                @elseif($volunteer->cadre_level === 'district_president')
+                    {{-- 4. District President: Assembly Segments Under Your District Table --}}
+                    <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                        <h3 class="font-black text-gray-800 text-sm uppercase tracking-wide flex items-center gap-2">
+                            <span>🗺️</span> ASSEMBLY SEGMENTS UNDER YOUR DISTRICT
+                        </h3>
+                        <span class="text-[10px] bg-orange-100 text-brandOrange font-bold px-2.5 py-0.5 rounded-full uppercase">
+                            District Scope: {{ $volunteer->districtRelation?->name ?? $volunteer->resolved_district }}
+                        </span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs text-gray-700">
+                            <thead>
+                                <tr class="bg-gray-50 border-b border-gray-200 text-gray-500 font-black uppercase text-[10px] tracking-wider">
+                                    <th class="p-3">Assembly Segment</th>
+                                    <th class="p-3">Assembly President Name</th>
+                                    <th class="p-3">Contact Number</th>
+                                    <th class="p-3 text-center">Members</th>
+                                    <th class="p-3 text-center">Events</th>
+                                    <th class="p-3 text-center">Beneficiaries</th>
+                                    <th class="p-3 text-center">Mandals</th>
+                                    <th class="p-3 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                @forelse($subordinateUnits as $unit)
+                                    <tr class="hover:bg-orange-50/40 font-medium transition">
+                                        <td class="p-3 font-bold text-brandOrange uppercase">
+                                            <a href="{{ $unit['detail_route'] }}" class="hover:text-orange-700 hover:underline inline-flex items-center gap-1">
+                                                <span>{{ $unit['unit_name'] }}</span>
+                                                <span class="text-xs">&rarr;</span>
+                                            </a>
+                                        </td>
+                                        <td class="p-3 font-bold uppercase {{ $unit['is_assigned'] ? 'text-gray-900' : 'text-gray-400 italic' }}">
+                                            {{ $unit['president_name'] }}
+                                        </td>
+                                        <td class="p-3 font-mono font-bold text-gray-800">{{ $unit['contact_phone'] }}</td>
+                                        <td class="p-3 text-center font-bold text-gray-900">{{ number_format($unit['members_count'] ?? 0) }}</td>
+                                        <td class="p-3 text-center font-bold text-gray-900">{{ number_format($unit['events_count'] ?? 0) }}</td>
+                                        <td class="p-3 text-center font-bold text-emerald-700">{{ number_format($unit['beneficiaries_count'] ?? 0) }}</td>
+                                        <td class="p-3 text-center font-bold text-gray-700">{{ $unit['child_count'] ?? 0 }}</td>
+                                        <td class="p-3 text-center">
+                                            <span class="inline-block px-2.5 py-0.5 text-[9px] font-black rounded-full uppercase {{ $unit['is_assigned'] ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500' }}">
+                                                {{ $unit['is_assigned'] ? 'Active' : 'Vacant' }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" class="p-4 text-center text-gray-400 font-medium">No Assembly Segments configured under this District yet.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                @elseif($volunteer->cadre_level === 'state_president')
+                    {{-- 5. State President: Districts Under Your State Table --}}
+                    <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                        <h3 class="font-black text-gray-800 text-sm uppercase tracking-wide flex items-center gap-2">
+                            <span>🏛️</span> DISTRICTS UNDER YOUR STATE
+                        </h3>
+                        <span class="text-[10px] bg-orange-100 text-brandOrange font-bold px-2.5 py-0.5 rounded-full uppercase">
+                            State Scope: {{ $volunteer->stateRelation?->name ?? $volunteer->resolved_state }}
+                        </span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs text-gray-700">
+                            <thead>
+                                <tr class="bg-gray-50 border-b border-gray-200 text-gray-500 font-black uppercase text-[10px] tracking-wider">
+                                    <th class="p-3">District Name</th>
+                                    <th class="p-3">District President Name</th>
+                                    <th class="p-3">Contact Number</th>
+                                    <th class="p-3 text-center">Members</th>
+                                    <th class="p-3 text-center">Events</th>
+                                    <th class="p-3 text-center">Beneficiaries</th>
+                                    <th class="p-3 text-center">Assembly Segments</th>
+                                    <th class="p-3 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                @forelse($subordinateUnits as $unit)
+                                    <tr class="hover:bg-orange-50/40 font-medium transition">
+                                        <td class="p-3 font-bold text-brandOrange uppercase">
+                                            <a href="{{ $unit['detail_route'] }}" class="hover:text-orange-700 hover:underline inline-flex items-center gap-1">
+                                                <span>{{ $unit['unit_name'] }}</span>
+                                                <span class="text-xs">&rarr;</span>
+                                            </a>
+                                        </td>
+                                        <td class="p-3 font-bold uppercase {{ $unit['is_assigned'] ? 'text-gray-900' : 'text-gray-400 italic' }}">
+                                            {{ $unit['president_name'] }}
+                                        </td>
+                                        <td class="p-3 font-mono font-bold text-gray-800">{{ $unit['contact_phone'] }}</td>
+                                        <td class="p-3 text-center font-bold text-gray-900">{{ number_format($unit['members_count'] ?? 0) }}</td>
+                                        <td class="p-3 text-center font-bold text-gray-900">{{ number_format($unit['events_count'] ?? 0) }}</td>
+                                        <td class="p-3 text-center font-bold text-emerald-700">{{ number_format($unit['beneficiaries_count'] ?? 0) }}</td>
+                                        <td class="p-3 text-center font-bold text-gray-700">{{ $unit['child_count'] ?? 0 }}</td>
+                                        <td class="p-3 text-center">
+                                            <span class="inline-block px-2.5 py-0.5 text-[9px] font-black rounded-full uppercase {{ $unit['is_assigned'] ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500' }}">
+                                                {{ $unit['is_assigned'] ? 'Active' : 'Vacant' }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" class="p-4 text-center text-gray-400 font-medium">No Districts configured under this State yet.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                @elseif($volunteer->cadre_level === 'national_president')
+                    {{-- 6. National President: State President Directory Table --}}
+                    <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                        <h3 class="font-black text-gray-800 text-sm uppercase tracking-wide flex items-center gap-2">
+                            <span>🇮🇳</span> STATE PRESIDENT DIRECTORY
+                        </h3>
+                        <span class="text-[10px] bg-orange-100 text-brandOrange font-bold px-2.5 py-0.5 rounded-full uppercase">
+                            National Scope: All India
+                        </span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs text-gray-700">
+                            <thead>
+                                <tr class="bg-gray-50 border-b border-gray-200 text-gray-500 font-black uppercase text-[10px] tracking-wider">
+                                    <th class="p-3">State Name</th>
+                                    <th class="p-3">State President Name</th>
+                                    <th class="p-3">Contact Number</th>
+                                    <th class="p-3 text-center">Members</th>
+                                    <th class="p-3 text-center">Events</th>
+                                    <th class="p-3 text-center">Beneficiaries</th>
+                                    <th class="p-3 text-center">Districts</th>
+                                    <th class="p-3 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                @forelse($subordinateUnits as $unit)
+                                    <tr class="hover:bg-orange-50/40 font-medium transition">
+                                        <td class="p-3 font-bold text-brandOrange uppercase">
+                                            <a href="{{ $unit['detail_route'] }}" class="hover:text-orange-700 hover:underline inline-flex items-center gap-1">
+                                                <span>{{ $unit['unit_name'] }}</span>
+                                                <span class="text-xs">&rarr;</span>
+                                            </a>
+                                        </td>
+                                        <td class="p-3 font-bold uppercase {{ $unit['is_assigned'] ? 'text-gray-900' : 'text-gray-400 italic' }}">
+                                            {{ $unit['president_name'] }}
+                                        </td>
+                                        <td class="p-3 font-mono font-bold text-gray-800">{{ $unit['contact_phone'] }}</td>
+                                        <td class="p-3 text-center font-bold text-gray-900">{{ number_format($unit['members_count'] ?? 0) }}</td>
+                                        <td class="p-3 text-center font-bold text-gray-900">{{ number_format($unit['events_count'] ?? 0) }}</td>
+                                        <td class="p-3 text-center font-bold text-emerald-700">{{ number_format($unit['beneficiaries_count'] ?? 0) }}</td>
+                                        <td class="p-3 text-center font-bold text-gray-700">{{ $unit['child_count'] ?? 0 }}</td>
+                                        <td class="p-3 text-center">
+                                            <span class="inline-block px-2.5 py-0.5 text-[9px] font-black rounded-full uppercase {{ $unit['is_assigned'] ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500' }}">
+                                                {{ $unit['is_assigned'] ? 'Active' : 'Vacant' }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" class="p-4 text-center text-gray-400 font-medium">No States configured yet.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+        @endif
+
         {{-- Regional Assignment & Profile Summary --}}
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -166,12 +510,6 @@
                     <a href="{{ route('volunteer.member_search') }}"
                        class="w-full bg-white hover:bg-orange-100 text-brandOrange border border-orange-300 font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-between">
                         <span>Search Member by ID</span>
-                        <span>&rarr;</span>
-                    </a>
-
-                    <a href="{{ route('volunteer.member_data') }}"
-                       class="w-full bg-white hover:bg-orange-100 text-gray-800 border border-orange-200 font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-between">
-                        <span>Area-wise Member Data</span>
                         <span>&rarr;</span>
                     </a>
 
