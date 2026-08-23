@@ -309,19 +309,20 @@
                         <span class="text-red-500">*</span>
                     </label>
 
-                    <!-- Custom Amount Input -->
-                    <div class="relative mt-2">
-                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 font-black text-base">
+                    <!-- Custom Amount Input Group -->
+                    <div class="mt-2 flex items-center w-full bg-gray-50 border-2 border-gray-200 rounded-2xl transition focus-within:border-brandOrange focus-within:bg-white">
+                        <span aria-hidden="true" class="flex items-center justify-center pl-4 pr-1 text-base sm:text-base font-bold text-gray-500 leading-none select-none shrink-0">
                             ₹
-                        </div>
+                        </span>
                         <input type="number" id="donation_amount" name="amount" min="1" max="500000" step="1" required
-                               class="w-full pl-9 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-2xl text-sm sm:text-base font-black font-mono text-gray-900 focus:outline-none focus:border-brandOrange focus:bg-white transition"
+                               aria-label="Donation amount in Indian Rupees"
+                               class="flex-1 min-w-0 border-0 bg-transparent py-3 sm:py-3.5 pr-4 text-base sm:text-base font-black font-mono text-gray-900 focus:ring-0 focus:outline-none placeholder:font-sans placeholder:text-xs sm:placeholder:text-sm placeholder:font-normal placeholder:text-gray-400"
                                placeholder="Enter amount from ₹1 to ₹5,00,000"
                                oninput="handleCustomAmountInput(this.value)">
-                        <p class="text-[10px] text-gray-400 font-semibold mt-1 pl-1">
-                            * Server-side amount validation enforced. Minimum ₹1 • Maximum ₹5,00,000 per transaction.
-                        </p>
                     </div>
+                    <p class="text-[10px] text-gray-400 font-semibold mt-1 pl-1">
+                        * Server-side amount validation enforced. Minimum ₹1 • Maximum ₹5,00,000 per transaction.
+                    </p>
                 </div>
 
                 <!-- STEP 2: DEDICATED CAUSE / CAMPAIGN SELECTION -->

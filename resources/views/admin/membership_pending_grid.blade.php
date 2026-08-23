@@ -100,9 +100,18 @@
                                             <span class="font-bold text-gray-700 uppercase tracking-wide block">
                                                 {{ $member->full_name ?: 'Details Not Submitted' }}
                                             </span>
-                                            <span class="text-[9px] font-bold text-amber-600 uppercase tracking-wider bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 inline-block mt-0.5">
-                                                Form Incomplete (Stage 2)
+                                            <span class="text-[9px] font-bold text-gray-600 uppercase tracking-wider bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200 inline-block mt-0.5">
+                                                Form Incomplete
                                             </span>
+                                            @if($member->hasVerifiedIdentity())
+                                                <span class="text-[9px] font-bold text-emerald-700 uppercase tracking-wider bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 inline-block mt-0.5">
+                                                    {{ $member->getIdentityBadgeLabel() }}
+                                                </span>
+                                            @else
+                                                <span class="text-[9px] font-bold text-amber-600 uppercase tracking-wider bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 inline-block mt-0.5">
+                                                    Identity Pending
+                                                </span>
+                                            @endif
                                         </div>
                                     </td>
 

@@ -1684,7 +1684,6 @@ class MembershipController extends Controller
             'gender' => 'nullable|string|in:Male,Female,Other',
             'dob' => 'nullable|string|max:20',
             'phone' => 'required|digits:10|unique:memberships,phone,' . $member->id,
-            'aadhaar_number' => 'required|digits:12',
             'father_or_husband_name' => 'required|string|max:255',
             'gotram' => 'required|string|max:255',
             'occupation' => 'required|string|max:255',
@@ -1713,7 +1712,6 @@ class MembershipController extends Controller
         $member->gender = $request->input('gender');
         $member->dob = $request->input('dob');
         $member->phone = $request->input('phone');
-        $member->aadhaar_number = $request->input('aadhaar_number');
         $member->father_or_husband_name = $request->input('father_or_husband_name');
         $member->gotram = $request->input('gotram');
         $member->occupation = $request->input('occupation');

@@ -28,22 +28,21 @@
         <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4">
             @php
                 $isVerified = $member->hasVerifiedIdentity();
-                $methodLabel = match($member->identity_verification_method ?? ($member->is_aadhaar_verified ? 'aadhaar' : 'none')) {
-                    'aadhaar'         => 'Aadhaar Card (DigiLocker)',
-                    'pan'             => 'PAN Card',
-                    'voter_id'        => 'Voter ID Card (EPIC)',
-                    'driving_licence' => 'Driving Licence',
-                    'passport'        => 'Indian Passport',
-                    default           => 'Government Official ID',
-                };
+                $methodLabel = $member->getIdentityMethodLabel();
+                $maskedDocLabel = $member->getIdentityDocumentMaskedLabel();
                 $verifiedName = $member->identity_verified_name ?? ($member->full_name ?? '');
+                $methodKey = strtolower((string)($member->identity_verification_method ?? ($member->is_aadhaar_verified ? 'aadhaar' : '')));
             @endphp
 
             <div class="flex items-center justify-between border-b border-gray-200 pb-2">
                 <h3 class="text-xs font-bold text-brandGray uppercase tracking-wider">Section A: Identity Verification</h3>
                 @if($isVerified)
                     <span class="text-[10px] font-black text-emerald-700 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                        ✓ {{ $methodLabel }} Verified
+                        {{ $member->getIdentityBadgeLabel() }}
+                    </span>
+                @else
+                    <span class="text-[10px] font-black text-amber-700 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                        Identity Pending
                     </span>
                 @endif
             </div>
@@ -54,7 +53,7 @@
                     <span class="text-emerald-600 text-base font-extrabold">✓</span>
                     <span class="tracking-wide">IDENTITY &amp; NAME VERIFIED ({{ strtoupper($methodLabel) }})</span>
                 </div>
-                <p class="text-xs text-emerald-700 mt-1 font-medium">Authoritative provider-verified legal name populated automatically from government records.</p>
+                <p class="text-xs text-emerald-700 mt-1 font-medium">Authoritative provider-verified legal name populated automatically from official records.</p>
             </div>
 
             @if(session('error') || session('warning'))
@@ -75,7 +74,7 @@
                 <p id="aadhaar_error_msg" class="text-xs text-amber-700 mt-1 font-medium">Identity verification failed. Please check the details and try again.</p>
             </div>
 
-            <!-- Aadhaar & Name Input Row -->
+            <!-- Identity Details Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label for="full_name" class="block text-xs font-bold text-brandGray uppercase mb-1">Full Name (Provider Verified) *</label>
@@ -84,15 +83,62 @@
                         class="block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm font-bold text-brandDarkGray uppercase cursor-not-allowed"
                         placeholder="Verified full name">
                 </div>
+
                 <div>
-                    <label for="aadhaar_number" class="block text-xs font-bold text-brandGray uppercase mb-1">
-                        Aadhaar Number {{ ($member->identity_verification_method ?? '') === 'aadhaar' ? '*' : '(Optional)' }}
-                    </label>
-                    <input type="text" id="aadhaar_number" name="aadhaar_number" maxlength="12"
-                        value="{{ old('aadhaar_number', $member->aadhaar_number ?? '') }}"
-                        {{ !empty($member->is_aadhaar_verified) ? 'readonly' : '' }}
-                        class="block w-full px-3 py-2 {{ !empty($member->is_aadhaar_verified) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white' }} border border-gray-300 rounded-md text-sm font-semibold tracking-widest text-brandGray focus:ring-brandOrange focus:border-brandOrange"
-                        placeholder="12 Digit Aadhaar Number (Optional)">
+                    @if($methodKey === 'aadhaar')
+                        <label class="block text-xs font-bold text-brandGray uppercase mb-1">Verification Method: Aadhaar</label>
+                        <input type="text" readonly
+                            value="{{ $member->getMaskedAadhaar() ?? 'XXXX-XXXX-XXXX' }}"
+                            class="block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm font-semibold tracking-widest text-brandGray cursor-not-allowed"
+                            placeholder="XXXX-XXXX-1234">
+                    @elseif($methodKey === 'pan')
+                        <label class="block text-xs font-bold text-brandGray uppercase mb-1">Verification Method: PAN</label>
+                        <input type="text" readonly
+                            value="{{ $maskedDocLabel }}"
+                            class="block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm font-semibold text-brandGray cursor-not-allowed">
+                    @elseif($methodKey === 'voter_id')
+                        <label class="block text-xs font-bold text-brandGray uppercase mb-1">Verification Method: Voter ID</label>
+                        <input type="text" readonly
+                            value="{{ $maskedDocLabel }}"
+                            class="block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm font-semibold text-brandGray cursor-not-allowed">
+                    @elseif($methodKey === 'driving_licence')
+                        <label class="block text-xs font-bold text-brandGray uppercase mb-1">Verification Method: Driving Licence</label>
+                        <input type="text" readonly
+                            value="{{ $maskedDocLabel }}"
+                            class="block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm font-semibold text-brandGray cursor-not-allowed">
+                    @elseif($methodKey === 'passport')
+                        <label class="block text-xs font-bold text-brandGray uppercase mb-1">Verification Method: Passport</label>
+                        <input type="text" readonly
+                            value="{{ $maskedDocLabel }}"
+                            class="block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm font-semibold text-brandGray cursor-not-allowed">
+                    @else
+                        <label class="block text-xs font-bold text-brandGray uppercase mb-1">Verification Status</label>
+                        <input type="text" readonly
+                            value="Identity Verification Pending"
+                            class="block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm font-semibold text-amber-700 cursor-not-allowed">
+                    @endif
+                </div>
+            </div>
+
+            <!-- Identity Verification Summary Card -->
+            <div class="p-3 bg-white rounded-lg border border-gray-200 text-xs text-gray-700 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="font-bold uppercase text-[10px] text-gray-400 tracking-wider">Status:</span>
+                    <span class="font-bold {{ $isVerified ? 'text-emerald-700' : 'text-amber-700' }}">
+                        {{ $isVerified ? 'Verified ✓' : 'Pending' }}
+                    </span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="font-bold uppercase text-[10px] text-gray-400 tracking-wider">Method:</span>
+                    <span class="font-bold text-gray-800">{{ $isVerified ? $methodLabel : 'Not Selected' }}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="font-bold uppercase text-[10px] text-gray-400 tracking-wider">Verified Name:</span>
+                    <span class="font-bold text-gray-800 uppercase">{{ $verifiedName ?: 'Pending' }}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="font-bold uppercase text-[10px] text-gray-400 tracking-wider">Document:</span>
+                    <span class="font-mono font-bold text-gray-800">{{ $isVerified ? $maskedDocLabel : 'N/A' }}</span>
                 </div>
             </div>
 
@@ -136,7 +182,7 @@
         <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4">
             <h3 class="text-xs font-bold text-brandGray uppercase tracking-wider border-b border-gray-200 pb-2">Section B: Address Details Mapping</h3>
             <div>
-                <label for="permanent_address" class="block text-xs font-bold text-brandGray uppercase mb-1">Permanent Address (As per Aadhaar) *</label>
+                <label for="permanent_address" class="block text-xs font-bold text-brandGray uppercase mb-1">Permanent Address *</label>
                 <textarea id="permanent_address" name="permanent_address" rows="2" required
                     class="block w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-brandGray focus:ring-brandOrange focus:border-brandOrange"
                     placeholder="Enter Permanent Address (House No, Street, Village, Mandal, District details...)">{{ old('permanent_address', $member->permanent_address ?? '') }}</textarea>
@@ -288,7 +334,7 @@
         <div class="bg-brandLightOrange p-5 rounded-lg border border-orange-100 text-xs text-gray-700 space-y-4 leading-relaxed">
             <p class="font-bold text-brandOrange uppercase tracking-wider text-[11px]">Disclaimer & Data Security Policy</p>
             <p class="text-gray-600">
-                The Aadhaar data collected through this application is strictly used for individual identity verification purpose only. This process is digitally executed with the applicant's explicit consent. In accordance with the Data Protection regulations of India, your personal information is stored securely in highly encrypted servers and will never be transferred to third parties or misused under any circumstances.
+                The identity and personal data collected through this application is strictly used for individual membership verification purpose only. This process is digitally executed with the applicant's explicit consent. In accordance with the Data Protection regulations of India, your personal information is stored securely in highly encrypted servers and will never be transferred to third parties or misused under any circumstances.
             </p>
             
             <div class="space-y-3 pt-3 border-t border-orange-200/60">
@@ -309,7 +355,7 @@
                 <label class="flex items-start gap-3 cursor-pointer group">
                     <input type="checkbox" required class="mt-0.5 h-4 w-4 rounded border-gray-300 text-brandOrange focus:ring-brandOrange cursor-pointer">
                     <span class="text-brandGray font-medium group-hover:text-brandOrange transition">
-                        3. All the details submitted by me are completely true. If it is proven that I have provided false information or fake Aadhaar details to deceive the organization, my membership will be cancelled immediately, and the organization reserves full rights to take legal criminal or civil action against me.
+                        3. All the details submitted by me are completely true. If it is proven that I have provided false information or fake identity details to deceive the organization, my membership will be cancelled immediately, and the organization reserves full rights to take legal criminal or civil action against me.
                     </span>
                 </label>
             </div>

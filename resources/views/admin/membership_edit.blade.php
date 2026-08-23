@@ -79,10 +79,17 @@
                                 <input type="text" name="phone" required maxlength="10" class="w-full border border-gray-300 rounded-lg px-4 py-2 text-xs font-semibold font-mono focus:outline-none focus:border-brandOrange" placeholder="10 Digit Phone Number" value="{{ old('phone', $member->phone) }}">
                             </div>
 
-                            <!-- Aadhaar Number -->
+                            <!-- Verified Identity Document (Read-Only) -->
                             <div>
-                                <label class="block text-[11px] font-black uppercase text-gray-600 mb-1.5 tracking-wider">Aadhaar Number (12 Digits) *</label>
-                                <input type="text" name="aadhaar_number" required maxlength="12" class="w-full border border-gray-300 rounded-lg px-4 py-2 text-xs font-semibold font-mono focus:outline-none focus:border-brandOrange" placeholder="12 Digit Aadhaar Number" value="{{ old('aadhaar_number', $member->aadhaar_number) }}">
+                                <label class="block text-[11px] font-black uppercase text-gray-600 mb-1.5 tracking-wider">
+                                    Identity Document ({{ $member->getIdentityMethodLabel() }})
+                                </label>
+                                <div class="w-full bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 text-xs font-semibold text-gray-700 flex items-center justify-between">
+                                    <span class="font-mono">{{ $member->getIdentityDocumentMaskedLabel() }}</span>
+                                    <span class="text-[9px] font-black {{ $member->hasVerifiedIdentity() ? 'text-emerald-700' : 'text-amber-700' }}">
+                                        {{ $member->hasVerifiedIdentity() ? 'Verified ✓' : 'Pending' }}
+                                    </span>
+                                </div>
                             </div>
 
                             <!-- Email Address -->

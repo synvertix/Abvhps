@@ -689,4 +689,154 @@ class MembershipIdentityVerificationTest extends TestCase
         $this->assertEquals('pan', $member->identity_verification_method);
         $this->assertEquals('VERIFIED PAN HOLDER', $member->full_name);
     }
+
+    /**
+     * Test: PAN verified member does NOT see Aadhaar input on application form and sees PAN masked details
+     */
+    public function test_pan_verified_member_application_ui(): void
+    {
+        $member = $this->createPaidMember('9876543210');
+        $member->identity_verified             = true;
+        $member->identity_verification_method   = 'pan';
+        $member->identity_verification_provider = 'cashfree';
+        $member->identity_verified_name        = 'RAMA CHANDRA PRABHU';
+        $member->identity_document_last4       = '4321';
+        $member->identity_verified_at         = now();
+        $member->save();
+
+        $response = $this->withSession(['verified_membership_phone' => '9876543210'])
+            ->get('/membership/application');
+
+        $response->assertStatus(200);
+        $response->assertSee('✓ PAN Verified');
+        $response->assertSee('Verification Method: PAN');
+        $response->assertSee('PAN ending in 4321');
+        $response->assertSee('RAMA CHANDRA PRABHU');
+        $response->assertDontSee('Aadhaar Number (12 Digits)');
+        $response->assertDontSee('name="aadhaar_number"', false);
+    }
+
+    /**
+     * Test: Voter ID verified member application UI renders Voter ID details and no Aadhaar input
+     */
+    public function test_voter_id_verified_member_application_ui(): void
+    {
+        $member = $this->createPaidMember('9876543211');
+        $member->identity_verified             = true;
+        $member->identity_verification_method   = 'voter_id';
+        $member->identity_verification_provider = 'cashfree';
+        $member->identity_verified_name        = 'SITA DEVI';
+        $member->identity_document_last4       = '7890';
+        $member->identity_verified_at         = now();
+        $member->save();
+
+        $response = $this->withSession(['verified_membership_phone' => '9876543211'])
+            ->get('/membership/application');
+
+        $response->assertStatus(200);
+        $response->assertSee('✓ Voter ID Verified');
+        $response->assertSee('Verification Method: Voter ID');
+        $response->assertSee('Voter ID ending in 7890');
+        $response->assertSee('SITA DEVI');
+        $response->assertDontSee('name="aadhaar_number"', false);
+    }
+
+    /**
+     * Test: Driving Licence verified member application UI renders DL details and no Aadhaar input
+     */
+    public function test_driving_licence_verified_member_application_ui(): void
+    {
+        $member = $this->createPaidMember('9876543212');
+        $member->identity_verified             = true;
+        $member->identity_verification_method   = 'driving_licence';
+        $member->identity_verification_provider = 'cashfree';
+        $member->identity_verified_name        = 'LAKSHMANA RAJU';
+        $member->identity_document_last4       = '6543';
+        $member->identity_verified_at         = now();
+        $member->save();
+
+        $response = $this->withSession(['verified_membership_phone' => '9876543212'])
+            ->get('/membership/application');
+
+        $response->assertStatus(200);
+        $response->assertSee('✓ Driving Licence Verified');
+        $response->assertSee('Verification Method: Driving Licence');
+        $response->assertSee('Driving Licence ending in 6543');
+        $response->assertSee('LAKSHMANA RAJU');
+        $response->assertDontSee('name="aadhaar_number"', false);
+    }
+
+    /**
+     * Test: Passport verified member application UI renders Passport details and no Aadhaar input
+     */
+    public function test_passport_verified_member_application_ui(): void
+    {
+        $member = $this->createPaidMember('9876543213');
+        $member->identity_verified             = true;
+        $member->identity_verification_method   = 'passport';
+        $member->identity_verification_provider = 'cashfree';
+        $member->identity_verified_name        = 'HANUMAN PRASAD';
+        $member->identity_document_last4       = '1122';
+        $member->identity_verified_at         = now();
+        $member->save();
+
+        $response = $this->withSession(['verified_membership_phone' => '9876543213'])
+            ->get('/membership/application');
+
+        $response->assertStatus(200);
+        $response->assertSee('✓ Passport Verified');
+        $response->assertSee('Verification Method: Passport');
+        $response->assertSee('Passport File Number ending in 1122');
+        $response->assertSee('HANUMAN PRASAD');
+        $response->assertDontSee('name="aadhaar_number"', false);
+    }
+
+    /**
+     * Test: Aadhaar verified member application UI renders masked Aadhaar XXXX-XXXX-1234, no editable input
+     */
+    public function test_aadhaar_verified_member_application_ui(): void
+    {
+        $member = $this->createPaidMember('9876543214');
+        $member->identity_verified             = true;
+        $member->identity_verification_method   = 'aadhaar';
+        $member->identity_verification_provider = 'cashfree';
+        $member->identity_verified_name        = 'BHARATHA VARMA';
+        $member->identity_document_last4       = '9988';
+        $member->aadhaar_number                = '123456789988';
+        $member->identity_verified_at         = now();
+        $member->save();
+
+        $response = $this->withSession(['verified_membership_phone' => '9876543214'])
+            ->get('/membership/application');
+
+        $response->assertStatus(200);
+        $response->assertSee('✓ Aadhaar Verified');
+        $response->assertSee('Verification Method: Aadhaar');
+        $response->assertSee('XXXX-XXXX-9988');
+        $response->assertSee('BHARATHA VARMA');
+        $response->assertDontSee('123456789988'); // Raw full Aadhaar must NOT be exposed
+    }
+
+    /**
+     * Test: Legacy Aadhaar verified member application UI backwards compatibility
+     */
+    public function test_legacy_aadhaar_verified_member_application_ui(): void
+    {
+        $member = $this->createPaidMember('9876543215');
+        $member->is_aadhaar_verified          = true;
+        $member->full_name                    = 'LEGACY DEVOTEE';
+        $member->aadhaar_number               = '987654321099';
+        $member->identity_verification_method = null;
+        $member->save();
+
+        $response = $this->withSession(['verified_membership_phone' => '9876543215'])
+            ->get('/membership/application');
+
+        $response->assertStatus(200);
+        $response->assertSee('✓ Aadhaar Verified');
+        $response->assertSee('Verification Method: Aadhaar');
+        $response->assertSee('XXXX-XXXX-1099');
+        $response->assertSee('LEGACY DEVOTEE');
+        $response->assertDontSee('987654321099'); // Raw full Aadhaar must NOT be exposed
+    }
 }
