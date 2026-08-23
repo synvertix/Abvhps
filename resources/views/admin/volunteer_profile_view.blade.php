@@ -212,13 +212,124 @@
                                 <span class="font-black text-gray-800 block text-xs">Bank Passbook / Cheque Copy</span>
                                 <span class="text-[10px] text-gray-400 font-semibold">{{ $volunteer->bank_name }} - {{ $volunteer->account_number }}</span>
                             </div>
-                            <a href="{{ asset('storage/' . $volunteer->document_bank_path) }}" target="_blank" class="bg-brandOrange hover:bg-orange-700 text-white font-black text-[10px] px-3 py-1.5 rounded uppercase transition">
+                            <a href="{{ asset('storage/' . $volunteer->document_bank_path) }}" target="_blank" class="bg-brandOrange hover:bg-orange-700 text-white font-black text-[10px] px-3.5 py-1.5 rounded uppercase transition">
                                 View File &rarr;
                             </a>
                         </div>
                     </div>
                 </div>
 
+            </div>
+
+            @php
+                $volunteerEvents = \App\Models\VolunteerEvent::where('volunteer_id', $volunteer->id)->orderBy('event_date', 'desc')->get();
+                $conductedCount = $volunteerEvents->where('status', 'completed')->count();
+                $upcomingCount = $volunteerEvents->where('status', 'upcoming')->count();
+                $eventIds = $volunteerEvents->pluck('id');
+                $totalParticipantsCount = \App\Models\VolunteerEventMember::whereIn('volunteer_event_id', $eventIds)
+                    ->whereIn('participation_status', ['registered', 'participated', 'benefited'])->count();
+                $totalBeneficiariesCount = \App\Models\VolunteerEventMember::whereIn('volunteer_event_id', $eventIds)
+                    ->where(function($q) {
+                        $q->where('participation_type', 'beneficiary')->orWhere('participation_status', 'benefited');
+                    })->count();
+            @endphp
+
+            <!-- Section 3: Grassroots Seva & Event Statistics -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+                <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg">🏆</span>
+                        <div>
+                            <h4 class="text-xs font-black text-brandGray uppercase tracking-wider">Volunteer Service &amp; Event Statistics</h4>
+                            <span class="text-[10px] text-gray-500 font-semibold">Operational summary of all community seva events organized by this volunteer</span>
+                        </div>
+                    </div>
+                    <a href="{{ route('admin.volunteer_events.index', ['volunteer_id' => $volunteer->id]) }}"
+                       class="bg-orange-50 hover:bg-orange-100 text-brandOrange border border-orange-200 text-[10px] font-black px-3 py-1 rounded transition">
+                        View In Events Roster &rarr;
+                    </a>
+                </div>
+
+                <!-- Metrics Matrix -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div class="bg-emerald-50/70 p-3.5 rounded-xl border border-emerald-200">
+                        <span class="text-[9px] font-black text-emerald-800 uppercase block">Events Conducted</span>
+                        <div class="font-mono text-xl font-black text-emerald-700 mt-0.5">{{ $conductedCount }}</div>
+                        <span class="text-[9px] text-emerald-600 font-semibold">Completed</span>
+                    </div>
+
+                    <div class="bg-blue-50/70 p-3.5 rounded-xl border border-blue-200">
+                        <span class="text-[9px] font-black text-blue-800 uppercase block">Upcoming Events</span>
+                        <div class="font-mono text-xl font-black text-blue-700 mt-0.5">{{ $upcomingCount }}</div>
+                        <span class="text-[9px] text-blue-600 font-semibold">Scheduled</span>
+                    </div>
+
+                    <div class="bg-amber-50/70 p-3.5 rounded-xl border border-amber-200">
+                        <span class="text-[9px] font-black text-amber-800 uppercase block">Total Participants</span>
+                        <div class="font-mono text-xl font-black text-amber-700 mt-0.5">{{ $totalParticipantsCount }}</div>
+                        <span class="text-[9px] text-amber-600 font-semibold">Linked attendees</span>
+                    </div>
+
+                    <div class="bg-orange-50/70 p-3.5 rounded-xl border border-orange-200">
+                        <span class="text-[9px] font-black text-brandOrange uppercase block">Total Beneficiaries</span>
+                        <div class="font-mono text-xl font-black text-brandOrange mt-0.5">{{ $totalBeneficiariesCount }}</div>
+                        <span class="text-[9px] text-orange-700 font-semibold">Received seva benefit</span>
+                    </div>
+                </div>
+
+                <!-- Recent Events Table -->
+                @if($volunteerEvents->count() > 0)
+                    <div class="overflow-x-auto pt-2">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="bg-gray-50 text-gray-600 uppercase text-[9px] font-black tracking-wider border-b border-gray-200">
+                                    <th class="py-2 px-3">Event Title</th>
+                                    <th class="py-2 px-3">Type</th>
+                                    <th class="py-2 px-3">Date</th>
+                                    <th class="py-2 px-3">Location</th>
+                                    <th class="py-2 px-3 text-center">Status</th>
+                                    <th class="py-2 px-3 text-center">Participants</th>
+                                    <th class="py-2 px-3 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                @foreach($volunteerEvents->take(5) as $ve)
+                                    <tr class="hover:bg-orange-50/30 transition">
+                                        <td class="py-2.5 px-3 font-bold text-gray-900 uppercase">
+                                            {{ $ve->title }}
+                                        </td>
+                                        <td class="py-2.5 px-3 text-[11px] text-brandOrange font-bold">
+                                            {{ $ve->event_type }}
+                                        </td>
+                                        <td class="py-2.5 px-3 text-gray-700 whitespace-nowrap">
+                                            {{ $ve->event_date->format('d-M-Y') }}
+                                        </td>
+                                        <td class="py-2.5 px-3 text-gray-600 text-[11px] truncate max-w-xs">
+                                            {{ implode(', ', array_filter([$ve->venue, $ve->village, $ve->mandal])) ?: '—' }}
+                                        </td>
+                                        <td class="py-2.5 px-3 text-center">
+                                            <span class="inline-block px-2 py-0.5 rounded text-[9px] font-black uppercase border {{ $ve->status_badge_class }}">
+                                                {{ strtoupper($ve->status) }}
+                                            </span>
+                                        </td>
+                                        <td class="py-2.5 px-3 text-center font-mono font-bold text-gray-900">
+                                            {{ $ve->participants_count }}
+                                        </td>
+                                        <td class="py-2.5 px-3 text-right">
+                                            <a href="{{ route('admin.volunteer_events.show', $ve->id) }}" class="text-brandOrange hover:underline font-bold text-[10px]">
+                                                Open Dossier &rarr;
+                                            </a>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <div class="py-4 text-center text-gray-400 text-xs">
+                        No events recorded yet by this volunteer.
+                    </div>
+                @endif
             </div>
 
         </main>

@@ -315,6 +315,103 @@
                 </div>
             </div>
 
+            <!-- Section 5: Event Participation & Seva Benefits History -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+                <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg">🏆</span>
+                        <div>
+                            <h4 class="text-xs font-black text-brandGray uppercase tracking-wider">Event Participation &amp; Benefits History</h4>
+                            <span class="text-[10px] text-gray-500 font-semibold">Track records of all grassroots volunteer programs this member participated in or received benefits from</span>
+                        </div>
+                    </div>
+                    <span class="bg-orange-50 text-brandOrange border border-orange-200 text-[10px] font-black px-2.5 py-0.5 rounded">
+                        {{ $member->eventParticipations->count() }} Records
+                    </span>
+                </div>
+
+                @if($member->eventParticipations->count() > 0)
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="bg-gray-50 text-gray-600 uppercase text-[9px] font-black tracking-wider border-b border-gray-200">
+                                    <th class="py-2.5 px-3">#</th>
+                                    <th class="py-2.5 px-3">Event Name &amp; Type</th>
+                                    <th class="py-2.5 px-3">Date</th>
+                                    <th class="py-2.5 px-3">Organizer Volunteer</th>
+                                    <th class="py-2.5 px-3">Type</th>
+                                    <th class="py-2.5 px-3">Status</th>
+                                    <th class="py-2.5 px-3">Benefit Details</th>
+                                    <th class="py-2.5 px-3 text-center">Proof Thumbnail</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                @foreach($member->eventParticipations as $idx => $ep)
+                                    <tr class="hover:bg-orange-50/30 transition">
+                                        <td class="py-3 px-3 font-bold text-gray-400">{{ $idx + 1 }}</td>
+                                        <td class="py-3 px-3">
+                                            @if($ep->event)
+                                                <a href="{{ route('admin.volunteer_events.show', $ep->event->id) }}" class="font-black text-gray-900 hover:text-brandOrange uppercase block">
+                                                    {{ $ep->event->title }}
+                                                </a>
+                                                <span class="text-[10px] text-brandOrange font-bold uppercase">
+                                                    {{ $ep->event->event_type }}
+                                                </span>
+                                            @else
+                                                <span class="font-bold text-gray-800">Event #{{ $ep->volunteer_event_id }}</span>
+                                            @endif
+                                        </td>
+                                        <td class="py-3 px-3 font-bold text-gray-700 whitespace-nowrap">
+                                            {{ $ep->event?->event_date ? $ep->event->event_date->format('d M Y') : '—' }}
+                                        </td>
+                                        <td class="py-3 px-3">
+                                            <div class="font-bold text-gray-900 uppercase">
+                                                {{ $ep->addedByVolunteer?->full_name ?? ($ep->event?->volunteer?->full_name ?? 'Volunteer') }}
+                                            </div>
+                                            <div class="font-mono text-[10px] text-brandOrange font-bold">
+                                                ID: {{ $ep->addedByVolunteer?->volunteer_id ?? ($ep->event?->volunteer?->volunteer_id ?? 'N/A') }}
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-3">
+                                            <span class="inline-block px-2 py-0.5 rounded text-[9px] font-black uppercase {{ $ep->participation_type === 'beneficiary' ? 'bg-orange-100 text-brandOrange' : 'bg-gray-100 text-gray-700' }}">
+                                                {{ ucfirst(str_replace('_', ' ', $ep->participation_type)) }}
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-3">
+                                            <span class="inline-block px-2 py-0.5 rounded text-[9px] font-black uppercase {{ $ep->participation_status === 'benefited' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800' }}">
+                                                {{ ucfirst($ep->participation_status) }}
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-3 font-medium text-gray-800 max-w-xs">
+                                            {{ $ep->benefit_details ?? '—' }}
+                                        </td>
+                                        <td class="py-3 px-3 text-center">
+                                            @if($ep->proof_image_path)
+                                                <div class="inline-flex flex-col items-center gap-0.5">
+                                                    <img src="{{ asset('storage/' . $ep->proof_image_path) }}"
+                                                         class="w-10 h-10 object-cover rounded-lg border border-orange-200 shadow-xs" alt="Proof thumbnail">
+                                                    <span class="text-[9px] font-mono text-emerald-700 font-bold">
+                                                        {{ $ep->formatted_proof_size }}
+                                                    </span>
+                                                </div>
+                                            @else
+                                                <span class="text-[10px] text-gray-400 italic">—</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <div class="py-6 text-center text-gray-400 space-y-1">
+                        <span class="text-xl block">📋</span>
+                        <span class="text-xs font-bold uppercase text-gray-600 block">No Event Records Yet</span>
+                        <p class="text-[11px] text-gray-500">This member has not yet been linked to any volunteer-conducted events.</p>
+                    </div>
+                @endif
+            </div>
+
         </main>
     </div>
 </div>

@@ -219,4 +219,12 @@ class Membership extends Model
 
         return 'Not recorded';
     }
+
+    /**
+     * Event participations and received benefits history.
+     */
+    public function eventParticipations()
+    {
+        return $this->hasMany(VolunteerEventMember::class, 'membership_record_id');
+    }
 }

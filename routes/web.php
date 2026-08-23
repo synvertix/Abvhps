@@ -101,6 +101,22 @@ Route::middleware('volunteer.auth')->group(function () {
         Route::post('/volunteer/member-data/search', [\App\Http\Controllers\VolunteerMemberDataController::class, 'search'])->name('volunteer.member_data.search');
         Route::post('/volunteer/member-data/export-pdf', [\App\Http\Controllers\VolunteerMemberDataController::class, 'exportPdf'])->name('volunteer.member_data.export_pdf');
         Route::post('/volunteer/member-data/export-csv', [\App\Http\Controllers\VolunteerMemberDataController::class, 'exportCsv'])->name('volunteer.member_data.export_csv');
+
+        // Volunteer Events & Beneficiary Management
+        Route::get('/volunteer/events', [\App\Http\Controllers\VolunteerEventController::class, 'index'])->name('volunteer.events.index');
+        Route::get('/volunteer/events/create', [\App\Http\Controllers\VolunteerEventController::class, 'create'])->name('volunteer.events.create');
+        Route::post('/volunteer/events', [\App\Http\Controllers\VolunteerEventController::class, 'store'])->name('volunteer.events.store');
+        Route::get('/volunteer/events/{id}', [\App\Http\Controllers\VolunteerEventController::class, 'show'])->name('volunteer.events.show');
+        Route::get('/volunteer/events/{id}/edit', [\App\Http\Controllers\VolunteerEventController::class, 'edit'])->name('volunteer.events.edit');
+        Route::put('/volunteer/events/{id}', [\App\Http\Controllers\VolunteerEventController::class, 'update'])->name('volunteer.events.update');
+        Route::post('/volunteer/events/{id}/add-member', [\App\Http\Controllers\VolunteerEventController::class, 'addMember'])->name('volunteer.events.add_member');
+        Route::put('/volunteer/events/{id}/members/{memberId}', [\App\Http\Controllers\VolunteerEventController::class, 'updateMember']);
+        Route::post('/volunteer/events/{id}/members/{memberId}/update', [\App\Http\Controllers\VolunteerEventController::class, 'updateMember'])->name('volunteer.events.update_member');
+        Route::delete('/volunteer/events/{id}/members/{memberId}', [\App\Http\Controllers\VolunteerEventController::class, 'removeMember'])->name('volunteer.events.remove_member');
+
+        // Volunteer Exact Member Search Desk & JSON Lookup
+        Route::get('/volunteer/member-search', [\App\Http\Controllers\VolunteerEventController::class, 'memberSearchDesk'])->name('volunteer.member_search');
+        Route::post('/volunteer/member-search/lookup', [\App\Http\Controllers\VolunteerEventController::class, 'searchMember'])->name('volunteer.member_search.lookup');
     });
 });
 
@@ -349,6 +365,12 @@ Route::get('/admin/membership-ledger', [App\Http\Controllers\MembershipControlle
     Route::post('/admin/volunteers/cadre/{id}', [VolunteerController::class, 'cadreUpdate'])->name('admin.volunteers.cadreUpdate')->middleware('auth:web');
     Route::post('/admin/volunteers/resend-credentials/{id}', [VolunteerController::class, 'resendCredentials'])->name('admin.volunteers.resendCredentials')->middleware('auth:web');
     Route::delete('/admin/volunteers/delete/{id}', [VolunteerController::class, 'deleteVolunteer'])->name('admin.volunteers.delete')->middleware('auth:web');
+
+    // 8b. Volunteer Events Management (Central Admin)
+    Route::get('/admin/volunteer-events', [\App\Http\Controllers\AdminVolunteerEventController::class, 'index'])->name('admin.volunteer_events.index')->middleware('auth:web');
+    Route::get('/admin/volunteer-events/{id}', [\App\Http\Controllers\AdminVolunteerEventController::class, 'show'])->name('admin.volunteer_events.show')->middleware('auth:web');
+    Route::post('/admin/volunteer-events/{id}/members/{memberLinkId}/replace-proof', [\App\Http\Controllers\AdminVolunteerEventController::class, 'replaceProofImage'])->name('admin.volunteer_events.replace_proof')->middleware('auth:web');
+    Route::delete('/admin/volunteer-events/{id}', [\App\Http\Controllers\AdminVolunteerEventController::class, 'destroy'])->name('admin.volunteer_events.delete')->middleware('auth:web');
 
     // 9. Rudrasena
     Route::get('/admin/rudrasena', [App\Http\Controllers\RudrasenaController::class, 'adminIndex'])->name('admin.rudrasena.index')->middleware('auth:web');

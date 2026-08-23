@@ -157,8 +157,20 @@
                 </div>
 
                 <div class="space-y-2">
-                    <a href="{{ route('volunteer.member_data') }}"
+                    <a href="{{ route('volunteer.events.index') }}"
                        class="w-full bg-brandOrange hover:bg-orange-600 text-white font-black text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-between">
+                        <span>🏆 My Events &amp; Service Activities</span>
+                        <span>&rarr;</span>
+                    </a>
+
+                    <a href="{{ route('volunteer.member_search') }}"
+                       class="w-full bg-white hover:bg-orange-100 text-brandOrange border border-orange-300 font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-between">
+                        <span>🔍 Search Member by ID</span>
+                        <span>&rarr;</span>
+                    </a>
+
+                    <a href="{{ route('volunteer.member_data') }}"
+                       class="w-full bg-white hover:bg-orange-100 text-gray-800 border border-orange-200 font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-between">
                         <span>📋 Area-wise Member Data</span>
                         <span>&rarr;</span>
                     </a>
