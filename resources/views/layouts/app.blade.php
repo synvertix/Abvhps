@@ -118,14 +118,13 @@
 
                 <!-- Fixed Exam Sub-Menu Dropdown Desk with Notice Board -->
                 <div class="relative group py-2">
-                    <button class="hover:text-brandOrange transition cursor-pointer flex items-center gap-1 focus:outline-none">
+                    <button class="hover:text-brandOrange transition cursor-pointer flex items-center focus:outline-none">
                         <span>Exam</span>
-                        <span class="text-xs text-gray-400">▼</span>
                     </button>
                     <div class="absolute left-0 pt-2 w-48 hidden group-hover:block z-50 top-full">
                         <div class="bg-white border border-gray-200 rounded-lg shadow-xl py-1">
                             <a href="{{ route('public.exams_board') }}" class="block px-4 py-2 text-gray-700 hover:bg-brandLightOrange hover:text-brandOrange font-bold transition text-xs border-b border-gray-100">
-                                📋 Exams Notice Board
+                                Exams Notice Board
                             </a>
                             <a href="{{ route('exam.form') }}" class="block px-4 py-2 text-gray-700 hover:bg-brandLightOrange hover:text-brandOrange font-medium transition text-xs">
                                 Apply Online
@@ -139,25 +138,22 @@
 
                 <!-- GLOBAL OUR WINGS DROPDOWN DESK SYSTEM -->
                 <div class="relative inline-block text-left group">
-                    <button type="button" class="inline-flex items-center gap-1 font-bold text-gray-700 hover:text-brandOrange transition uppercase cursor-pointer py-2">
+                    <button type="button" class="font-bold text-gray-700 hover:text-brandOrange transition uppercase cursor-pointer py-2">
                         <span>OUR WINGS</span>
-                        <svg class="w-4 h-4 transition transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
-                        </svg>
                     </button>
                     
                     <div class="absolute left-0 w-56 bg-white border border-gray-200 rounded-lg shadow-xl py-1 z-50 hidden group-hover:block transition animate-fadeIn">
-                        <a href="{{ route('rudrasena.form') }}" class="flex items-center gap-2 px-4 py-2.5 text-xs font-black text-gray-700 hover:bg-orange-50 hover:text-brandOrange transition border-b border-gray-100">
-                            <span>🔱</span> RUDRASENA DAL
+                        <a href="{{ route('rudrasena.form') }}" class="block px-4 py-2.5 text-xs font-black text-gray-700 hover:bg-orange-50 hover:text-brandOrange transition border-b border-gray-100">
+                            RUDRASENA DAL
                         </a>
-                        <a href="{{ route('kalabrundam.form') }}" class="flex items-center gap-2 px-4 py-2.5 text-xs font-black text-gray-700 hover:bg-orange-50 hover:text-brandOrange transition border-b border-gray-100">
-                            <span>🪘</span> KALA BRUNDAM
+                        <a href="{{ route('kalabrundam.form') }}" class="block px-4 py-2.5 text-xs font-black text-gray-700 hover:bg-orange-50 hover:text-brandOrange transition border-b border-gray-100">
+                            KALA BRUNDAM
                         </a>
-                        <a href="{{ route('gramasevadal.form') }}" class="flex items-center gap-2 px-4 py-2.5 text-xs font-black text-gray-700 hover:bg-orange-50 hover:text-brandOrange transition border-b border-gray-100">
-                            <span>🌱</span> GRAMA SEVA DAL
+                        <a href="{{ route('gramasevadal.form') }}" class="block px-4 py-2.5 text-xs font-black text-gray-700 hover:bg-orange-50 hover:text-brandOrange transition border-b border-gray-100">
+                            GRAMA SEVA DAL
                         </a>
-                        <a href="{{ route('organicfarmers.form') }}" class="flex items-center gap-2 px-4 py-2.5 text-xs font-black text-gray-700 hover:bg-orange-50 hover:text-brandOrange transition">
-                            <span>🌾</span> ORGANIC FARMERS
+                        <a href="{{ route('organicfarmers.form') }}" class="block px-4 py-2.5 text-xs font-black text-gray-700 hover:bg-orange-50 hover:text-brandOrange transition">
+                            ORGANIC FARMERS
                         </a>
                     </div>
                 </div>
@@ -288,49 +284,43 @@
 
             <a href="/" 
                onclick="togglePublicMobileMenu(false)" 
-               class="public-nav-row flex items-center gap-3 px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->is('/') ? 'is-active' : '' }}"
+               class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->is('/') ? 'is-active' : '' }}"
                @if(request()->is('/')) aria-current="page" @endif>
-                <span class="text-sm shrink-0">🏠</span> 
                 <span class="truncate">HOME</span>
             </a>
 
             <a href="/about" 
                onclick="togglePublicMobileMenu(false)" 
-               class="public-nav-row flex items-center gap-3 px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->is('about*') ? 'is-active' : '' }}"
+               class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->is('about*') ? 'is-active' : '' }}"
                @if(request()->is('about*')) aria-current="page" @endif>
-                <span class="text-sm shrink-0">📖</span> 
                 <span class="truncate">ABOUT US</span>
             </a>
 
             <a href="{{ route('public.team') }}" 
                onclick="togglePublicMobileMenu(false)" 
-               class="public-nav-row flex items-center gap-3 px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->routeIs('public.team*') ? 'is-active' : '' }}"
+               class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->routeIs('public.team*') ? 'is-active' : '' }}"
                @if(request()->routeIs('public.team*')) aria-current="page" @endif>
-                <span class="text-sm shrink-0">👥</span> 
                 <span class="truncate">OUR TEAM</span>
             </a>
 
             <a href="/gallery" 
                onclick="togglePublicMobileMenu(false)" 
-               class="public-nav-row flex items-center gap-3 px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->is('gallery*') ? 'is-active' : '' }}"
+               class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->is('gallery*') ? 'is-active' : '' }}"
                @if(request()->is('gallery*')) aria-current="page" @endif>
-                <span class="text-sm shrink-0">🖼️</span> 
                 <span class="truncate">MEDIA GALLERY</span>
             </a>
 
             <a href="/membership" 
                onclick="togglePublicMobileMenu(false)" 
-               class="public-nav-row flex items-center gap-3 px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->is('membership*') ? 'is-active' : '' }}"
+               class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->is('membership*') ? 'is-active' : '' }}"
                @if(request()->is('membership*')) aria-current="page" @endif>
-                <span class="text-sm shrink-0">💳</span> 
                 <span class="truncate">MEMBERSHIP PORTAL</span>
             </a>
 
             <a href="/volunteer" 
                onclick="togglePublicMobileMenu(false)" 
-               class="public-nav-row flex items-center gap-3 px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->is('volunteer*') ? 'is-active' : '' }}"
+               class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->is('volunteer*') ? 'is-active' : '' }}"
                @if(request()->is('volunteer*')) aria-current="page" @endif>
-                <span class="text-sm shrink-0">🤝</span> 
                 <span class="truncate">VOLUNTEER CADRE</span>
             </a>
 
@@ -341,32 +331,29 @@
 
             <!-- Accordion 1: Exam -->
             <div class="rounded-xl overflow-hidden shadow-xs">
-                <button type="button" 
-                        onclick="togglePublicSubmenu('public-exam-submenu', 'public-exam-arrow')" 
+                <button type="button"
+                        onclick="togglePublicSubmenu('public-exam-submenu')"
                         class="public-nav-row w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-gray-200 hover:text-brandOrange transition focus:outline-none cursor-pointer min-h-[48px]">
-                    <span class="flex items-center gap-3 font-extrabold text-[11px] uppercase tracking-wider">
-                        <span class="text-sm">📝</span> <span>EXAMS INFO & RESULTS</span>
+                    <span class="font-extrabold text-[11px] uppercase tracking-wider">
+                        EXAMS INFO & RESULTS
                     </span>
-                    <svg id="public-exam-arrow" class="w-4 h-4 transition-transform duration-200 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
-                    </svg>
                 </button>
                 <div id="public-exam-submenu" 
                      class="public-submenu-box hidden px-2.5 pb-2 pt-1.5 space-y-1 rounded-b-xl border-x border-b border-white/10 text-[10.5px] font-bold mt-1">
                     <a href="{{ route('public.exams_board') }}" 
                        onclick="togglePublicMobileMenu(false)" 
                        class="block px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/70 transition border-b border-gray-800/60">
-                        📋 EXAMS NOTICE BOARD
+                        EXAMS NOTICE BOARD
                     </a>
                     <a href="{{ route('exam.form') }}" 
                        onclick="togglePublicMobileMenu(false)" 
                        class="block px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/70 transition border-b border-gray-800/60">
-                        ✍️ APPLY ONLINE
+                        APPLY ONLINE
                     </a>
                     <a href="{{ route('exam.results_portal') }}" 
                        onclick="togglePublicMobileMenu(false)" 
                        class="block px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/70 transition">
-                        🏆 VIEW RESULTS
+                        VIEW RESULTS
                     </a>
                 </div>
             </div>
@@ -378,37 +365,34 @@
 
             <!-- Accordion 2: Our Wings -->
             <div class="rounded-xl overflow-hidden shadow-xs">
-                <button type="button" 
-                        onclick="togglePublicSubmenu('public-wings-submenu', 'public-wings-arrow')" 
+                <button type="button"
+                        onclick="togglePublicSubmenu('public-wings-submenu')"
                         class="public-nav-row w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-gray-200 hover:text-brandOrange transition focus:outline-none cursor-pointer min-h-[48px]">
-                    <span class="flex items-center gap-3 font-extrabold text-[11px] uppercase tracking-wider">
-                        <span class="text-sm">🚩</span> <span>OUR WINGS</span>
+                    <span class="font-extrabold text-[11px] uppercase tracking-wider">
+                        OUR WINGS
                     </span>
-                    <svg id="public-wings-arrow" class="w-4 h-4 transition-transform duration-200 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
-                    </svg>
                 </button>
                 <div id="public-wings-submenu" 
                      class="public-submenu-box hidden px-2.5 pb-2 pt-1.5 space-y-1 rounded-b-xl border-x border-b border-white/10 text-[10.5px] font-bold mt-1">
                     <a href="{{ route('rudrasena.form') }}" 
                        onclick="togglePublicMobileMenu(false)" 
-                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/70 transition border-b border-gray-800/60">
-                        <span>🔱</span> RUDRASENA DAL
+                       class="block px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/70 transition border-b border-gray-800/60">
+                        RUDRASENA DAL
                     </a>
                     <a href="{{ route('kalabrundam.form') }}" 
                        onclick="togglePublicMobileMenu(false)" 
-                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/70 transition border-b border-gray-800/60">
-                        <span>🪘</span> KALA BRUNDAM
+                       class="block px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/70 transition border-b border-gray-800/60">
+                        KALA BRUNDAM
                     </a>
                     <a href="{{ route('gramasevadal.form') }}" 
                        onclick="togglePublicMobileMenu(false)" 
-                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/70 transition border-b border-gray-800/60">
-                        <span>🌱</span> GRAMA SEVA DAL
+                       class="block px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/70 transition border-b border-gray-800/60">
+                        GRAMA SEVA DAL
                     </a>
                     <a href="{{ route('organicfarmers.form') }}" 
                        onclick="togglePublicMobileMenu(false)" 
-                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/70 transition">
-                        <span>🌾</span> ORGANIC FARMERS
+                       class="block px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/70 transition">
+                        ORGANIC FARMERS
                     </a>
                 </div>
             </div>
@@ -420,25 +404,22 @@
 
             <a href="{{ route('donations.grid') }}" 
                onclick="togglePublicMobileMenu(false)" 
-               class="public-nav-row flex items-center gap-3 px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->routeIs('donations.*') ? 'is-active' : '' }}"
+               class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->routeIs('donations.*') ? 'is-active' : '' }}"
                @if(request()->routeIs('donations.*')) aria-current="page" @endif>
-                <span class="text-sm shrink-0">💰</span> 
                 <span class="truncate">FUNDRAISE CAMPAIGNS</span>
             </a>
 
             <a href="{{ route('public.blogs') }}" 
                onclick="togglePublicMobileMenu(false)" 
-               class="public-nav-row flex items-center gap-3 px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->routeIs('public.blogs*') ? 'is-active' : '' }}"
+               class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->routeIs('public.blogs*') ? 'is-active' : '' }}"
                @if(request()->routeIs('public.blogs*')) aria-current="page" @endif>
-                <span class="text-sm shrink-0">📰</span> 
                 <span class="truncate">BLOGS & UPDATES</span>
             </a>
 
             <a href="{{ route('public.contact') }}" 
                onclick="togglePublicMobileMenu(false)" 
-               class="public-nav-row flex items-center gap-3 px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->routeIs('public.contact*') ? 'is-active' : '' }}"
+               class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->routeIs('public.contact*') ? 'is-active' : '' }}"
                @if(request()->routeIs('public.contact*')) aria-current="page" @endif>
-                <span class="text-sm shrink-0">📩</span> 
                 <span class="truncate">CONTACT US</span>
             </a>
 
@@ -446,8 +427,8 @@
             <div class="pt-2 pb-1">
                 <a href="{{ route('donations.grid') }}" 
                    onclick="togglePublicMobileMenu(false)" 
-                   class="w-full bg-brandOrange hover:bg-orange-600 text-white font-black text-center py-2.5 min-h-[48px] rounded-xl shadow-md transition flex items-center justify-center gap-2 uppercase tracking-wider text-xs border border-orange-400/50 cursor-pointer">
-                    <span class="text-base">🙏</span> MAKE A DONATION
+                   class="w-full bg-brandOrange hover:bg-orange-600 text-white font-black text-center py-2.5 min-h-[48px] rounded-xl shadow-md transition flex items-center justify-center uppercase tracking-wider text-xs border border-orange-400/50 cursor-pointer">
+                    MAKE A DONATION
                 </a>
             </div>
         </nav>
@@ -492,10 +473,10 @@
             <div>
                 <h3 class="text-white font-bold text-lg mb-4 text-brandOrange">Our Wings</h3>
                 <div class="space-y-1.5 text-sm">
-                    <a href="{{ route('rudrasena.form') }}" class="hover:text-white block">🔱 Rudrasena Dal</a>
-                    <a href="{{ route('kalabrundam.form') }}" class="hover:text-white block">🪘 Kala Brundam</a>
-                    <a href="{{ route('gramasevadal.form') }}" class="hover:text-white block">🌱 Grama Seva Dal</a>
-                    <a href="{{ route('organicfarmers.form') }}" class="hover:text-white block font-bold text-emerald-400">🌾 Organic Farmers</a>
+                    <a href="{{ route('rudrasena.form') }}" class="hover:text-white block">Rudrasena Dal</a>
+                    <a href="{{ route('kalabrundam.form') }}" class="hover:text-white block">Kala Brundam</a>
+                    <a href="{{ route('gramasevadal.form') }}" class="hover:text-white block">Grama Seva Dal</a>
+                    <a href="{{ route('organicfarmers.form') }}" class="hover:text-white block font-bold text-emerald-400">Organic Farmers</a>
                 </div>
             </div>
             <div>
