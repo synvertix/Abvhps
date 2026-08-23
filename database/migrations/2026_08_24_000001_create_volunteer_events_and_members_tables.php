@@ -51,7 +51,7 @@ return new class extends Migration
             $table->timestamps();
 
             // Canonical relational uniqueness
-            $table->unique(['volunteer_event_id', 'membership_record_id']);
+            $table->unique(['volunteer_event_id', 'membership_record_id'], 'vem_event_member_unique');
             $table->index(['volunteer_event_id', 'membership_id']);
         });
     }
