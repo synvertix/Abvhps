@@ -85,10 +85,19 @@
                                             <div class="w-8 h-10 rounded bg-gray-100 border flex items-center justify-content-center text-gray-400 text-[10px]">No Img</div>
                                         @endif
                                         <div>
-                                            <span>{{ $member->full_name }}</span>
-                                            @if($member->aadhaar_number)
-                                                <span class="block text-[10px] font-mono font-normal text-gray-400 normal-case tracking-normal">Aadhaar: **** **** {{ substr($member->aadhaar_number, -4) }}</span>
-                                            @endif
+                                            <span class="block">{{ $member->full_name }}</span>
+                                            <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                                @if($member->hasVerifiedIdentity())
+                                                    <span class="text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded uppercase">
+                                                        {{ $member->getIdentityBadgeLabel() }}
+                                                    </span>
+                                                    <span class="text-[10px] font-mono text-gray-400 normal-case tracking-normal">{{ $member->getIdentityDocumentMaskedLabel() }}</span>
+                                                @else
+                                                    <span class="text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded uppercase">
+                                                        Identity Pending
+                                                    </span>
+                                                @endif
+                                            </div>
                                         </div>
                                     </td>
                                     <td class="px-6 py-3.5 font-mono text-brandOrange font-black text-sm tracking-wider">

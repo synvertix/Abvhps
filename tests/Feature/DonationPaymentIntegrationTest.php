@@ -691,4 +691,23 @@ class DonationPaymentIntegrationTest extends TestCase
         $response->assertSee('CASHFREE DONOR');
         $response->assertDontSee('RAZORPAY DONOR');
     }
+
+    /**
+     * Test: Donation amount field uses flex-based input group and removes absolute positioning hacks
+     */
+    public function test_donation_amount_input_uses_flex_group_and_no_absolute_positioning(): void
+    {
+        $response = $this->get('/donations');
+
+        $response->assertStatus(200);
+        $response->assertSee('Donation Amount (INR)');
+        $response->assertSee('flex items-center w-full bg-gray-50 border-2 border-gray-200 rounded-2xl', false);
+        $response->assertSee('id="donation_amount"', false);
+        $response->assertSee('name="amount"', false);
+        $response->assertSee('min="1"', false);
+        $response->assertSee('max="500000"', false);
+        $response->assertSee('aria-hidden="true"', false);
+        $response->assertDontSee('absolute inset-y-0 left-0', false);
+        $response->assertDontSee('preset-amount-button');
+    }
 }

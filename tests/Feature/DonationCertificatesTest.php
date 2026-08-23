@@ -125,8 +125,10 @@ class DonationCertificatesTest extends TestCase
         $response = $this->get('/donations');
         $response->assertStatus(200);
 
-        // Prefix div must contain flex items-center without pt-2
-        $response->assertSee('absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 font-black text-base', false);
+        // Wrapper must use flex alignment without absolute positioning hacks
+        $response->assertSee('flex items-center w-full bg-gray-50 border-2 border-gray-200 rounded-2xl', false);
+        $response->assertSee('aria-hidden="true"', false);
+        $response->assertDontSee('absolute inset-y-0 left-0', false);
         $response->assertDontSee('pointer-events-none text-gray-500 font-black text-base pt-2', false);
     }
 }

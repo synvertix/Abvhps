@@ -95,14 +95,8 @@
                                 <span class="font-mono font-semibold text-gray-800 truncate block">{{ $member->email ?? 'Not Provided' }}</span>
                             </div>
                             <div class="bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                                <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Aadhaar Number</span>
-                                <span class="font-mono font-bold text-gray-800">
-                                    @if($member->aadhaar_number)
-                                        {{ substr($member->aadhaar_number, 0, 4) }} {{ substr($member->aadhaar_number, 4, 4) }} {{ substr($member->aadhaar_number, 8, 4) }}
-                                    @else
-                                        N/A
-                                    @endif
-                                </span>
+                                <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Identity Document</span>
+                                <span class="font-mono font-bold text-gray-800">{{ $member->getIdentityDocumentMaskedLabel() }}</span>
                             </div>
                         </div>
                     </div>
@@ -151,8 +145,8 @@
                             <span class="font-bold text-red-600">{{ $member->blood_group ?? 'N/A' }}</span>
                         </div>
                         <div class="flex justify-between py-1 border-b border-gray-50">
-                            <span class="text-gray-500 font-semibold uppercase text-[10px]">Aadhaar Card:</span>
-                            <span class="font-mono font-bold text-gray-900">{{ $member->aadhaar_number ?? 'N/A' }}</span>
+                            <span class="text-gray-500 font-semibold uppercase text-[10px]">Identity Document:</span>
+                            <span class="font-mono font-bold text-gray-900">{{ $member->getIdentityDocumentMaskedLabel() }}</span>
                         </div>
                         <div class="flex justify-between py-1">
                             <span class="text-gray-500 font-semibold uppercase text-[10px]">Primary Mobile:</span>
@@ -204,11 +198,75 @@
 
             </div>
 
-            <!-- Section 3: Verification & Security Audit Trail -->
+            <!-- Section 3: Official Identity Verification Desk -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+                <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg">🪪</span>
+                        <h4 class="text-xs font-black text-brandGray uppercase tracking-wider">Official Identity Verification</h4>
+                    </div>
+                    @if($member->hasVerifiedIdentity())
+                        <span class="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-0.5 rounded border border-emerald-200 uppercase tracking-wider">
+                            {{ $member->getIdentityBadgeLabel() }}
+                        </span>
+                    @else
+                        <span class="bg-amber-100 text-amber-800 text-[10px] font-black px-2.5 py-0.5 rounded border border-amber-200 uppercase tracking-wider">
+                            Identity Pending
+                        </span>
+                    @endif
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Verification Status</span>
+                        <span class="font-bold text-gray-900 block mt-1">
+                            @if($member->hasVerifiedIdentity())
+                                <span class="text-emerald-600 font-black">Verified ✓</span>
+                            @else
+                                <span class="text-amber-600 font-black">Pending ⏳</span>
+                            @endif
+                        </span>
+                    </div>
+
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Verification Method</span>
+                        <span class="font-bold text-gray-900 block mt-1">{{ $member->getIdentityMethodLabel() }}</span>
+                    </div>
+
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Verified Legal Name</span>
+                        <span class="font-bold text-gray-900 block mt-1 uppercase">{{ $member->identity_verified_name ?? ($member->full_name ?? 'N/A') }}</span>
+                    </div>
+
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Document (Masked)</span>
+                        <span class="font-mono font-bold text-gray-900 block mt-1">{{ $member->getIdentityDocumentMaskedLabel() }}</span>
+                    </div>
+
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Verification Provider</span>
+                        <span class="font-bold text-gray-900 block mt-1">{{ $member->getIdentityVerificationProviderLabel() }}</span>
+                    </div>
+
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Verified Timestamp</span>
+                        <span class="font-mono text-gray-700 block mt-1 text-[11px]">{{ $member->getIdentityVerifiedAtFormatted() ?? 'N/A' }}</span>
+                    </div>
+
+                    @if(!empty($member->identity_verification_reference_id) || !empty($member->aadhaar_verification_ref))
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-100 sm:col-span-2 md:col-span-3">
+                        <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Verification Reference ID</span>
+                        <span class="font-mono text-gray-700 block mt-1 text-[11px]">{{ $member->identity_verification_reference_id ?? $member->aadhaar_verification_ref }}</span>
+                    </div>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Section 4: Payment & Security Audit Matrix -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
                 <div class="flex items-center gap-2 border-b border-gray-100 pb-3">
                     <span class="text-lg">🛡️</span>
-                    <h4 class="text-xs font-black text-brandGray uppercase tracking-wider">Payment & Security Audit Matrix</h4>
+                    <h4 class="text-xs font-black text-brandGray uppercase tracking-wider">Membership Fee &amp; Payment Audit Matrix</h4>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
@@ -220,21 +278,38 @@
                     </div>
 
                     <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Fee Amount</span>
+                        <span class="font-mono font-bold text-gray-900 block mt-1">₹{{ number_format((float)($member->payment_amount ?? 1.00), 2) }}</span>
+                    </div>
+
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Payment Gateway</span>
+                        <span class="font-bold text-gray-900 block mt-1 uppercase">{{ ucfirst($member->payment_gateway ?? 'Razorpay') }}</span>
+                    </div>
+
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
                         <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Payment Transaction ID</span>
                         <span class="font-mono font-bold text-gray-900 block mt-1 truncate">{{ $member->payment_id ?? 'TXN-SYSTEM' }}</span>
                     </div>
 
                     <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                        <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Registered Timestamp</span>
+                        <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Payment Verified At</span>
                         <span class="font-mono text-gray-700 block mt-1 text-[11px]">
-                            {{ $member->created_at ? \Carbon\Carbon::parse($member->created_at)->format('d-M-Y h:i A') : 'N/A' }}
+                            {{ $member->payment_verified_at ? \Carbon\Carbon::parse($member->payment_verified_at)->timezone('Asia/Kolkata')->format('d-M-Y h:i A') . ' IST' : 'N/A' }}
                         </span>
                     </div>
 
                     <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Registered Timestamp</span>
+                        <span class="font-mono text-gray-700 block mt-1 text-[11px]">
+                            {{ $member->created_at ? \Carbon\Carbon::parse($member->created_at)->timezone('Asia/Kolkata')->format('d-M-Y h:i A') . ' IST' : 'N/A' }}
+                        </span>
+                    </div>
+
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-100 sm:col-span-2">
                         <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Last Profile Update</span>
                         <span class="font-mono text-gray-700 block mt-1 text-[11px]">
-                            {{ $member->updated_at ? \Carbon\Carbon::parse($member->updated_at)->format('d-M-Y h:i A') : 'N/A' }}
+                            {{ $member->updated_at ? \Carbon\Carbon::parse($member->updated_at)->timezone('Asia/Kolkata')->format('d-M-Y h:i A') . ' IST' : 'N/A' }}
                         </span>
                     </div>
                 </div>

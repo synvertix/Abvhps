@@ -331,4 +331,269 @@ class MembershipAdminTest extends TestCase
 
         $response->assertSessionHasErrors(['gender']);
     }
+
+    /**
+     * Test: Admin ledger and profile display PAN verification details, masked document, and no raw document numbers
+     */
+    public function test_admin_ledger_and_profile_show_pan_verification_details(): void
+    {
+        $panMember = Membership::forceCreate([
+            'membership_id'                      => '778899001122',
+            'phone'                              => '9123456780',
+            'payment_status'                     => 'success',
+            'payment_id'                         => 'TXN-PAN-001',
+            'payment_gateway'                    => 'razorpay',
+            'payment_amount'                     => 1.00,
+            'payment_verified_at'                => now(),
+            'full_name'                          => 'SRI RAMA PAN DEVOTEE',
+            'father_or_husband_name'             => 'DASARATHA',
+            'gotram'                             => 'RAGHU',
+            'occupation'                         => 'SEVA',
+            'pincode'                            => '516193',
+            'grama_panchayat'                    => 'Porumamilla',
+            'mandal'                             => 'Porumamilla',
+            'district'                           => 'YSR Kadapa',
+            'state'                              => 'Andhra Pradesh',
+            'country'                            => 'India',
+            'is_completed'                       => 1,
+            'identity_verified'                  => true,
+            'identity_verification_method'        => 'pan',
+            'identity_verification_provider'      => 'cashfree',
+            'identity_verified_name'             => 'SRI RAMA PAN DEVOTEE',
+            'identity_document_last4'            => '5678',
+            'identity_verification_reference_id' => 'CF_PAN_REF_778899',
+            'identity_verified_at'              => now(),
+            'aadhaar_number'                     => null,
+            'is_aadhaar_verified'                => false,
+        ]);
+
+        // 1. Check Admin Ledger
+        $ledgerResp = $this->actingAs($this->admin)->get(route('admin.membership.ledger'));
+        $ledgerResp->assertStatus(200);
+        $ledgerResp->assertSee('✓ PAN Verified');
+        $ledgerResp->assertSee('PAN ending in 5678');
+        $ledgerResp->assertSee('SRI RAMA PAN DEVOTEE');
+
+        // 2. Check Admin Profile View
+        $profileResp = $this->actingAs($this->admin)->get(route('admin.membership.view', $panMember->id));
+        $profileResp->assertStatus(200);
+        $profileResp->assertSee('Official Identity Verification');
+        $profileResp->assertSee('✓ PAN Verified');
+        $profileResp->assertSee('PAN ending in 5678');
+        $profileResp->assertSee('SRI RAMA PAN DEVOTEE');
+        $profileResp->assertSee('Cashfree');
+        $profileResp->assertSee('CF_PAN_REF_778899');
+        $profileResp->assertSee('₹1.00');
+        $profileResp->assertSee('Razorpay');
+
+        // 3. Privacy: full PAN / unmasked document data is absent
+        $profileResp->assertDontSee('ABCDE5678F');
+    }
+
+    /**
+     * Test: Admin ledger displays badges for all 5 identity methods and unverified members
+     */
+    public function test_admin_ledger_shows_badges_for_all_identity_methods(): void
+    {
+        Membership::forceCreate([
+            'membership_id'                => '778899001123',
+            'phone'                        => '9123456781',
+            'payment_status'               => 'success',
+            'payment_id'                   => 'TXN-VOTER-001',
+            'full_name'                    => 'VOTER MEMBER',
+            'father_or_husband_name'       => 'Father',
+            'gotram'                       => 'Gotram',
+            'occupation'                   => 'Service',
+            'pincode'                      => '516193',
+            'grama_panchayat'              => 'Porumamilla',
+            'mandal'                       => 'Porumamilla',
+            'district'                     => 'YSR Kadapa',
+            'state'                        => 'Andhra Pradesh',
+            'is_completed'                 => 1,
+            'identity_verified'            => true,
+            'identity_verification_method'  => 'voter_id',
+            'identity_verified_name'       => 'VOTER MEMBER',
+            'identity_document_last4'      => '1234',
+            'identity_verified_at'        => now(),
+        ]);
+
+        Membership::forceCreate([
+            'membership_id'                => '778899001124',
+            'phone'                        => '9123456782',
+            'payment_status'               => 'success',
+            'payment_id'                   => 'TXN-DL-001',
+            'full_name'                    => 'DL MEMBER',
+            'father_or_husband_name'       => 'Father',
+            'gotram'                       => 'Gotram',
+            'occupation'                   => 'Service',
+            'pincode'                      => '516193',
+            'grama_panchayat'              => 'Porumamilla',
+            'mandal'                       => 'Porumamilla',
+            'district'                     => 'YSR Kadapa',
+            'state'                        => 'Andhra Pradesh',
+            'is_completed'                 => 1,
+            'identity_verified'            => true,
+            'identity_verification_method'  => 'driving_licence',
+            'identity_verified_name'       => 'DL MEMBER',
+            'identity_document_last4'      => '2345',
+            'identity_verified_at'        => now(),
+        ]);
+
+        Membership::forceCreate([
+            'membership_id'                => '778899001125',
+            'phone'                        => '9123456783',
+            'payment_status'               => 'success',
+            'payment_id'                   => 'TXN-PASS-001',
+            'full_name'                    => 'PASSPORT MEMBER',
+            'father_or_husband_name'       => 'Father',
+            'gotram'                       => 'Gotram',
+            'occupation'                   => 'Service',
+            'pincode'                      => '516193',
+            'grama_panchayat'              => 'Porumamilla',
+            'mandal'                       => 'Porumamilla',
+            'district'                     => 'YSR Kadapa',
+            'state'                        => 'Andhra Pradesh',
+            'is_completed'                 => 1,
+            'identity_verified'            => true,
+            'identity_verification_method'  => 'passport',
+            'identity_verified_name'       => 'PASSPORT MEMBER',
+            'identity_document_last4'      => '3456',
+            'identity_verified_at'        => now(),
+        ]);
+
+        Membership::forceCreate([
+            'membership_id'          => '778899001126',
+            'phone'                  => '9123456784',
+            'payment_status'         => 'success',
+            'payment_id'             => 'TXN-UNVER-001',
+            'full_name'              => 'UNVERIFIED MEMBER',
+            'father_or_husband_name' => 'Father',
+            'gotram'                 => 'Gotram',
+            'occupation'             => 'Service',
+            'pincode'                => '516193',
+            'grama_panchayat'        => 'Porumamilla',
+            'mandal'                 => 'Porumamilla',
+            'district'               => 'YSR Kadapa',
+            'state'                  => 'Andhra Pradesh',
+            'is_completed'           => 1,
+            'identity_verified'      => false,
+        ]);
+
+        $ledgerResp = $this->actingAs($this->admin)->get(route('admin.membership.ledger'));
+        $ledgerResp->assertStatus(200);
+        $ledgerResp->assertSee('✓ Voter ID Verified');
+        $ledgerResp->assertSee('✓ Driving Licence Verified');
+        $ledgerResp->assertSee('✓ Passport Verified');
+        $ledgerResp->assertSee('Identity Pending');
+    }
+
+    /**
+     * Test: Admin pending grid displays identity badge separately from fee status
+     */
+    public function test_admin_pending_grid_shows_identity_badge(): void
+    {
+        Membership::forceCreate([
+            'membership_id'                => '778899001127',
+            'phone'                        => '9123456785',
+            'payment_status'               => 'success',
+            'payment_id'                   => 'TXN-PEND-PAN-001',
+            'is_completed'                 => 0,
+            'identity_verified'            => true,
+            'identity_verification_method'  => 'pan',
+            'identity_verified_name'       => 'PENDING PAN DEVOTEE',
+            'identity_document_last4'      => '9876',
+            'identity_verified_at'        => now(),
+        ]);
+
+        $pendingResp = $this->actingAs($this->admin)->get(route('admin.membership.pending'));
+        $pendingResp->assertStatus(200);
+        $pendingResp->assertSee('✓ PAID');
+        $pendingResp->assertSee('✓ PAN Verified');
+    }
+
+    /**
+     * Regression Test: Admin update request passing aadhaar_number does NOT attach Aadhaar to PAN-verified member
+     */
+    public function test_admin_update_profile_does_not_attach_aadhaar_to_pan_verified_member(): void
+    {
+        $panMember = Membership::forceCreate([
+            'membership_id'                => '778899001128',
+            'phone'                        => '9123456786',
+            'payment_status'               => 'success',
+            'payment_id'                   => 'TXN-PAN-REGRESS',
+            'full_name'                    => 'PAN USER TO UPDATE',
+            'father_or_husband_name'       => 'Father Name',
+            'gotram'                       => 'Kashyapa',
+            'occupation'                   => 'Business',
+            'pincode'                      => '516193',
+            'grama_panchayat'              => 'Porumamilla',
+            'mandal'                       => 'Porumamilla',
+            'district'                     => 'YSR Kadapa',
+            'state'                        => 'Andhra Pradesh',
+            'is_completed'                 => 1,
+            'identity_verified'            => true,
+            'identity_verification_method'  => 'pan',
+            'identity_verified_name'       => 'PAN USER TO UPDATE',
+            'identity_document_last4'      => '4455',
+            'identity_verified_at'        => now(),
+            'aadhaar_number'               => null,
+            'is_aadhaar_verified'          => false,
+        ]);
+
+        // Admin submits edit form with an unverified Aadhaar number parameter
+        $response = $this->actingAs($this->admin)->post(route('admin.membership.update', $panMember->id), [
+            'full_name'              => 'PAN USER TO UPDATE',
+            'phone'                  => '9123456786',
+            'aadhaar_number'         => '999988887777', // Injected Aadhaar
+            'father_or_husband_name' => 'Updated Father Name',
+            'gotram'                 => 'Kashyapa',
+            'occupation'             => 'Business Updated',
+            'pincode'                => '516193',
+            'grama_panchayat'        => 'Porumamilla',
+            'mandal'                 => 'Porumamilla',
+            'district'               => 'YSR Kadapa',
+            'state'                  => 'Andhra Pradesh',
+        ]);
+
+        $response->assertRedirect(route('admin.membership.ledger'));
+
+        $panMember->refresh();
+        $this->assertEquals('Updated Father Name', $panMember->father_or_husband_name);
+        $this->assertNull($panMember->aadhaar_number); // MUST NOT attach injected Aadhaar
+        $this->assertFalse((bool) $panMember->is_aadhaar_verified); // MUST remain false
+        $this->assertEquals('pan', $panMember->identity_verification_method); // MUST remain pan
+    }
+
+    /**
+     * Test: Admin profile for legacy Aadhaar row displays legacy verification provider
+     */
+    public function test_admin_profile_legacy_aadhaar_row_shows_legacy_verification(): void
+    {
+        $legacyMember = Membership::forceCreate([
+            'membership_id'          => '778899001129',
+            'phone'                  => '9123456787',
+            'payment_status'         => 'success',
+            'payment_id'             => 'TXN-LEGACY-001',
+            'full_name'              => 'LEGACY AADHAAR MEMBER',
+            'father_or_husband_name' => 'Father',
+            'gotram'                 => 'Gotram',
+            'occupation'             => 'Service',
+            'pincode'                => '516193',
+            'grama_panchayat'        => 'Porumamilla',
+            'mandal'                 => 'Porumamilla',
+            'district'               => 'YSR Kadapa',
+            'state'                  => 'Andhra Pradesh',
+            'is_completed'           => 1,
+            'is_aadhaar_verified'    => true,
+            'aadhaar_number'         => '111122223333',
+            'aadhaar_verified_at'    => now(),
+        ]);
+
+        $profileResp = $this->actingAs($this->admin)->get(route('admin.membership.view', $legacyMember->id));
+        $profileResp->assertStatus(200);
+        $profileResp->assertSee('✓ Aadhaar Verified');
+        $profileResp->assertSee('Aadhaar ending in 3333');
+        $profileResp->assertSee('Legacy verification');
+        $profileResp->assertDontSee('111122223333'); // Raw full Aadhaar not rendered
+    }
 }
