@@ -52,6 +52,13 @@ class Membership extends Model
         'district',
         'state',
         'country',
+        'state_id',
+        'district_id',
+        'assembly_segment_id',
+        'mandal_id',
+        'panchayat_id',
+        'geo_mapping_status',
+        'geo_mapping_notes',
         'is_completed',
         'is_aadhaar_verified',
         'aadhaar_verification_ref',
@@ -72,7 +79,46 @@ class Membership extends Model
         'welcome_email_sent_at'      => 'datetime',
         'payment_verified_at'        => 'datetime',
         'payment_amount'             => 'decimal:2',
+        'state_id'                   => 'integer',
+        'district_id'                => 'integer',
+        'assembly_segment_id'        => 'integer',
+        'mandal_id'                  => 'integer',
+        'panchayat_id'               => 'integer',
     ];
+
+    // -------------------------------------------------------
+    // Canonical Hierarchy Relationships
+    // -------------------------------------------------------
+
+    public function stateRelation()
+    {
+        return $this->belongsTo(GeoState::class, 'state_id');
+    }
+
+    public function districtRelation()
+    {
+        return $this->belongsTo(GeoDistrict::class, 'district_id');
+    }
+
+    public function assemblySegmentRelation()
+    {
+        return $this->belongsTo(GeoAssemblySegment::class, 'assembly_segment_id');
+    }
+
+    public function mandalRelation()
+    {
+        return $this->belongsTo(GeoMandal::class, 'mandal_id');
+    }
+
+    public function panchayatRelation()
+    {
+        return $this->belongsTo(GeoPanchayat::class, 'panchayat_id');
+    }
+
+    public function volunteer()
+    {
+        return $this->hasOne(Volunteer::class, 'membership_id', 'membership_id');
+    }
 
     /**
      * Canonical single source of truth for identity verification.

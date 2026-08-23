@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Volunteer extends Authenticatable
 {
@@ -36,6 +38,7 @@ class Volunteer extends Authenticatable
         'status',
         'is_active',
         'cadre',
+        'cadre_level',
         'role',
         'designation',
         'locality',
@@ -45,6 +48,13 @@ class Volunteer extends Authenticatable
         'assembly_segment',
         'mandal',
         'grama_panchayat',
+        'state_id',
+        'district_id',
+        'assembly_segment_id',
+        'mandal_id',
+        'panchayat_id',
+        'geo_mapping_status',
+        'geo_mapping_notes',
         'volunteer_id',
         'volunteer_login_id',
     ];
@@ -59,18 +69,48 @@ class Volunteer extends Authenticatable
         'must_change_password' => 'boolean',
         'credentials_created_at' => 'datetime',
         'welcome_email_sent_at' => 'datetime',
+        'state_id' => 'integer',
+        'district_id' => 'integer',
+        'assembly_segment_id' => 'integer',
+        'mandal_id' => 'integer',
+        'panchayat_id' => 'integer',
     ];
 
     // -------------------------------------------------------
-    // Relationships
+    // Canonical Hierarchy Relationships
     // -------------------------------------------------------
 
-    public function membership()
+    public function stateRelation(): BelongsTo
+    {
+        return $this->belongsTo(GeoState::class, 'state_id');
+    }
+
+    public function districtRelation(): BelongsTo
+    {
+        return $this->belongsTo(GeoDistrict::class, 'district_id');
+    }
+
+    public function assemblySegmentRelation(): BelongsTo
+    {
+        return $this->belongsTo(GeoAssemblySegment::class, 'assembly_segment_id');
+    }
+
+    public function mandalRelation(): BelongsTo
+    {
+        return $this->belongsTo(GeoMandal::class, 'mandal_id');
+    }
+
+    public function panchayatRelation(): BelongsTo
+    {
+        return $this->belongsTo(GeoPanchayat::class, 'panchayat_id');
+    }
+
+    public function membership(): BelongsTo
     {
         return $this->belongsTo(Membership::class, 'membership_id', 'membership_id');
     }
 
-    public function events()
+    public function events(): HasMany
     {
         return $this->hasMany(VolunteerEvent::class, 'volunteer_id');
     }
@@ -148,31 +188,77 @@ class Volunteer extends Authenticatable
 
     public function getResolvedStateAttribute(): ?string
     {
-        return ($this->attributes['state'] ?? null) ?: $this->membership?->state;
+        return $this->stateRelation?->name ?: (($this->attributes['state'] ?? null) ?: $this->membership?->state);
     }
 
     public function getResolvedDistrictAttribute(): ?string
     {
-        return ($this->attributes['district'] ?? null) ?: $this->membership?->district;
+        return $this->districtRelation?->name ?: (($this->attributes['district'] ?? null) ?: $this->membership?->district);
     }
 
     public function getResolvedAssemblySegmentAttribute(): ?string
     {
-        return ($this->attributes['assembly_segment'] ?? null) ?: $this->membership?->assembly_segment;
+        return $this->assemblySegmentRelation?->name ?: (($this->attributes['assembly_segment'] ?? null) ?: $this->membership?->assembly_segment);
     }
 
     public function getResolvedMandalAttribute(): ?string
     {
-        return ($this->attributes['mandal'] ?? null) ?: $this->membership?->mandal;
+        return $this->mandalRelation?->name ?: (($this->attributes['mandal'] ?? null) ?: $this->membership?->mandal);
     }
 
     public function getResolvedGramaPanchayatAttribute(): ?string
     {
-        return ($this->attributes['grama_panchayat'] ?? null) ?: $this->membership?->grama_panchayat;
+        return $this->panchayatRelation?->name ?: (($this->attributes['grama_panchayat'] ?? null) ?: $this->membership?->grama_panchayat);
     }
 
     public function getCadreLabelAttribute(): string
     {
+        if (!empty($this->cadre_level)) {
+            return self::cadreLevelToPublicTitle($this->cadre_level);
+        }
         return $this->cadre ?: ($this->designation ?: 'Volunteer');
+    }
+
+    public static function cadreLevelToPublicTitle(?string $level): string
+    {
+        return match ($level) {
+            'national_president' => 'National President',
+            'state_president'    => 'State President',
+            'district_president' => 'District President',
+            'assembly_president' => 'Taluka President / Assembly Segment President',
+            'mandal_president'   => 'Mandal President',
+            'panchayat_president'=> 'Panchayat President',
+            'volunteer'          => 'Volunteer',
+            default              => ucfirst(str_replace('_', ' ', (string)$level ?: 'Volunteer')),
+        };
+    }
+
+    public function isVerifiedPresident(): bool
+    {
+        return $this->status === 'approved'
+            && ($this->is_active ?? true)
+            && !empty($this->cadre_level)
+            && in_array($this->cadre_level, [
+                'national_president',
+                'state_president',
+                'district_president',
+                'assembly_president',
+                'mandal_president',
+                'panchayat_president'
+            ], true)
+            && ($this->geo_mapping_status === 'verified');
+    }
+
+    public function getJurisdictionSummaryAttribute(): string
+    {
+        return match ($this->cadre_level) {
+            'national_president' => 'National / All India Scope',
+            'state_president'    => 'State: ' . ($this->resolved_state ?? 'Unassigned'),
+            'district_president' => 'District: ' . ($this->resolved_district ?? 'Unassigned'),
+            'assembly_president' => 'Assembly Segment: ' . ($this->resolved_assembly_segment ?? 'Unassigned'),
+            'mandal_president'   => 'Mandal: ' . ($this->resolved_mandal ?? 'Unassigned'),
+            'panchayat_president'=> 'Panchayat: ' . ($this->resolved_grama_panchayat ?? 'Unassigned'),
+            default              => $this->locality ?? 'General Volunteer',
+        };
     }
 }

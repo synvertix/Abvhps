@@ -120,22 +120,18 @@ Route::middleware('volunteer.auth')->group(function () {
     });
 });
 
-// Village President Dashboard Search and Compression Routing Engine Map Links Setup
-Route::get('/volunteer/dashboard/village', [VolunteerController::class, 'showVillageDashboard']);
+// 6-Tier President Dashboard Routes
+Route::get('/volunteer/dashboard/panchayat', [VolunteerController::class, 'showVillageDashboard'])->name('volunteer.dashboard.panchayat');
+Route::get('/volunteer/dashboard/village', [VolunteerController::class, 'showVillageDashboard'])->name('volunteer.dashboard.village');
 Route::post('/volunteer/dashboard/village/search-member', [VolunteerController::class, 'searchMember']);
 Route::post('/volunteer/dashboard/village/deliver-seva', [VolunteerController::class, 'deliverSeva']);
 
-// Mandal President Dashboard Core Mapping Link Routing Rule
-Route::get('/volunteer/dashboard/mandal', [VolunteerController::class, 'showMandalDashboard']);
-
-// Assembly Segment President Dashboard Core Mapping Link Routing Rule
-Route::get('/volunteer/dashboard/assembly', [VolunteerController::class, 'showAssemblyDashboard']);
-
-// District President Dashboard Core Mapping Link Routing Rule
-Route::get('/volunteer/dashboard/district', [VolunteerController::class, 'showDistrictDashboard']);
-
-// Global Master Dashboard Pipeline Mapping Link Routing Rule
-Route::get('/volunteer/dashboard/global', [VolunteerController::class, 'showGlobalDashboard']);
+Route::get('/volunteer/dashboard/mandal', [VolunteerController::class, 'showMandalDashboard'])->name('volunteer.dashboard.mandal');
+Route::get('/volunteer/dashboard/assembly', [VolunteerController::class, 'showAssemblyDashboard'])->name('volunteer.dashboard.assembly');
+Route::get('/volunteer/dashboard/district', [VolunteerController::class, 'showDistrictDashboard'])->name('volunteer.dashboard.district');
+Route::get('/volunteer/dashboard/state', [VolunteerController::class, 'showStateDashboard'])->name('volunteer.dashboard.state');
+Route::get('/volunteer/dashboard/national', [VolunteerController::class, 'showGlobalDashboard'])->name('volunteer.dashboard.national');
+Route::get('/volunteer/dashboard/global', [VolunteerController::class, 'showGlobalDashboard'])->name('volunteer.dashboard.global');
 
 // Village President Group Event Album Upload Route Link Setup
 Route::post('/volunteer/dashboard/village/upload-group-event', [VolunteerController::class, 'uploadGroupEvent']);
@@ -365,6 +361,12 @@ Route::get('/admin/membership-ledger', [App\Http\Controllers\MembershipControlle
     Route::post('/admin/volunteers/cadre/{id}', [VolunteerController::class, 'cadreUpdate'])->name('admin.volunteers.cadreUpdate')->middleware('auth:web');
     Route::post('/admin/volunteers/resend-credentials/{id}', [VolunteerController::class, 'resendCredentials'])->name('admin.volunteers.resendCredentials')->middleware('auth:web');
     Route::delete('/admin/volunteers/delete/{id}', [VolunteerController::class, 'deleteVolunteer'])->name('admin.volunteers.delete')->middleware('auth:web');
+
+    // 8c. Geographic Canonical Hierarchy & Review Desk
+    Route::get('/admin/geo/hierarchy', [VolunteerController::class, 'getGeoHierarchyAjax'])->name('admin.geo.hierarchy')->middleware('auth:web');
+    Route::get('/admin/geo-mapping-review', [\App\Http\Controllers\AdminGeoReviewController::class, 'index'])->name('admin.geo_review.index')->middleware('auth:web');
+    Route::post('/admin/geo-mapping-review/update/{type}/{id}', [\App\Http\Controllers\AdminGeoReviewController::class, 'updateMapping'])->name('admin.geo_review.update')->middleware('auth:web');
+    Route::post('/admin/geo-mapping-review/alias', [\App\Http\Controllers\AdminGeoReviewController::class, 'approveAlias'])->name('admin.geo_review.alias')->middleware('auth:web');
 
     // 8b. Volunteer Events Management (Central Admin)
     Route::get('/admin/volunteer-events', [\App\Http\Controllers\AdminVolunteerEventController::class, 'index'])->name('admin.volunteer_events.index')->middleware('auth:web');
