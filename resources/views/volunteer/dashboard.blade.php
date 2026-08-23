@@ -159,7 +159,7 @@
                 <div class="space-y-2">
                     <a href="{{ route('volunteer.events.index') }}"
                        class="w-full bg-brandOrange hover:bg-orange-600 text-white font-black text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-between">
-                        <span>🏆 My Events &amp; Service Activities</span>
+                        <span>🏆 Events &amp; Service Activities</span>
                         <span>&rarr;</span>
                     </a>
 

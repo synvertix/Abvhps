@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'My Events & Service Activities | ABVHPS Volunteer Portal')
+@section('title', 'Events & Service Activities | ABVHPS Volunteer Portal')
 
 @section('content')
 <div class="bg-gray-50 min-h-screen pb-16">
@@ -13,7 +13,7 @@
                     Volunteer Portal &bull; Seva Desk
                 </span>
                 <h1 class="text-2xl md:text-3xl font-black uppercase tracking-wide text-white">
-                    My Events &amp; Service Activities
+                    Events &amp; Service Activities
                 </h1>
                 <p class="text-xs text-yellow-200/90 font-medium mt-0.5">
                     Manage conducted seva programs, report beneficiaries, and organize upcoming events
