@@ -741,4 +741,86 @@ class DonationPaymentIntegrationTest extends TestCase
         $response->assertDontSee('absolute inset-y-0 left-0', false);
         $response->assertDontSee('preset-amount-button');
     }
+
+    // =========================================================================
+    // RAZORPAY CHECKOUT REGRESSION & CSP TESTS
+    // =========================================================================
+
+    public function test_donation_form_method_is_post_and_prevents_get_submission(): void
+    {
+        $response = $this->get('/donations');
+        $response->assertStatus(200);
+
+        // Form tag must declare method="POST" and preventDefault on submit
+        $response->assertSee('<form id="donation_form" method="POST" onsubmit="event.preventDefault(); handleDonationSubmit(event);"', false);
+
+        // Gateway radio options: Razorpay active/checked, Cashfree disabled
+        $response->assertSee('id="radio_razorpay" checked', false);
+        $response->assertSee('id="radio_cashfree" disabled', false);
+
+        // Razorpay SDK loaded
+        $response->assertSee('https://checkout.razorpay.com/v1/checkout.js', false);
+    }
+
+    public function test_donation_javascript_has_valid_try_catch_structure(): void
+    {
+        $response = $this->get('/donations');
+        $html = $response->getContent();
+
+        // Extract <script> content
+        preg_match('/<script>([\s\S]*?)<\/script>/', $html, $matches);
+        $this->assertNotEmpty($matches, 'Inline payment script tag must be present');
+
+        $script = $matches[1];
+
+        // Must contain handleDonationSubmit
+        $this->assertStringContainsString('async function handleDonationSubmit', $script);
+        $this->assertStringContainsString('new Razorpay(options)', $script);
+        $this->assertStringContainsString('rzp.open()', $script);
+
+        // Ensure no stray double closing braces before catch block
+        $this->assertStringNotContainsString("rzp.open();\n            }\n        } catch", $script);
+        $this->assertStringNotContainsString("rzp.open();\r\n            }\r\n        } catch", $script);
+
+        // Count balanced braces in handleDonationSubmit function body
+        $startPos = strpos($script, 'async function handleDonationSubmit');
+        $endPos = strpos($script, 'document.addEventListener', $startPos);
+        $funcBody = substr($script, $startPos, $endPos - $startPos);
+
+        $openBraces = substr_count($funcBody, '{');
+        $closeBraces = substr_count($funcBody, '}');
+        $this->assertEquals($openBraces, $closeBraces, "Braces must be perfectly balanced in handleDonationSubmit (found {$openBraces} open, {$closeBraces} close)");
+    }
+
+    public function test_csp_headers_permit_razorpay_cdn_and_checkout_origins(): void
+    {
+        $response = $this->get('/donations');
+        $response->assertStatus(200);
+
+        $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotEmpty($csp, 'Content-Security-Policy header must be present');
+
+        // script-src must permit Razorpay CDN, Checkout and API
+        $this->assertStringContainsString('https://cdn.razorpay.com', $csp);
+        $this->assertStringContainsString('https://checkout.razorpay.com', $csp);
+        $this->assertStringContainsString('https://api.razorpay.com', $csp);
+
+        // frame-src must permit Razorpay Checkout and API
+        $this->assertMatchesRegularExpression('/frame-src [^;]*https:\/\/checkout\.razorpay\.com/', $csp);
+        $this->assertMatchesRegularExpression('/frame-src [^;]*https:\/\/api\.razorpay\.com/', $csp);
+    }
+
+    public function test_no_razorpay_key_secret_rendered_in_html(): void
+    {
+        $response = $this->get('/donations');
+        $response->assertStatus(200);
+
+        $secret = config('services.razorpay.key_secret');
+        if ($secret && $secret !== 'your_razorpay_secret_here') {
+            $response->assertDontSee($secret, false);
+        }
+
+        // Must not contain secret key patterns
+        $response->assertDontSee('key_secret', false);
+    }
 }

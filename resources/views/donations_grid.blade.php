@@ -298,7 +298,7 @@
             </div>
 
             <!-- Form Content -->
-            <form id="donation_form" onsubmit="handleDonationSubmit(event)" class="p-6 sm:p-10 space-y-8">
+            <form id="donation_form" method="POST" onsubmit="event.preventDefault(); handleDonationSubmit(event);" class="p-6 sm:p-10 space-y-8">
                 @csrf
 
                 <!-- STEP 1: AMOUNT SELECTION -->
@@ -790,7 +790,6 @@
 
                 const rzp = new Razorpay(options);
                 rzp.open();
-            }
         } catch (error) {
             submitBtn.disabled = false;
             btnIcon.innerText = '🔒';
