@@ -132,6 +132,172 @@
                     </div>
                 </div>
 
+                <!-- Homepage Join / Membership Floating Strip Settings -->
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4 text-xs">
+                    <div class="border-b border-gray-100 pb-2">
+                        <h3 class="font-black text-sm text-gray-900 uppercase flex items-center gap-2">
+                            <span class="text-brandOrange">🤝</span> HOMEPAGE FLOATING JOIN &amp; MEMBERSHIP STRIP
+                        </h3>
+                        <p class="text-[11px] text-gray-500">Configure the overlapping floating strip between Vision/Mission and Statistics on the homepage.</p>
+                    </div>
+
+                    <!-- Section Enabled Toggle -->
+                    <div>
+                        <label class="block font-black text-gray-700 uppercase mb-1">Section Enabled *</label>
+                        <select name="homepage_join_enabled" class="w-full sm:w-64 border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                            <option value="1" {{ in_array($settings['homepage_join_enabled'] ?? '1', ['1', 'yes', true], true) ? 'selected' : '' }}>Yes (Enabled on Homepage)</option>
+                            <option value="0" {{ in_array($settings['homepage_join_enabled'] ?? '1', ['0', 'no', false], true) ? 'selected' : '' }}>No (Hidden from Homepage)</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-100">
+                        <!-- Left Side: Why Join -->
+                        <div class="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                            <h4 class="font-black text-xs text-brandGray uppercase tracking-wider">Left Side — Why Join ABVHPS?</h4>
+                            <div>
+                                <label class="block font-bold text-gray-700 uppercase mb-1 text-[11px]">Why Join Heading</label>
+                                <input type="text" name="homepage_join_why_heading" value="{{ old('homepage_join_why_heading', $settings['homepage_join_why_heading']) }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                            </div>
+                            <div>
+                                <label class="block font-bold text-gray-700 uppercase mb-1 text-[11px]">Why Join Description</label>
+                                <textarea name="homepage_join_why_text" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-medium text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">{{ old('homepage_join_why_text', $settings['homepage_join_why_text']) }}</textarea>
+                            </div>
+                        </div>
+
+                        <!-- Right Side: Membership CTA -->
+                        <div class="space-y-3 bg-orange-50/40 p-4 rounded-xl border border-orange-200">
+                            <h4 class="font-black text-xs text-brandOrange uppercase tracking-wider">Right Side — Membership CTA</h4>
+                            <div>
+                                <label class="block font-bold text-gray-700 uppercase mb-1 text-[11px]">Membership Heading</label>
+                                <input type="text" name="homepage_join_member_heading" value="{{ old('homepage_join_member_heading', $settings['homepage_join_member_heading']) }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                            </div>
+                            <div>
+                                <label class="block font-bold text-gray-700 uppercase mb-1 text-[11px]">Membership Description</label>
+                                <textarea name="homepage_join_member_text" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-medium text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">{{ old('homepage_join_member_text', $settings['homepage_join_member_text']) }}</textarea>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block font-bold text-gray-700 uppercase mb-1 text-[11px]">CTA Button Text</label>
+                                    <input type="text" name="homepage_join_cta_text" value="{{ old('homepage_join_cta_text', $settings['homepage_join_cta_text']) }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-gray-700 uppercase mb-1 text-[11px]">CTA Destination (Locked)</label>
+                                    <div class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono font-bold text-gray-600 truncate" title="{{ route('membership.form') }}">
+                                        {{ route('membership.form') }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Homepage Supporting Partners & Logo Manager -->
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-5 text-xs">
+                    <div class="border-b border-gray-100 pb-2 flex items-center justify-between">
+                        <div>
+                            <h3 class="font-black text-sm text-gray-900 uppercase flex items-center gap-2">
+                                <span class="text-brandOrange">🤝</span> SUPPORTING PARTNERS &amp; LOGO MANAGER
+                            </h3>
+                            <p class="text-[11px] text-gray-500">Manage the compact continuous supporting partners scrolling ticker and brand logos.</p>
+                        </div>
+                        <span class="bg-orange-50 text-brandOrange text-[10px] font-black px-2.5 py-1 rounded-full border border-orange-200 uppercase">Brand Ticker</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block font-black text-gray-700 uppercase mb-1">Section Enabled *</label>
+                            <select name="homepage_sponsors_enabled" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                                <option value="1" {{ in_array($settings['homepage_sponsors_enabled'] ?? '1', ['1', 'yes', true], true) ? 'selected' : '' }}>Yes (Enabled on Homepage)</option>
+                                <option value="0" {{ in_array($settings['homepage_sponsors_enabled'] ?? '1', ['0', 'no', false], true) ? 'selected' : '' }}>No (Hidden from Homepage)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-black text-gray-700 uppercase mb-1">Section Heading *</label>
+                            <input type="text" name="homepage_sponsors_heading" value="{{ old('homepage_sponsors_heading', $settings['homepage_sponsors_heading']) }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Current Supporting Partners List -->
+                    <div class="space-y-3 pt-2 border-t border-gray-100">
+                        <label class="block font-black text-gray-800 uppercase tracking-wider text-[11px]">Current Supporting Partners ({{ count($settings['supporting_partners'] ?? []) }})</label>
+
+                        <div class="space-y-3" id="partners-list-container">
+                            @foreach($settings['supporting_partners'] ?? [] as $partner)
+                                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 hover:border-orange-200 transition space-y-3">
+                                    <div class="flex items-center justify-between border-b border-gray-200 pb-2">
+                                        <span class="font-extrabold text-[11px] text-gray-700 uppercase tracking-wider">Partner #{{ $loop->iteration }}</span>
+                                        <label class="inline-flex items-center gap-1.5 text-[11px] text-red-600 font-bold cursor-pointer hover:text-red-700">
+                                            <input type="checkbox" name="remove_partner_ids[]" value="{{ $partner['id'] }}" class="rounded text-red-600 focus:ring-red-500">
+                                            <span>Remove Partner</span>
+                                        </label>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                                        <!-- Partner Name -->
+                                        <div class="md:col-span-5">
+                                            <label class="block font-bold text-gray-700 uppercase mb-1 text-[10px]">Partner Name *</label>
+                                            <input type="text" name="partners[{{ $partner['id'] }}][name]" value="{{ old('partners.'.$partner['id'].'.name', $partner['name']) }}" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                                        </div>
+
+                                        <!-- Partner Logo Preview & Upload -->
+                                        <div class="md:col-span-5 space-y-1.5">
+                                            <label class="block font-bold text-gray-700 uppercase text-[10px]">Logo (PNG, JPG, WEBP, Max 2MB)</label>
+                                            <input type="hidden" name="partners[{{ $partner['id'] }}][existing_logo_path]" value="{{ $partner['logo_path'] ?? '' }}">
+
+                                            <div class="flex items-center gap-3">
+                                                @if(!empty($partner['logo_path']))
+                                                    <div class="h-8 max-w-[80px] bg-white p-1 rounded border border-gray-300 flex items-center justify-center shrink-0">
+                                                        <img src="{{ asset('storage/' . $partner['logo_path']) }}" alt="Logo" class="max-h-full max-w-full object-contain">
+                                                    </div>
+                                                    <label class="inline-flex items-center gap-1 text-[10px] text-red-600 font-bold cursor-pointer hover:underline">
+                                                        <input type="checkbox" name="remove_logo_ids[]" value="{{ $partner['id'] }}" class="rounded text-red-600 focus:ring-red-500">
+                                                        <span>Remove Logo</span>
+                                                    </label>
+                                                @else
+                                                    <span class="text-[10px] text-gray-400 font-medium italic">No logo (Text-only)</span>
+                                                @endif
+                                            </div>
+
+                                            <div>
+                                                <input type="file" name="partner_logos[{{ $partner['id'] }}]" accept="image/png,image/jpeg,image/jpg,image/webp" class="block w-full text-[10px] text-gray-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-bold file:bg-orange-50 file:text-brandOrange hover:file:bg-orange-100">
+                                            </div>
+                                        </div>
+
+                                        <!-- Display Order -->
+                                        <div class="md:col-span-2">
+                                            <label class="block font-bold text-gray-700 uppercase mb-1 text-[10px]">Order</label>
+                                            <input type="number" name="partners[{{ $partner['id'] }}][order]" value="{{ old('partners.'.$partner['id'].'.order', $partner['order'] ?? $loop->iteration) }}" min="1" class="w-full border border-gray-300 rounded-lg px-2.5 py-2 text-xs font-bold text-gray-800 text-center focus:ring-2 focus:ring-brandOrange outline-none">
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <!-- Add New Supporting Partner Block -->
+                    <div class="bg-orange-50/50 p-4 rounded-xl border border-orange-200 space-y-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-brandOrange font-black text-sm">+</span>
+                            <h4 class="font-extrabold text-xs text-brandOrange uppercase tracking-wider">Add New Supporting Partner</h4>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                            <div class="md:col-span-5">
+                                <label class="block font-bold text-gray-700 uppercase mb-1 text-[10px]">New Partner Name</label>
+                                <input type="text" name="new_partner_name" placeholder="e.g. Acme Foundation" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none bg-white">
+                            </div>
+                            <div class="md:col-span-5">
+                                <label class="block font-bold text-gray-700 uppercase mb-1 text-[10px]">New Partner Logo (Optional)</label>
+                                <input type="file" name="new_partner_logo" accept="image/png,image/jpeg,image/jpg,image/webp" class="block w-full text-[10px] text-gray-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-bold file:bg-white file:text-brandOrange hover:file:bg-orange-100">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block font-bold text-gray-700 uppercase mb-1 text-[10px]">Order</label>
+                                <input type="number" name="new_partner_order" value="{{ count($settings['supporting_partners'] ?? []) + 1 }}" min="1" class="w-full border border-gray-300 rounded-lg px-2.5 py-2 text-xs font-bold text-gray-800 text-center focus:ring-2 focus:ring-brandOrange outline-none bg-white">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- SEO & Footer Descriptions -->
                 <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4 text-xs">
                     <div class="border-b border-gray-100 pb-2">

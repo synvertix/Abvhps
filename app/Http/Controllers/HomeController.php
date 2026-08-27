@@ -33,16 +33,81 @@ class HomeController extends Controller
             ->take(3)
             ->get();
 
-        // Static counts representing live database connection in future updates
-        $liveCounts = [
-            'donors' => 960,
-            'members' => 9000,
-            'volunteers' => 852,
-            'years' => 10
+        // Real database statistics with 10-minute cache for fast public homepage rendering
+        $liveCounts = \Illuminate\Support\Facades\Cache::remember('homepage_public_stats', 600, function () {
+            // 1. Qualifying completed registered members
+            $membersCount = \App\Models\Membership::completed()->count();
+
+            // 2. Qualifying approved and active volunteers
+            $volunteersCount = \App\Models\Volunteer::approved()->count();
+
+            // 3. Qualifying verified distinct donors (excluding failed/pending)
+            $donorsCount = (int) (\App\Models\Donation::paid()
+                ->selectRaw('COUNT(DISTINCT COALESCE(NULLIF(phone, ""), NULLIF(email, ""), name)) as count')
+                ->value('count') ?? 0);
+
+            // 4. Years of Service: Check configurable setting or calculate from organization registration year
+            $configuredYears = \App\Models\SiteSetting::get('years_of_service');
+            if ($configuredYears !== null && is_numeric($configuredYears)) {
+                $yearsOfService = (int)$configuredYears;
+            } else {
+                $foundedYear = (int)\App\Models\SiteSetting::get('organization_founded_year', 2023);
+                $yearsOfService = max(1, (int)date('Y') - $foundedYear);
+            }
+
+            return [
+                'donors'     => $donorsCount,
+                'members'    => $membersCount,
+                'volunteers' => $volunteersCount,
+                'years'      => $yearsOfService,
+            ];
+        });
+
+        // Homepage Floating Join / Membership Strip Settings
+        $rawJoinEnabled = \App\Models\SiteSetting::get('homepage_join_enabled', '1');
+        $memberHeading = \App\Models\SiteSetting::get('homepage_join_member_heading')
+            ?: \App\Models\SiteSetting::get('homepage_join_vol_heading', 'BECOME AN ABVHPS MEMBER');
+        if ($memberHeading === 'JOIN AS A VOLUNTEER') {
+            $memberHeading = 'BECOME AN ABVHPS MEMBER';
+        }
+
+        $memberText = \App\Models\SiteSetting::get('homepage_join_member_text')
+            ?: \App\Models\SiteSetting::get('homepage_join_vol_text', 'Join our growing community and participate in Dharma, Seva, cultural and social initiatives through ABVHPS.');
+        if (str_contains($memberText, 'volunteer') || str_contains($memberText, 'Volunteer')) {
+            $memberText = 'Join our growing community and participate in Dharma, Seva, cultural and social initiatives through ABVHPS.';
+        }
+
+        $ctaText = \App\Models\SiteSetting::get('homepage_join_cta_text', 'BECOME A MEMBER');
+        if ($ctaText === 'JOIN AS VOLUNTEER') {
+            $ctaText = 'BECOME A MEMBER';
+        }
+
+        $joinStrip = [
+            'enabled'            => in_array($rawJoinEnabled, ['1', 'yes', true, 1], true),
+            'why_heading'        => \App\Models\SiteSetting::get('homepage_join_why_heading', 'WHY JOIN ABVHPS?'),
+            'why_text'           => \App\Models\SiteSetting::get('homepage_join_why_text', 'Become part of a service-oriented community committed to Dharma, social service, cultural awareness and organized community service.'),
+            'member_heading'     => $memberHeading,
+            'member_text'        => $memberText,
+            'cta_text'           => $ctaText,
+            'cta_url'            => route('membership.form'),
+            'secondary_cta_text' => \App\Models\SiteSetting::get('homepage_join_secondary_cta_text'),
+            'secondary_cta_url'  => \App\Models\SiteSetting::get('homepage_join_secondary_cta_url'),
+        ];
+
+        // Supporting Partners / Sponsors Scrolling Marquee Settings
+        $rawSponsorsEnabled = \App\Models\SiteSetting::get('homepage_sponsors_enabled', '1');
+        $sponsorsHeading = \App\Models\SiteSetting::get('homepage_sponsors_heading', 'OUR SUPPORTING PARTNERS');
+        $supportingPartners = \App\Models\SiteSetting::getSupportingPartners();
+
+        $sponsorsStrip = [
+            'enabled'  => in_array($rawSponsorsEnabled, ['1', 'yes', true, 1], true),
+            'heading'  => $sponsorsHeading,
+            'partners' => $supportingPartners,
+            'sponsors' => array_column($supportingPartners, 'name'),
         ];
 
         // Pass all database items to the view folder
-        return view('home', compact('sliders', 'projects', 'fundraising', 'fundraisingCampaigns', 'liveCounts', 'publishedExams'));
+        return view('home', compact('sliders', 'projects', 'fundraising', 'fundraisingCampaigns', 'liveCounts', 'publishedExams', 'joinStrip', 'sponsorsStrip'));
     }
 
     // 2. Public Website About Page Node

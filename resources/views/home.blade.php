@@ -127,7 +127,7 @@
 </section>
 
 <!-- 3. Vision, Mission & Goal Section -->
-<section class="py-12 px-4 bg-gray-50 border-t border-b border-gray-200">
+<section class="py-12 px-4 bg-gray-50 border-t border-gray-200 relative @if(!empty($joinStrip['enabled'])) pb-16 sm:pb-20 @endif">
     <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="bg-white p-6 rounded shadow-sm text-center">
             <div class="text-2xl mb-2">👁️</div>
@@ -145,58 +145,92 @@
             <p class="text-xs text-gray-600 leading-relaxed">Protect and promote Hindu traditions, rituals, and festivals for future generations, fostering brotherhood and collaboration globally.</p>
         </div>
     </div>
-</section>
 
-<!-- 4. Our Core Service Projects (Managed from Admin Panel / our_supports) -->
-<section class="py-16 px-4 bg-gray-50 border-t border-gray-100">
-    <div class="max-w-6xl mx-auto">
-        <div class="text-center mb-12">
-            <span class="text-xs font-bold text-brandOrange uppercase tracking-wider block">Comprehensive Seva Modules</span>
-            <h2 class="text-2xl sm:text-3xl font-extrabold text-brandGray uppercase tracking-tight mt-1">Our Core Service Projects</h2>
-            <p class="text-xs text-gray-500 mt-1">Every project can be customized, added, or modified using the secure Admin Login Panel</p>
-            <div class="h-1 w-16 bg-brandOrange mx-auto mt-3"></div>
-        </div>
-
-        @if(isset($projects) && count($projects) > 0)
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                @foreach($projects as $project)
-                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition flex flex-col justify-between h-full">
-                        <div>
-                            <!-- Project Image Component Frame -->
-                            <div class="mb-4 aspect-[16/10] w-full bg-gray-50 rounded-lg overflow-hidden border border-gray-100 flex items-center justify-center">
-                                @if($project->image_path)
-                                    <img src="{{ asset('storage/' . $project->image_path) }}" class="w-full h-full object-cover" alt="{{ $project->name }}">
-                                @else
-                                    <span class="text-3xl">🌱</span>
-                                @endif
-                            </div>
-                            
-                            <!-- Project Official Title Name -->
-                            <h3 class="font-bold text-base text-brandGray uppercase tracking-wide mb-2">
-                                {{ $project->name }}
-                            </h3>
-                            
-                            <!-- Controlled 3-Line Text Description Fragment -->
-                            <p class="text-xs text-gray-500 leading-relaxed mb-4 line-clamp-3 font-medium">
-                                {{ strip_tags($project->short_info) }}
-                            </p>
+    @if(!empty($joinStrip['enabled']))
+    <!-- Floating Upper Layer: Join / Volunteer Strip -->
+    <div class="max-w-6xl mx-auto px-0 sm:px-4 -mb-24 sm:-mb-28 mt-8 sm:mt-10 relative z-20" id="homepage-floating-join-strip">
+        <div class="bg-white rounded-2xl p-6 sm:p-8 md:p-10 border border-orange-100 shadow-xl shadow-orange-950/10 transition hover:shadow-2xl">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
+                <!-- Left Side: Why Join ABVHPS? (7 cols) -->
+                <div class="lg:col-span-7 space-y-3">
+                    <div class="inline-flex items-center gap-1.5 text-[11px] font-black text-brandOrange uppercase tracking-wider bg-orange-50 px-2.5 py-1 rounded-full border border-orange-200/60">
+                        <span>🕉️</span>
+                        <span>Seva Community</span>
+                    </div>
+                    <h3 class="text-xl sm:text-2xl font-extrabold text-brandGray uppercase tracking-tight">
+                        {{ $joinStrip['why_heading'] ?? 'WHY JOIN ABVHPS?' }}
+                    </h3>
+                    <p class="text-xs sm:text-sm text-gray-600 leading-relaxed font-medium">
+                        {{ $joinStrip['why_text'] ?? 'Become part of a service-oriented community committed to Dharma, social service, cultural awareness and organized voluntary service.' }}
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 text-[11px] font-bold text-gray-700">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-brandOrange text-xs font-black">✓</span>
+                            <span>Serve the Community</span>
                         </div>
-                        
-                        <!-- Explore Single Core Detail Action Button Fixed Link -->
-                        <div class="pt-2 border-t border-gray-50">
-                            <a href="{{ route('public.project.show', $project->id) }}" class="text-xs font-black text-brandOrange hover:text-brandGray uppercase tracking-wider inline-flex items-center gap-1 transition">
-                                Explore Project <span class="text-sm">→</span>
-                            </a>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-brandOrange text-xs font-black">✓</span>
+                            <span>Support Dharma Activities</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-brandOrange text-xs font-black">✓</span>
+                            <span>Participate in Seva Programs</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-brandOrange text-xs font-black">✓</span>
+                            <span>Build Local Leadership</span>
                         </div>
                     </div>
-                @endforeach
+                </div>
+
+                <!-- Right Side: Membership CTA (5 cols) -->
+                <div class="lg:col-span-5 bg-gradient-to-br from-orange-50/70 to-amber-50/40 p-5 sm:p-6 rounded-xl border border-orange-200/70 flex flex-col justify-between space-y-4">
+                    <div>
+                        <span class="text-[10px] font-black text-brandOrange uppercase tracking-wider block">ABVHPS MEMBERSHIP</span>
+                        <h4 class="text-base sm:text-lg font-extrabold text-gray-900 uppercase tracking-tight mt-0.5">
+                            {{ $joinStrip['member_heading'] ?? 'BECOME AN ABVHPS MEMBER' }}
+                        </h4>
+                        <p class="text-xs text-gray-600 leading-relaxed mt-1.5 font-medium">
+                            {{ $joinStrip['member_text'] ?? 'Join our growing community and participate in Dharma, Seva, cultural and social initiatives through ABVHPS.' }}
+                        </p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-1">
+                        <a href="{{ route('membership.form') }}" class="inline-flex items-center justify-center gap-2 bg-brandOrange hover:bg-orange-600 text-white text-xs font-black py-3 px-5 rounded-xl shadow-md uppercase tracking-wider transition group">
+                            <span>{{ $joinStrip['cta_text'] ?? 'BECOME A MEMBER' }}</span>
+                            <span class="group-hover:translate-x-1 transition-transform">→</span>
+                        </a>
+                        @if(!empty($joinStrip['secondary_cta_text']) && !empty($joinStrip['secondary_cta_url']))
+                            <a href="{{ $joinStrip['secondary_cta_url'] }}" class="inline-flex items-center justify-center text-xs font-bold text-gray-700 hover:text-brandOrange py-2 px-3 transition uppercase tracking-wider">
+                                {{ $joinStrip['secondary_cta_text'] }}
+                            </a>
+                        @endif
+                    </div>
+                </div>
             </div>
-        @else
-            <div class="text-center py-10 bg-white rounded-xl border border-gray-200 p-8 max-w-md mx-auto">
-                <span class="text-3xl block mb-2">🌱</span>
-                <p class="text-xs text-gray-500 font-medium">Core service project records will appear here.</p>
-            </div>
-        @endif
+        </div>
+    </div>
+    @endif
+</section>
+
+<!-- 4. Live Counter Statistics Strip (Transition Band) -->
+<section class="w-full bg-brandOrange text-white @if(!empty($joinStrip['enabled'])) pt-20 sm:pt-24 pb-10 @else py-10 @endif px-4 shadow-inner relative z-10" id="homepage-statistics-strip">
+    <div class="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center">
+        <div class="p-2">
+            <span class="block text-3xl sm:text-4xl font-extrabold mb-1 tracking-tight">{{ number_format($liveCounts['donors']) }}</span>
+            <span class="text-[11px] sm:text-xs uppercase font-bold tracking-wider text-orange-100">Verified Donors</span>
+        </div>
+        <div class="p-2">
+            <span class="block text-3xl sm:text-4xl font-extrabold mb-1 tracking-tight">{{ number_format($liveCounts['members']) }}</span>
+            <span class="text-[11px] sm:text-xs uppercase font-bold tracking-wider text-orange-100">Registered Members</span>
+        </div>
+        <div class="p-2">
+            <span class="block text-3xl sm:text-4xl font-extrabold mb-1 tracking-tight">{{ number_format($liveCounts['volunteers']) }}</span>
+            <span class="text-[11px] sm:text-xs uppercase font-bold tracking-wider text-orange-100">Total Volunteers</span>
+        </div>
+        <div class="p-2">
+            <span class="block text-3xl sm:text-4xl font-extrabold mb-1 tracking-tight">{{ number_format($liveCounts['years']) }}</span>
+            <span class="text-[11px] sm:text-xs uppercase font-bold tracking-wider text-orange-100">Years of Service</span>
+        </div>
     </div>
 </section>
 
@@ -300,27 +334,159 @@
     </div>
 </section>
 
-<!-- 6. Live Counter Statistics Section -->
-<section class="bg-brandOrange text-white py-12 px-4">
-    <div class="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-        <div>
-            <span class="block text-4xl font-extrabold mb-1">{{ $liveCounts['donors'] }}+</span>
-            <span class="text-xs uppercase font-medium tracking-wider">Active Donors</span>
+<!-- 6. Our Core Service Projects (Managed from Admin Panel / our_supports) -->
+<section class="py-16 px-4 bg-gray-50 border-t border-gray-100">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-12">
+            <span class="text-xs font-bold text-brandOrange uppercase tracking-wider block">Comprehensive Seva Modules</span>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-brandGray uppercase tracking-tight mt-1">Our Core Service Projects</h2>
+            <p class="text-xs text-gray-500 mt-1">Every project can be customized, added, or modified using the secure Admin Login Panel</p>
+            <div class="h-1 w-16 bg-brandOrange mx-auto mt-3"></div>
         </div>
-        <div>
-            <span class="block text-4xl font-extrabold mb-1">{{ $liveCounts['members'] }}+</span>
-            <span class="text-xs uppercase font-medium tracking-wider">Registered Members</span>
-        </div>
-        <div>
-            <span class="block text-4xl font-extrabold mb-1">{{ $liveCounts['volunteers'] }}+</span>
-            <span class="text-xs uppercase font-medium tracking-wider">Total Volunteers</span>
-        </div>
-        <div>
-            <span class="block text-4xl font-extrabold mb-1">{{ $liveCounts['years'] }}</span>
-            <span class="text-xs uppercase font-medium tracking-wider">Years of Service</span>
-        </div>
+
+        @if(isset($projects) && count($projects) > 0)
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                @foreach($projects as $project)
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition flex flex-col justify-between h-full">
+                        <div>
+                            <!-- Project Image Component Frame -->
+                            <div class="mb-4 aspect-[16/10] w-full bg-gray-50 rounded-lg overflow-hidden border border-gray-100 flex items-center justify-center">
+                                @if($project->image_path)
+                                    <img src="{{ asset('storage/' . $project->image_path) }}" class="w-full h-full object-cover" alt="{{ $project->name }}">
+                                @else
+                                    <span class="text-3xl">🌱</span>
+                                @endif
+                            </div>
+
+                            <!-- Project Official Title Name -->
+                            <h3 class="font-bold text-base text-brandGray uppercase tracking-wide mb-2">
+                                {{ $project->name }}
+                            </h3>
+
+                            <!-- Controlled 3-Line Text Description Fragment -->
+                            <p class="text-xs text-gray-500 leading-relaxed mb-4 line-clamp-3 font-medium">
+                                {{ strip_tags($project->short_info) }}
+                            </p>
+                        </div>
+
+                        <!-- Explore Single Core Detail Action Button Fixed Link -->
+                        <div class="pt-2 border-t border-gray-50">
+                            <a href="{{ route('public.project.show', $project->id) }}" class="text-xs font-black text-brandOrange hover:text-brandGray uppercase tracking-wider inline-flex items-center gap-1 transition">
+                                Explore Project <span class="text-sm">→</span>
+                            </a>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @else
+            <div class="text-center py-10 bg-white rounded-xl border border-gray-200 p-8 max-w-md mx-auto">
+                <span class="text-3xl block mb-2">🌱</span>
+                <p class="text-xs text-gray-500 font-medium">Core service project records will appear here.</p>
+            </div>
+        @endif
     </div>
 </section>
+
+<!-- 7. Our Supporting Partners / Sponsors Compact Scrolling Marquee Strip -->
+@if(!empty($sponsorsStrip['enabled']) && (!empty($sponsorsStrip['partners']) || !empty($sponsorsStrip['sponsors'])))
+@php
+    $partnersList = !empty($sponsorsStrip['partners']) ? $sponsorsStrip['partners'] : array_map(fn($n) => ['name' => $n, 'logo_path' => null], $sponsorsStrip['sponsors']);
+@endphp
+<section class="py-5 sm:py-6 bg-gradient-to-b from-slate-50 via-orange-50/20 to-slate-50 border-t border-b border-slate-200/80 overflow-hidden relative" id="homepage-sponsors-strip" aria-label="{{ $sponsorsStrip['heading'] ?? 'Our Supporting Partners' }}">
+    <div class="max-w-6xl mx-auto px-4 mb-3 text-center">
+        <span class="text-[9.5px] font-extrabold text-brandOrange uppercase tracking-widest block mb-0.5">Collaborations &amp; Trust</span>
+        <h2 class="text-base sm:text-lg font-extrabold text-slate-800 uppercase tracking-tight">
+            {{ $sponsorsStrip['heading'] ?? 'OUR SUPPORTING PARTNERS' }}
+        </h2>
+    </div>
+
+    <!-- Scrolling Marquee Container -->
+    <div class="relative w-full overflow-hidden marquee-wrapper group py-1">
+        <!-- Subtle edge gradients for smooth fade in/out on desktop -->
+        <div class="hidden sm:block absolute left-0 top-0 bottom-0 w-16 sm:w-20 bg-gradient-to-r from-slate-50 via-slate-50/80 to-transparent z-10 pointer-events-none"></div>
+        <div class="hidden sm:block absolute right-0 top-0 bottom-0 w-16 sm:w-20 bg-gradient-to-l from-slate-50 via-slate-50/80 to-transparent z-10 pointer-events-none"></div>
+
+        <div class="flex marquee-track group-hover:[animation-play-state:paused] items-center">
+            <!-- Group A (Primary) -->
+            <div class="flex items-center gap-6 sm:gap-8 shrink-0 marquee-group pr-6 sm:pr-8">
+                @foreach($partnersList as $partner)
+                    <div class="inline-flex items-center gap-2.5 px-4 py-2 sm:px-5 sm:py-2.5 bg-white/90 hover:bg-white border border-slate-200/90 hover:border-orange-300 rounded-xl shadow-2xs hover:shadow-xs hover:-translate-y-0.5 transition duration-200 group/card shrink-0">
+                        @if(!empty($partner['logo_path']))
+                            <div class="w-12 sm:w-14 h-7 sm:h-8 flex items-center justify-center shrink-0">
+                                <img src="{{ asset('storage/' . $partner['logo_path']) }}" alt="{{ $partner['name'] }} logo" class="max-h-full max-w-full object-contain shrink-0 opacity-85 group-hover/card:opacity-100 transition-opacity">
+                            </div>
+                        @endif
+                        <span class="font-bold text-xs sm:text-sm tracking-wide text-gray-800 group-hover/card:text-brandOrange whitespace-nowrap">
+                            {{ $partner['name'] }}
+                        </span>
+                    </div>
+                @endforeach
+            </div>
+
+            <!-- Group B (Duplicate - aria-hidden for screen readers) -->
+            <div class="flex items-center gap-6 sm:gap-8 shrink-0 marquee-group pr-6 sm:pr-8" aria-hidden="true">
+                @foreach($partnersList as $partner)
+                    <div class="inline-flex items-center gap-2.5 px-4 py-2 sm:px-5 sm:py-2.5 bg-white/90 hover:bg-white border border-slate-200/90 hover:border-orange-300 rounded-xl shadow-2xs hover:shadow-xs hover:-translate-y-0.5 transition duration-200 group/card shrink-0">
+                        @if(!empty($partner['logo_path']))
+                            <div class="w-12 sm:w-14 h-7 sm:h-8 flex items-center justify-center shrink-0">
+                                <img src="{{ asset('storage/' . $partner['logo_path']) }}" alt="{{ $partner['name'] }} logo" class="max-h-full max-w-full object-contain shrink-0 opacity-85 group-hover/card:opacity-100 transition-opacity">
+                            </div>
+                        @endif
+                        <span class="font-bold text-xs sm:text-sm tracking-wide text-gray-800 group-hover/card:text-brandOrange whitespace-nowrap">
+                            {{ $partner['name'] }}
+                        </span>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .marquee-track {
+            display: flex;
+            width: max-content;
+            animation: partnerMarquee 34s linear infinite;
+        }
+
+        @keyframes partnerMarquee {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+
+        @keyframes sponsorMarquee {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .marquee-track {
+                animation: none !important;
+                width: 100% !important;
+                flex-wrap: wrap !important;
+                justify-content: center !important;
+                gap: 0.75rem !important;
+            }
+            .marquee-group[aria-hidden="true"] {
+                display: none !important;
+            }
+            .marquee-group {
+                flex-wrap: wrap !important;
+                justify-content: center !important;
+                padding-right: 0 !important;
+                gap: 0.75rem !important;
+            }
+        }
+    </style>
+</section>
+@endif
 
 <!-- JavaScript logic to animate the slider images -->
 <script>

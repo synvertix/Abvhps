@@ -154,10 +154,12 @@ class MembershipMailTest extends TestCase
         $this->assertTrue((bool) $member->is_completed);
         $this->assertNull($member->welcome_email_sent_at); // Not marked as successfully sent
 
-        // Claim record was deleted/released on failure so retry is possible
+        // Log record has status failed so retry is possible via claim()
         $log = NotificationLog::where('event_type', 'membership_welcome')
             ->where('notifiable_id', $member->id)
             ->first();
-        $this->assertNull($log);
+        $this->assertNotNull($log);
+        $this->assertEquals('failed', $log->status);
+        $this->assertNull($log->sent_at);
     }
 }

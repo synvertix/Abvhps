@@ -26,7 +26,7 @@ Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'ind
 use App\Http\Controllers\MembershipController;
 
 // 1. Membership OTP Verification Process Routes
-Route::get('/membership', [MembershipController::class, 'showOtpForm']);
+Route::get('/membership', [MembershipController::class, 'showOtpForm'])->name('membership.form');
 Route::post('/membership/send-otp', [MembershipController::class, 'sendOtp']);
 Route::post('/membership/verify-otp', [MembershipController::class, 'verifyOtp']);
 

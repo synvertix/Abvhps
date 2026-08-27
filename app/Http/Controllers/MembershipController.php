@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class MembershipController extends Controller
 {
@@ -1511,52 +1512,63 @@ class MembershipController extends Controller
             return;
         }
 
-        // Canonical idempotency claim via NotificationLog unique index
-        try {
-            $claim = \App\Models\NotificationLog::create([
-                'event_type'      => 'membership_welcome',
-                'notifiable_type' => Membership::class,
-                'notifiable_id'   => $member->id,
-                'channel'         => 'email',
-                'recipient_email' => $member->email,
-                'subject'         => '🙏 Welcome to ABVHPS — Your Membership ID: ' . ($member->membership_id ?? 'MEMBER'),
-                'message'         => 'Membership welcome confirmation sent for ID: ' . ($member->membership_id ?? 'MEMBER'),
-                'status'          => 'pending',
-                'sent_at'         => null,
-            ]);
-        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
-            // Already claimed or sent
-            return;
-        } catch (\Throwable $e) {
-            Log::error("MembershipWelcomeMail: Claim creation failed for member {$member->id}: " . $e->getMessage());
+        // Canonical idempotency claim via NotificationLog::claim
+        $idempotencyKey = "membership_welcome:{$member->id}";
+        $subject = 'Welcome to ABVHPS – Your Membership ID ' . ($member->membership_id ?? 'MEMBER');
+        $message = 'Membership welcome confirmation sent for ID: ' . ($member->membership_id ?? 'MEMBER');
+
+        $claim = \App\Models\NotificationLog::claim(
+            $idempotencyKey,
+            'membership_welcome',
+            Membership::class,
+            $member->id,
+            'email',
+            $member->email,
+            $member->phone,
+            $subject,
+            $message
+        );
+
+        if (!$claim) {
+            // Already claimed or successfully sent by another process
             return;
         }
 
+        $formattedId = $member->membership_id ? implode(' ', str_split($member->membership_id, 4)) : 'MEMBER';
+        $memberName = $member->identity_verified_name ?? $member->full_name;
+
         $memberData = [
-            'full_name'     => $member->identity_verified_name ?? $member->full_name,
-            'membership_id' => $member->membership_id,
-            'formatted_id'  => implode(' ', str_split($member->membership_id ?? '', 4)),
-            'status'        => 'Active / Completed',
+            'member_name'       => $memberName,
+            'full_name'         => $memberName,
+            'membership_id'     => $member->membership_id,
+            'formatted_id'      => $formattedId,
+            'registration_date' => $member->created_at ? Carbon::parse($member->created_at)->timezone('Asia/Kolkata')->format('d-M-Y') : now('Asia/Kolkata')->format('d-M-Y'),
+            'status'            => 'Active',
+            'phone'             => $member->phone,
+            'blood_group'       => $member->blood_group ?? 'N/A',
+            'locality'          => $member->grama_panchayat ?? ($member->mandal ?? ($member->district ?? 'N/A')),
+            'district'          => $member->district ?? 'N/A',
+            'state'             => $member->state ?? 'India',
+            'photo_path'        => $member->photo_path,
         ];
 
+        $pdfContent = null;
         try {
-            \Illuminate\Support\Facades\Mail::to($member->email)->send(new \App\Mail\MembershipWelcomeMail($memberData));
+            $pdf = Pdf::loadView('pdf.membership_card_pdf', compact('memberData'));
+            $pdfContent = $pdf->output();
+        } catch (\Throwable $e) {
+            Log::warning('Membership PDF generation fallback: ' . $e->getMessage());
+        }
 
-            $status = config('mail.default') === 'log' ? 'logged' : 'sent';
-            $claim->update([
-                'status'  => $status,
-                'sent_at' => now(),
-            ]);
+        try {
+            \Illuminate\Support\Facades\Mail::to($member->email)->send(new \App\Mail\MembershipWelcomeMail($memberData, $pdfContent));
+            $claim->markSent($subject, $message);
 
             $member->welcome_email_sent_at = now();
             $member->save();
         } catch (\Throwable $e) {
             Log::error("MembershipWelcomeMail: Send failed for member {$member->id}: " . $e->getMessage());
-            try {
-                $claim->delete();
-            } catch (\Throwable $delEx) {
-                // ignore
-            }
+            $claim->markFailed($e->getMessage());
         }
     }
 

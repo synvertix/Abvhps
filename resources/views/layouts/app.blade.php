@@ -161,6 +161,12 @@
                 <a href="{{ route('donations.grid') }}" class="hover:text-brandOrange transition">FUNDRAISE</a>
                 <a href="{{ route('public.blogs') }}" class="nav-link font-semibold text-gray-700 hover:text-orange-500 transition">Blogs</a>
                 <a href="{{ route('public.contact') }}" class="hover:text-brandOrange transition">Contact</a>
+                @if(!auth()->guard('web')->check() && !auth()->guard('volunteer')->check())
+                <button type="button" onclick="openLoginModal()" class="cursor-pointer font-bold text-gray-700 hover:text-brandOrange transition uppercase inline-flex items-center gap-1.5 py-1.5 px-3 rounded-lg border border-gray-200 hover:border-brandOrange bg-white shadow-xs">
+                    <svg class="w-4 h-4 text-brandOrange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+                    <span>LOGIN</span>
+                </button>
+                @endif
                 <a href="{{ route('donations.grid') }}" class="bg-brandOrange text-white px-4 py-2 rounded shadow hover:bg-opacity-90 transition">Donation</a>
             </div>
 
@@ -423,8 +429,16 @@
                 <span class="truncate">CONTACT US</span>
             </a>
 
-            <!-- CTA: MAKE A DONATION -->
-            <div class="pt-2 pb-1">
+            <!-- CTA: LOGIN & MAKE A DONATION -->
+            <div class="pt-2 pb-1 space-y-2">
+                @if(!auth()->guard('web')->check() && !auth()->guard('volunteer')->check())
+                <button type="button"
+                   onclick="togglePublicMobileMenu(false); openLoginModal();"
+                   class="w-full bg-[#111c2e] hover:bg-black text-brandOrange border border-brandOrange/50 font-black text-center py-2.5 min-h-[48px] rounded-xl shadow-md transition flex items-center justify-center gap-2 uppercase tracking-wider text-xs cursor-pointer">
+                    <svg class="w-4 h-4 text-brandOrange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+                    <span>LOGIN PORTALS</span>
+                </button>
+                @endif
                 <a href="{{ route('donations.grid') }}" 
                    onclick="togglePublicMobileMenu(false)" 
                    class="w-full bg-brandOrange hover:bg-orange-600 text-white font-black text-center py-2.5 min-h-[48px] rounded-xl shadow-md transition flex items-center justify-center uppercase tracking-wider text-xs border border-orange-400/50 cursor-pointer">
@@ -507,9 +521,92 @@
     <!-- Floating WhatsApp Quick Connect Button -->
     <x-whatsapp-floating-button />
 
+    @if(!auth()->guard('web')->check() && !auth()->guard('volunteer')->check())
+    <!-- Login Portals Selection Modal -->
+    <div id="login-portal-modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 bg-black/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="login-modal-title">
+        <div class="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200" onclick="event.stopPropagation()">
+            <!-- Modal Header -->
+            <div class="bg-[#0b1426] text-white px-6 py-5 flex items-center justify-between border-b-2 border-brandOrange">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-white p-0.5 border border-brandOrange flex items-center justify-center overflow-hidden shrink-0">
+                        <img src="{{ asset('images/logo_abvhps.png') }}" class="w-full h-full object-contain" alt="ABVHPS">
+                    </div>
+                    <div>
+                        <h2 id="login-modal-title" class="text-base sm:text-lg font-extrabold uppercase tracking-wide text-white">Select Login Portal</h2>
+                        <p class="text-[11px] text-orange-200">Akhanda Bharatha Viswa Hindu Parirakshana Samiti</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeLoginModal()" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-brandOrange text-white flex items-center justify-center transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-brandOrange" aria-label="Close modal">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Portals Grid -->
+            <div class="p-6 sm:p-8 bg-gray-50">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <!-- Card 1: Admin Portal -->
+                    <div class="bg-white rounded-xl p-6 border-2 border-gray-200 hover:border-brandOrange hover:shadow-lg transition flex flex-col justify-between group">
+                        <div>
+                            <div class="w-12 h-12 rounded-xl bg-orange-100 text-brandOrange flex items-center justify-center mb-4 group-hover:scale-105 transition">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                            </div>
+                            <h3 class="text-base font-extrabold text-brandGray group-hover:text-brandOrange transition uppercase tracking-wide mb-1">Admin Login</h3>
+                            <p class="text-xs text-gray-600 leading-relaxed mb-6">Authorized ABVHPS Administration access.</p>
+                        </div>
+                        <a href="{{ route('login') }}" class="w-full inline-flex items-center justify-center gap-2 bg-brandGray hover:bg-black text-white text-xs font-black py-3 px-4 rounded-xl shadow-sm uppercase tracking-wider transition">
+                            <span>LOGIN AS ADMIN</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- Card 2: Volunteer Portal -->
+                    <div class="bg-white rounded-xl p-6 border-2 border-orange-200 bg-gradient-to-b from-white to-orange-50/40 hover:border-brandOrange hover:shadow-lg transition flex flex-col justify-between group">
+                        <div>
+                            <div class="w-12 h-12 rounded-xl bg-orange-500 text-white flex items-center justify-center mb-4 group-hover:scale-105 transition shadow-sm">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            </div>
+                            <h3 class="text-base font-extrabold text-brandOrange uppercase tracking-wide mb-1">Volunteer Login</h3>
+                            <p class="text-xs text-gray-600 leading-relaxed mb-6">Approved ABVHPS Volunteers and Presidents.</p>
+                        </div>
+                        <a href="{{ route('volunteer.login') }}" class="w-full inline-flex items-center justify-center gap-2 bg-brandOrange hover:bg-orange-600 text-white text-xs font-black py-3 px-4 rounded-xl shadow-md uppercase tracking-wider transition">
+                            <span>LOGIN AS VOLUNTEER</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-3.5 bg-white border-t border-gray-200 text-center">
+                <span class="text-[11px] text-gray-500">Need help accessing your portal? Contact <strong class="text-gray-700 font-bold">info@abvhps.org</strong></span>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <script>
         (function() {
             var lastFocusedPublicElem = null;
+
+            @if(!auth()->guard('web')->check() && !auth()->guard('volunteer')->check())
+            window.openLoginModal = function() {
+                var modal = document.getElementById('login-portal-modal');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                    document.body.style.overflow = 'hidden';
+                }
+            };
+
+            window.closeLoginModal = function() {
+                var modal = document.getElementById('login-portal-modal');
+                if (modal) {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                    document.body.style.overflow = '';
+                }
+            };
+            @endif
 
             window.togglePublicMobileMenu = function(forceState) {
                 var drawer = document.getElementById('public-mobile-drawer');
@@ -574,6 +671,17 @@
                     if (drawer && !drawer.classList.contains('-translate-x-full')) {
                         window.togglePublicMobileMenu(false);
                     }
+                    var modal = document.getElementById('login-portal-modal');
+                    if (modal && !modal.classList.contains('hidden')) {
+                        if (typeof window.closeLoginModal === 'function') window.closeLoginModal();
+                    }
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                var modal = document.getElementById('login-portal-modal');
+                if (modal && e.target === modal) {
+                    if (typeof window.closeLoginModal === 'function') window.closeLoginModal();
                 }
             });
         })();

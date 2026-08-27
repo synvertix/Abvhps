@@ -18,6 +18,10 @@ use App\Models\GeoPanchayat;
 use App\Services\VolunteerCadreScopeService;
 use App\Services\GeoHierarchyBackfillService;
 use App\Mail\VolunteerWelcomeMail;
+use App\Mail\VolunteerApplicationReceivedMail;
+use App\Mail\VolunteerPendingStatusMail;
+use App\Mail\VolunteerRejectedStatusMail;
+use App\Mail\VolunteerAssignmentUpdatedMail;
 use Illuminate\Support\Facades\Auth;
 
 class VolunteerController extends Controller
@@ -134,7 +138,7 @@ class VolunteerController extends Controller
         $member = DB::table('memberships')->where('membership_id', $membershipId)->first();
 
         // Inserting pristine form details into volunteers table with dynamic pending status configuration
-        DB::table('volunteers')->insert([
+        $volunteerInsertId = DB::table('volunteers')->insertGetId([
             'membership_id' => $membershipId,
             'phone' => $phone,
             'qualification' => $request->input('qualification'),
@@ -162,6 +166,39 @@ class VolunteerController extends Controller
             'created_at' => now(),
             'updated_at' => now()
         ]);
+
+        $volunteerEmail = $request->input('email');
+        if (!empty($volunteerEmail) && filter_var($volunteerEmail, FILTER_VALIDATE_EMAIL)) {
+            $volunteerData = [
+                'volunteer_name'   => $member->full_name ?? 'Volunteer',
+                'full_name'        => $member->full_name ?? 'Volunteer',
+                'membership_id'    => $membershipId,
+                'application_date' => now('Asia/Kolkata')->format('d-M-Y'),
+            ];
+
+            $idempotencyKey = "volunteer_application_received:{$volunteerInsertId}";
+            $claim = \App\Models\NotificationLog::claim(
+                $idempotencyKey,
+                'volunteer_application_received',
+                \App\Models\Volunteer::class,
+                (int)$volunteerInsertId,
+                'email',
+                $volunteerEmail,
+                $phone,
+                'ABVHPS Volunteer Application Received',
+                'Volunteer application received confirmation sent for ID: ' . $membershipId
+            );
+
+            if ($claim) {
+                try {
+                    Mail::to($volunteerEmail)->send(new VolunteerApplicationReceivedMail($volunteerData));
+                    $claim->markSent('ABVHPS Volunteer Application Received', 'Volunteer application received confirmation sent for ID: ' . $membershipId);
+                } catch (\Throwable $e) {
+                    Log::error('Volunteer application received email error: ' . $e->getMessage());
+                    $claim->markFailed($e->getMessage());
+                }
+            }
+        }
 
         return redirect('/volunteer/success-notice');
     }
@@ -592,7 +629,7 @@ class VolunteerController extends Controller
                     }
                     $assignedLoginId = $assignedVolunteerId;
 
-                    $plainPassword = 'password';
+                    $plainPassword = \Illuminate\Support\Str::password(10, true, true, false, false);
                     $encryptedPassword = \Illuminate\Support\Facades\Hash::make($plainPassword);
 
                     DB::table('volunteers')->where('id', $id)->update(array_merge([
@@ -606,7 +643,6 @@ class VolunteerController extends Controller
                         'password' => $encryptedPassword,
                         'must_change_password' => true,
                         'credentials_created_at' => now(),
-                        'welcome_email_sent_at' => now(),
                         'updated_at' => now()
                     ], $syncLocation));
                 } else {
@@ -628,34 +664,22 @@ class VolunteerController extends Controller
             });
 
             if ($isFirstTimeApproval && $assignedVolunteerId && $plainPassword) {
-                $mailOathMetrics = [
-                    'recipient_email' => $volunteer->email,
-                    'assigned_role' => $cadreLevel,
-                    'assigned_designation' => $cadreTitle,
-                    'assigned_locality' => $locality,
-                    'formatted_volunteer_id' => $assignedVolunteerId,
-                    'clean_volunteer_id' => $assignedVolunteerId,
-                    'volunteer_login_id' => $assignedLoginId,
-                    'generated_password' => $plainPassword,
-                    'status' => 'credentials_oath_email_dispatched'
-                ];
-                session(['last_volunteer_email_log' => $mailOathMetrics]);
-
                 // Compile PDF ID Card & Dispatch Welcome Email to Volunteer
                 $volunteerData = [
-                    'full_name' => $member->full_name ?? 'Volunteer',
-                    'membership_id' => $volunteer->membership_id,
-                    'volunteer_id' => $assignedVolunteerId,
-                    'volunteer_login_id' => $assignedLoginId,
-                    'formatted_volunteer_id' => $assignedVolunteerId,
-                    'clean_volunteer_id' => $assignedVolunteerId,
-                    'email' => $volunteer->email,
-                    'phone' => $volunteer->phone,
-                    'plainPassword' => $plainPassword,
-                    'designation' => $cadreTitle,
-                    'locality' => $locality,
-                    'blood_group' => $member->blood_group ?? 'N/A',
-                    'photo_path' => $member->photo_path ?? null,
+                    'volunteer_name'       => $member->full_name ?? 'Volunteer',
+                    'full_name'            => $member->full_name ?? 'Volunteer',
+                    'membership_id'        => $volunteer->membership_id,
+                    'volunteer_id'         => $assignedVolunteerId,
+                    'volunteer_login_id'   => $assignedLoginId,
+                    'temporary_password'   => $plainPassword,
+                    'plainPassword'        => $plainPassword,
+                    'volunteer_login_url'  => route('volunteer.login'),
+                    'cadre_title'          => $cadreTitle,
+                    'designation'          => $cadreTitle,
+                    'jurisdiction'         => $locality,
+                    'locality'             => $locality,
+                    'blood_group'          => $member->blood_group ?? 'N/A',
+                    'photo_path'           => $member->photo_path ?? null,
                 ];
 
                 $pdfContent = null;
@@ -666,28 +690,87 @@ class VolunteerController extends Controller
                     Log::warning('Volunteer PDF generation fallback: ' . $e->getMessage());
                 }
 
-                $mailStatus = config('mail.default') === 'log' ? 'logged' : 'sent';
-                try {
-                    Mail::to($volunteer->email)->send(new VolunteerWelcomeMail($volunteerData, $pdfContent));
-                } catch (\Throwable $e) {
-                    Log::error('Volunteer welcome email dispatch error: ' . $e->getMessage());
-                    $mailStatus = 'failed';
-                }
+                $idempotencyKey = "volunteer_welcome:{$id}";
+                $claim = \App\Models\NotificationLog::claim(
+                    $idempotencyKey,
+                    'volunteer_welcome',
+                    \App\Models\Volunteer::class,
+                    $id,
+                    'email',
+                    $volunteer->email,
+                    $volunteer->phone,
+                    'Welcome to ABVHPS Volunteer Service – Volunteer ID ' . $assignedVolunteerId,
+                    'Volunteer welcome credentials dispatched for ID: ' . $assignedVolunteerId
+                );
 
-                // Log notification
-                \App\Models\NotificationLog::create([
-                    'event_type' => 'volunteer_welcome',
-                    'notifiable_type' => \App\Models\Volunteer::class,
-                    'notifiable_id' => $id,
-                    'channel' => 'email',
-                    'recipient' => $volunteer->email,
-                    'status' => $mailStatus,
-                    'metadata' => [
-                        'volunteer_login_id' => $assignedLoginId,
-                        'official_id' => $assignedVolunteerId,
-                    ],
-                    'sent_at' => now(),
-                ]);
+                if ($claim) {
+                    try {
+                        Mail::to($volunteer->email)->send(new VolunteerWelcomeMail($volunteerData, $pdfContent));
+                        $claim->markSent('Welcome to ABVHPS Volunteer Service – Volunteer ID ' . $assignedVolunteerId, 'Volunteer welcome credentials dispatched for ID: ' . $assignedVolunteerId);
+                        DB::table('volunteers')->where('id', $id)->update(['welcome_email_sent_at' => now()]);
+                    } catch (\Throwable $e) {
+                        Log::error('Volunteer welcome email dispatch error: ' . $e->getMessage());
+                        $claim->markFailed($e->getMessage());
+                    }
+                }
+            } elseif (!$isFirstTimeApproval && $volunteer->email && filter_var($volunteer->email, FILTER_VALIDATE_EMAIL)) {
+                // Check if assignment actually changed before sending notification
+                $oldAssignment = [
+                    'cadre_level'         => (string)($volunteer->cadre_level ?? 'volunteer'),
+                    'state_id'            => (string)($volunteer->state_id ?? ''),
+                    'district_id'         => (string)($volunteer->district_id ?? ''),
+                    'assembly_segment_id' => (string)($volunteer->assembly_segment_id ?? ''),
+                    'mandal_id'           => (string)($volunteer->mandal_id ?? ''),
+                    'panchayat_id'        => (string)($volunteer->panchayat_id ?? ''),
+                ];
+                $newAssignment = [
+                    'cadre_level'         => (string)($cadreLevel ?? 'volunteer'),
+                    'state_id'            => (string)($stateId ?? ''),
+                    'district_id'         => (string)($districtId ?? ''),
+                    'assembly_segment_id' => (string)($assemblyId ?? ''),
+                    'mandal_id'           => (string)($mandalId ?? ''),
+                    'panchayat_id'        => (string)($panchayatId ?? ''),
+                ];
+
+                if ($oldAssignment !== $newAssignment) {
+                    // Cadre/Jurisdiction Reassignment Email (NO temporary password)
+                    $volunteerData = [
+                        'volunteer_name'       => $member->full_name ?? ($volunteer->full_name ?? 'Volunteer'),
+                        'full_name'            => $member->full_name ?? ($volunteer->full_name ?? 'Volunteer'),
+                        'membership_id'        => $volunteer->membership_id,
+                        'volunteer_id'         => $assignedVolunteerId,
+                        'volunteer_login_id'   => $assignedLoginId,
+                        'volunteer_login_url'  => route('volunteer.login'),
+                        'cadre_title'          => $cadreTitle,
+                        'jurisdiction'         => $locality,
+                        'effective_date'       => now('Asia/Kolkata')->format('d-M-Y'),
+                    ];
+
+                    $assignmentHash = md5(implode('|', $newAssignment));
+                    $idempotencyKey = "volunteer_assignment_updated:{$id}:{$assignmentHash}";
+
+                    $claim = \App\Models\NotificationLog::claim(
+                        $idempotencyKey,
+                        'volunteer_assignment_updated',
+                        \App\Models\Volunteer::class,
+                        $id,
+                        'email',
+                        $volunteer->email,
+                        $volunteer->phone,
+                        'ABVHPS Volunteer Assignment Updated – Volunteer ID ' . $assignedVolunteerId,
+                        'Volunteer assignment update notification sent for ID: ' . $assignedVolunteerId
+                    );
+
+                    if ($claim) {
+                        try {
+                            Mail::to($volunteer->email)->send(new VolunteerAssignmentUpdatedMail($volunteerData));
+                            $claim->markSent('ABVHPS Volunteer Assignment Updated – Volunteer ID ' . $assignedVolunteerId, 'Volunteer assignment update notification sent for ID: ' . $assignedVolunteerId);
+                        } catch (\Throwable $e) {
+                            Log::error('Volunteer assignment updated email error: ' . $e->getMessage());
+                            $claim->markFailed($e->getMessage());
+                        }
+                    }
+                }
             }
 
             \App\Services\AuditLogger::log($isFirstTimeApproval ? 'VOLUNTEER_APPROVED' : 'VOLUNTEER_CADRE_UPDATED', 'Volunteer', (string)$assignedVolunteerId, [
@@ -705,12 +788,74 @@ class VolunteerController extends Controller
                 ->with('success', 'Volunteer status verified & approved successfully as ' . $cadreTitle . ' (Login ID #' . $assignedLoginId . ')!');
         }
 
+        $oldStatus = $volunteer->status;
+
         // Processing Rejected or Pending states
         DB::table('volunteers')->where('id', $id)->update([
             'status' => $mappedStatus,
             'is_active' => ($mappedStatus === 'approved'),
             'updated_at' => now()
         ]);
+
+        $member = DB::table('memberships')->where('membership_id', $volunteer->membership_id)->first();
+        $volunteerEmail = $volunteer->email;
+
+        if (!empty($volunteerEmail) && filter_var($volunteerEmail, FILTER_VALIDATE_EMAIL)) {
+            $volunteerData = [
+                'volunteer_name'    => $member->full_name ?? ($volunteer->full_name ?? 'Volunteer'),
+                'full_name'         => $member->full_name ?? ($volunteer->full_name ?? 'Volunteer'),
+                'membership_id'     => $volunteer->membership_id,
+                'status_updated_at' => now('Asia/Kolkata')->format('d-M-Y'),
+            ];
+
+            if ($mappedStatus === 'pending' && $oldStatus !== 'pending') {
+                $transitionKey = "volunteer_pending:{$id}:" . md5("{$oldStatus}_to_pending_" . ($volunteer->updated_at ?? ''));
+                $claim = \App\Models\NotificationLog::claim(
+                    $transitionKey,
+                    'volunteer_status_pending',
+                    \App\Models\Volunteer::class,
+                    $id,
+                    'email',
+                    $volunteerEmail,
+                    $volunteer->phone,
+                    'ABVHPS Volunteer Application Status Update – Pending Review',
+                    'Volunteer pending status notice sent for membership: ' . $volunteer->membership_id
+                );
+
+                if ($claim) {
+                    try {
+                        Mail::to($volunteerEmail)->send(new VolunteerPendingStatusMail($volunteerData));
+                        $claim->markSent('ABVHPS Volunteer Application Status Update – Pending Review', 'Volunteer pending status notice sent for membership: ' . $volunteer->membership_id);
+                    } catch (\Throwable $e) {
+                        Log::error('Volunteer pending status email error: ' . $e->getMessage());
+                        $claim->markFailed($e->getMessage());
+                    }
+                }
+            } elseif ($mappedStatus === 'rejected' && $oldStatus !== 'rejected') {
+                $transitionKey = "volunteer_rejected:{$id}:" . md5("{$oldStatus}_to_rejected_" . ($volunteer->updated_at ?? ''));
+                $claim = \App\Models\NotificationLog::claim(
+                    $transitionKey,
+                    'volunteer_status_rejected',
+                    \App\Models\Volunteer::class,
+                    $id,
+                    'email',
+                    $volunteerEmail,
+                    $volunteer->phone,
+                    'ABVHPS Volunteer Application Status Update',
+                    'Volunteer rejection notice sent for membership: ' . $volunteer->membership_id
+                );
+
+                if ($claim) {
+                    try {
+                        Mail::to($volunteerEmail)->send(new VolunteerRejectedStatusMail($volunteerData));
+                        $claim->markSent('ABVHPS Volunteer Application Status Update', 'Volunteer rejection notice sent for membership: ' . $volunteer->membership_id);
+                    } catch (\Throwable $e) {
+                        Log::error('Volunteer rejected status email error: ' . $e->getMessage());
+                        $claim->markFailed($e->getMessage());
+                    }
+                }
+            }
+        }
 
         \App\Services\AuditLogger::log($mappedStatus === 'rejected' ? 'VOLUNTEER_REJECTED' : 'VOLUNTEER_PENDING', 'Volunteer', (string)$volunteer->id, [
             'status' => $mappedStatus
@@ -722,92 +867,96 @@ class VolunteerController extends Controller
     }
 
     /**
-     * Admin action: Resend or Reset Volunteer Credentials.
+     * Admin Resend Login Credentials Workflow
      */
-     public function resendCredentials($id)
-     {
-         $volunteer = DB::table('volunteers')->where('id', $id)->first();
-         if (!$volunteer || $volunteer->status !== 'approved') {
-             return redirect()->back()->with('error', 'Only approved volunteers can receive login credentials.');
-         }
+    public function resendCredentials($id)
+    {
+        $volunteer = DB::table('volunteers')->where('id', $id)->first();
+        if (!$volunteer || $volunteer->status !== 'approved') {
+            return redirect()->back()->with('error', 'Only approved volunteers can receive login credentials.');
+        }
 
-         $member = DB::table('memberships')->where('membership_id', $volunteer->membership_id)->first();
+        $member = DB::table('memberships')->where('membership_id', $volunteer->membership_id)->first();
 
-         // Ensure 6-digit official Volunteer ID exists
-         $officialId = $volunteer->volunteer_id;
-         if (!$officialId || !preg_match('/^[0-9]{6}$/', trim($officialId))) {
-             $officialId = self::generateNextVolunteerId();
-         }
-         $loginId = $officialId;
+        // Ensure 6-digit official Volunteer ID exists
+        $officialId = $volunteer->volunteer_id;
+        if (!$officialId || !preg_match('/^[0-9]{6}$/', trim($officialId))) {
+            $officialId = self::generateNextVolunteerId();
+        }
+        $loginId = $officialId;
 
-          // Generate fresh default password
-          $plainPassword = 'password';
-          $encryptedPassword = \Illuminate\Support\Facades\Hash::make($plainPassword);
+        // Generate fresh cryptographically secure random temporary password
+        $plainPassword = \Illuminate\Support\Str::password(10, true, true, false, false);
+        $encryptedPassword = \Illuminate\Support\Facades\Hash::make($plainPassword);
 
-         DB::table('volunteers')->where('id', $id)->update([
-             'volunteer_login_id' => $loginId,
-             'volunteer_id' => $officialId,
-             'password' => $encryptedPassword,
-             'must_change_password' => true,
-             'credentials_created_at' => now(),
-             'welcome_email_sent_at' => now(),
-             'updated_at' => now()
-         ]);
+        DB::table('volunteers')->where('id', $id)->update([
+            'volunteer_login_id' => $loginId,
+            'volunteer_id' => $officialId,
+            'password' => $encryptedPassword,
+            'must_change_password' => true,
+            'credentials_created_at' => now(),
+            'updated_at' => now()
+        ]);
 
-         \App\Services\AuditLogger::log('VOLUNTEER_CREDENTIALS_RESET', 'Volunteer', (string)$officialId, [
-             'volunteer_id' => $officialId,
-             'email' => $volunteer->email
-         ]);
+        \App\Services\AuditLogger::log('VOLUNTEER_CREDENTIALS_RESET', 'Volunteer', (string)$officialId, [
+            'volunteer_id' => $officialId,
+            'email' => $volunteer->email
+        ]);
 
-         $volunteerData = [
-             'full_name' => $member->full_name ?? 'Volunteer',
-             'membership_id' => $volunteer->membership_id,
-             'volunteer_id' => $officialId,
-             'volunteer_login_id' => $loginId,
-             'formatted_volunteer_id' => $officialId,
-             'clean_volunteer_id' => $officialId,
-             'email' => $volunteer->email,
-             'phone' => $volunteer->phone,
-             'plainPassword' => $plainPassword,
-             'designation' => $volunteer->cadre ?? ($volunteer->designation ?? 'Volunteer'),
-             'locality' => $volunteer->locality ?? 'HQ',
-             'blood_group' => $member->blood_group ?? 'N/A',
-             'photo_path' => $member->photo_path ?? null,
-         ];
+        $volunteerData = [
+            'volunteer_name'       => $member->full_name ?? 'Volunteer',
+            'full_name'            => $member->full_name ?? 'Volunteer',
+            'membership_id'        => $volunteer->membership_id,
+            'volunteer_id'         => $officialId,
+            'volunteer_login_id'   => $loginId,
+            'temporary_password'   => $plainPassword,
+            'plainPassword'        => $plainPassword,
+            'volunteer_login_url'  => route('volunteer.login'),
+            'cadre_title'          => $volunteer->cadre ?? ($volunteer->designation ?? 'Volunteer'),
+            'designation'          => $volunteer->cadre ?? ($volunteer->designation ?? 'Volunteer'),
+            'jurisdiction'         => $volunteer->locality ?? 'HQ',
+            'locality'             => $volunteer->locality ?? 'HQ',
+            'blood_group'          => $member->blood_group ?? 'N/A',
+            'photo_path'           => $member->photo_path ?? null,
+        ];
 
-         $pdfContent = null;
-         try {
-             $pdf = Pdf::loadView('pdf.volunteer_card_pdf', compact('volunteerData'));
-             $pdfContent = $pdf->output();
-         } catch (\Throwable $e) {
-             Log::warning('Volunteer PDF generation fallback: ' . $e->getMessage());
-         }
+        $pdfContent = null;
+        try {
+            $pdf = Pdf::loadView('pdf.volunteer_card_pdf', compact('volunteerData'));
+            $pdfContent = $pdf->output();
+        } catch (\Throwable $e) {
+            Log::warning('Volunteer PDF generation fallback: ' . $e->getMessage());
+        }
 
-         $mailStatus = config('mail.default') === 'log' ? 'logged' : 'sent';
-         try {
-             Mail::to($volunteer->email)->send(new VolunteerWelcomeMail($volunteerData, $pdfContent));
-         } catch (\Throwable $e) {
-             Log::error('Volunteer resend email error: ' . $e->getMessage());
-             $mailStatus = 'failed';
-         }
+        $idempotencyKey = "volunteer_welcome_resend:{$volunteer->id}:" . now()->timestamp;
+        $claim = \App\Models\NotificationLog::claim(
+            $idempotencyKey,
+            'volunteer_welcome_resend',
+            \App\Models\Volunteer::class,
+            $volunteer->id,
+            'email',
+            $volunteer->email,
+            $volunteer->phone,
+            'Welcome to ABVHPS Volunteer Service – Volunteer ID ' . $officialId,
+            'Volunteer credentials resent for ID: ' . $officialId
+        );
 
-         \App\Models\NotificationLog::create([
-             'event_type' => 'volunteer_welcome_resend',
-             'notifiable_type' => \App\Models\Volunteer::class,
-             'notifiable_id' => $volunteer->id,
-             'channel' => 'email',
-             'recipient' => $volunteer->email,
-             'status' => $mailStatus,
-             'metadata' => [
-                 'volunteer_id' => $officialId,
-                 'volunteer_login_id' => $loginId,
-             ],
-             'sent_at' => now(),
-         ]);
+        $mailStatus = 'failed';
+        if ($claim) {
+            try {
+                Mail::to($volunteer->email)->send(new VolunteerWelcomeMail($volunteerData, $pdfContent));
+                $mailStatus = config('mail.default') === 'log' ? 'logged' : 'sent';
+                $claim->markSent('Welcome to ABVHPS Volunteer Service – Volunteer ID ' . $officialId, 'Volunteer credentials resent for ID: ' . $officialId);
+                DB::table('volunteers')->where('id', $id)->update(['welcome_email_sent_at' => now()]);
+            } catch (\Throwable $e) {
+                Log::error('Volunteer resend email error: ' . $e->getMessage());
+                $claim->markFailed($e->getMessage());
+            }
+        }
 
-         $statusMsg = $mailStatus === 'logged' ? ' (Written to storage/logs/laravel.log)' : '';
-         return redirect()->back()->with('success', "Login credentials for Volunteer #{$officialId} reset and welcome email {$mailStatus}{$statusMsg}.");
-     }
+        $statusMsg = $mailStatus === 'logged' ? ' (Written to storage/logs/laravel.log)' : '';
+        return redirect()->back()->with('success', "Login credentials for Volunteer #{$officialId} reset and welcome email {$mailStatus}{$statusMsg}.");
+    }
 
     /**
      * Generate the next official unique 6-digit numeric Volunteer ID (e.g. 100001, 100002, ...).
