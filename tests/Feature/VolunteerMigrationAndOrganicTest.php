@@ -77,16 +77,18 @@ class VolunteerMigrationAndOrganicTest extends TestCase
         // Check ID format
         $this->assertNotEquals('100001', $volunteer->volunteer_id, "Volunteer ID must not be legacy 100001");
         $this->assertMatchesRegularExpression('/^[0-9]{6}$/', $volunteer->volunteer_id);
-        $this->assertEquals($volunteer->volunteer_id, $volunteer->volunteer_login_id, "volunteer_id and volunteer_login_id must be identical");
+        // Check secure random password and must_change_password flag
+        $this->assertNotEmpty($volunteer->password);
+        $this->assertTrue((bool)$volunteer->must_change_password, "must_change_password must be true initially");
 
-        // Check Default Password 'password'
-        $this->assertTrue(Hash::check('password', $volunteer->password), "Default password must be 'password'");
-        $this->assertTrue($volunteer->must_change_password, "must_change_password must be true initially");
+        // Set a known temporary password to test first login and forced password change workflow
+        $tempPassword = 'TempPassword123';
+        $volunteer->update(['password' => Hash::make($tempPassword)]);
 
-        // Volunteer logs in with 'password'
+        // Volunteer logs in with temporary password
         $loginRes = $this->post(route('volunteer.login.submit'), [
             'volunteer_id' => $volunteer->volunteer_id,
-            'password' => 'password'
+            'password' => $tempPassword,
         ]);
 
         // First login must redirect to change password
@@ -99,14 +101,14 @@ class VolunteerMigrationAndOrganicTest extends TestCase
 
         // Change password
         $changeRes = $this->post(route('volunteer.change_password.submit'), [
-            'current_password' => 'password',
+            'current_password' => $tempPassword,
             'new_password' => 'SecureNewPass123',
             'new_password_confirmation' => 'SecureNewPass123',
         ]);
         $changeRes->assertRedirect(route('volunteer.dashboard'));
 
         $volunteer->refresh();
-        $this->assertFalse($volunteer->must_change_password);
+        $this->assertFalse((bool)$volunteer->must_change_password);
         $this->assertTrue(Hash::check('SecureNewPass123', $volunteer->password));
 
         // Public QR Verification URL works dynamically

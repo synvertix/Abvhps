@@ -6,6 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Queue\SerializesModels;
 
 class MembershipWelcomeMail extends Mailable
@@ -13,13 +14,15 @@ class MembershipWelcomeMail extends Mailable
     use Queueable, SerializesModels;
 
     public array $memberData;
+    protected ?string $pdfContent;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(array $memberData)
+    public function __construct(array $memberData, ?string $pdfContent = null)
     {
         $this->memberData = $memberData;
+        $this->pdfContent = $pdfContent;
     }
 
     /**
@@ -27,10 +30,10 @@ class MembershipWelcomeMail extends Mailable
      */
     public function envelope(): Envelope
     {
-        $id = $this->memberData['formatted_id'] ?? ($this->memberData['membership_id'] ?? 'MEMBER');
+        $id = $this->memberData['membership_id'] ?? ($this->memberData['formatted_id'] ?? 'MEMBER');
 
         return new Envelope(
-            subject: "🙏 Welcome to ABVHPS — Your Membership ID: {$id}",
+            subject: "Welcome to ABVHPS – Your Membership ID {$id}",
         );
     }
 
@@ -54,6 +57,17 @@ class MembershipWelcomeMail extends Mailable
      */
     public function attachments(): array
     {
-        return [];
+        $attachments = [];
+
+        if (!empty($this->pdfContent)) {
+            $id = $this->memberData['membership_id'] ?? ($this->memberData['formatted_id'] ?? 'MEMBER');
+            $cleanId = str_replace(' ', '', $id);
+            $attachments[] = Attachment::fromData(
+                fn () => $this->pdfContent,
+                'ABVHPS_Membership_ID_' . $cleanId . '.pdf'
+            )->withMime('application/pdf');
+        }
+
+        return $attachments;
     }
 }

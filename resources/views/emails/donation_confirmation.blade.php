@@ -2,95 +2,92 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ABVHPS Donation Confirmation & Receipt</title>
+    <title>
+        @if(!empty($donationData['fundraiser_name']))
+            Thank You for Supporting {{ $donationData['fundraiser_name'] }} – ABVHPS Receipt {{ $donationData['receipt_number'] ?? '' }}
+        @else
+            Thank You for Your Donation to ABVHPS – Receipt {{ $donationData['receipt_number'] ?? '' }}
+        @endif
+    </title>
 </head>
-<body style="font-family: Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 24px; color: #374151;">
-    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 24px; color: #374151;">
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb; padding: 28px;">
         
-        <!-- Header -->
-        <div style="background-color: #FF6600; padding: 24px; text-align: center; color: #ffffff;">
-            <h1 style="margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">
-                Akhanda Bharatha Viswa Hindu Parirakshana Samiti
-            </h1>
-            <p style="margin: 6px 0 0 0; font-size: 12px; font-weight: 600; color: #fff3eb; text-transform: uppercase;">
-                Official Sacred Contribution Confirmation
-            </p>
-        </div>
+        <p style="font-size: 15px; font-weight: bold; color: #111827; margin-top: 0;">
+            Namaste {{ $donationData['donor_name'] ?? 'Devotee' }},
+        </p>
 
-        <!-- Body Content -->
-        <div style="padding: 24px 28px;">
-            <p style="font-size: 15px; font-weight: bold; color: #111827; margin-top: 0;">
-                Namaste {{ $donation->name }},
-            </p>
-            
-            <p style="font-size: 13px; line-height: 1.6; color: #4b5563;">
-                Thank you with all our hearts for your generous and holy contribution towards ABVHPS Sanatana Dharma preservation initiatives and community seva projects.
+        @if(!empty($donationData['fundraiser_name']))
+            <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+                Thank you for supporting the ABVHPS fundraiser:
             </p>
 
-            <!-- Details Table -->
-            <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px;">
-                <tr style="background-color: #fff7ed;">
-                    <td style="padding: 10px 14px; border: 1px solid #fed7aa; font-weight: bold; color: #9a3412;">Receipt Number:</td>
-                    <td style="padding: 10px 14px; border: 1px solid #fed7aa; font-family: monospace; font-weight: bold; color: #ea580c;">{{ $donation->receipt_number ?? 'ABVHPS-TXN-' . str_pad($donation->id, 6, '0', STR_PAD_LEFT) }}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 10px 14px; border: 1px solid #e5e7eb; font-weight: bold; color: #374151;">Contribution Amount:</td>
-                    <td style="padding: 10px 14px; border: 1px solid #e5e7eb; font-weight: 900; color: #059669; font-size: 15px;">₹{{ number_format((float)$donation->amount, 2) }}</td>
-                </tr>
-                @if($donation->campaign)
-                <tr style="background-color: #f9fafb;">
-                    <td style="padding: 10px 14px; border: 1px solid #e5e7eb; font-weight: bold; color: #374151;">Dedicated Cause:</td>
-                    <td style="padding: 10px 14px; border: 1px solid #e5e7eb; font-weight: bold; color: #1f2937; text-transform: uppercase;">{{ $donation->campaign->title }}</td>
-                </tr>
-                @endif
-                <tr>
-                    <td style="padding: 10px 14px; border: 1px solid #e5e7eb; font-weight: bold; color: #374151;">Payment Channel:</td>
-                    <td style="padding: 10px 14px; border: 1px solid #e5e7eb; color: #4b5563; text-transform: capitalize;">{{ $donation->payment_gateway }} Payments</td>
-                </tr>
-                <tr style="background-color: #f9fafb;">
-                    <td style="padding: 10px 14px; border: 1px solid #e5e7eb; font-weight: bold; color: #374151;">Transaction Reference:</td>
-                    <td style="padding: 10px 14px; border: 1px solid #e5e7eb; font-family: monospace; color: #4b5563;">{{ $donation->gateway_payment_id ?? $donation->gateway_order_id ?? 'Confirmed' }}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 10px 14px; border: 1px solid #e5e7eb; font-weight: bold; color: #374151;">Date &amp; Time (IST):</td>
-                    <td style="padding: 10px 14px; border: 1px solid #e5e7eb; color: #4b5563;">{{ $donation->paid_at ? \Carbon\Carbon::parse($donation->paid_at)->timezone('Asia/Kolkata')->format('d-M-Y H:i') . ' IST' : now('Asia/Kolkata')->format('d-M-Y H:i') . ' IST' }}</td>
-                </tr>
-            </table>
+            <p style="font-size: 15px; font-weight: bold; color: #ea580c; margin: 8px 0;">
+                {{ $donationData['fundraiser_name'] }}
+            </p>
 
-            <!-- Button -->
-            <div style="text-align: center; margin: 28px 0 15px;">
-                <a href="{{ route('donations.receipt', !empty($receiptToken) ? ['id' => $donation->id, 'token' => $receiptToken] : $donation->id) }}" style="background-color: #FF6600; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-size: 13px; font-weight: bold; display: inline-block; text-transform: uppercase; letter-spacing: 0.5px;">
-                    View &amp; Download Official Receipt
-                </a>
+            <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+                Your contribution has been successfully received.
+            </p>
+
+            <div style="margin: 20px 0; padding: 16px; background-color: #fff7ed; border-left: 4px solid #ea580c; border-radius: 4px;">
+                <p style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #9a3412;">Contribution Details</p>
+                <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Receipt Number:</strong> {{ $donationData['receipt_number'] ?? '' }}</p>
+                <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Contributor Name:</strong> {{ $donationData['donor_name'] ?? '' }}</p>
+                <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Fundraiser:</strong> {{ $donationData['fundraiser_name'] }}</p>
+                <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Amount:</strong> ₹{{ number_format((float)($donationData['amount'] ?? 0), 2) }}</p>
+                <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Contribution Date:</strong> {{ $donationData['contribution_date'] ?? ($donationData['donation_date'] ?? now('Asia/Kolkata')->format('d-M-Y')) }}</p>
             </div>
 
-            @if(!empty($activeCertificates) && count($activeCertificates) > 0)
-            <div style="margin: 20px 0; padding: 14px 18px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
-                <p style="margin: 0 0 8px; font-size: 12px; font-weight: bold; color: #334155; text-transform: uppercase;">
-                    📜 View ABVHPS Compliance Certificates
-                </p>
-                <div style="font-size: 12px; line-height: 1.8;">
-                    @foreach($activeCertificates as $cert)
-                        <div>
-                            • <a href="{{ $cert->file_url }}" target="_blank" rel="noopener noreferrer" style="color: #ea580c; text-decoration: none; font-weight: bold;">
-                                {{ $cert->title }} ({{ $cert->certificate_type }})
-                            </a>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-            @endif
-
-            <p style="font-size: 12px; color: #6b7280; line-height: 1.5;">
-                This contribution is dedicated towards temple renovations, goshala developments, youth welfare, and Hindu community empowerment initiatives.
+            <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+                Your official contribution receipt is attached to this email as a PDF.
             </p>
-        </div>
 
-        <!-- Footer -->
-        <div style="background-color: #f3f4f6; padding: 16px 24px; text-align: center; font-size: 11px; color: #9ca3af; border-top: 1px solid #e5e7eb;">
-            <p style="margin: 0;">Akhanda Bharatha Viswa Hindu Parirakshana Samiti (ABVHPS)</p>
-            <p style="margin: 4px 0 0 0;">{{ \App\Models\SiteSetting::get('contact_address', 'Survey No:1826, Shanmukhapuram, Akkalareddy Palli Village and Post, Porumamilla Mandalam, Kadapa, A.P - 516193') }}</p>
-        </div>
+            <p style="font-size: 13px; color: #4b5563; margin-top: 14px;">
+                <strong>Attachment:</strong><br>
+                ABVHPS_Fundraiser_Receipt_{{ $donationData['receipt_number'] ?? '' }}.pdf
+            </p>
+
+            <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+                Your support helps ABVHPS carry forward its service initiatives and organizational activities.
+            </p>
+
+            <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+                We sincerely thank you for your contribution.
+            </p>
+        @else
+            <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+                Thank you for your generous contribution to Akhanda Bharatha Viswa Hindu Parirakshana Samiti (ABVHPS).
+            </p>
+
+            <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+                Your donation has been successfully received.
+            </p>
+
+            <div style="margin: 20px 0; padding: 16px; background-color: #fff7ed; border-left: 4px solid #ea580c; border-radius: 4px;">
+                <p style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #9a3412;">Donation Details</p>
+                <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Receipt Number:</strong> {{ $donationData['receipt_number'] ?? '' }}</p>
+                <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Donor Name:</strong> {{ $donationData['donor_name'] ?? '' }}</p>
+                <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Amount:</strong> ₹{{ number_format((float)($donationData['amount'] ?? 0), 2) }}</p>
+                <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Date:</strong> {{ $donationData['donation_date'] ?? now('Asia/Kolkata')->format('d-M-Y') }}</p>
+                <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Purpose:</strong> {{ $donationData['donation_purpose'] ?? ($donationData['purpose'] ?? 'General Contribution Fund') }}</p>
+            </div>
+
+            <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+                Your official donation receipt is attached to this email as a PDF.
+            </p>
+
+            <p style="font-size: 13px; color: #4b5563; margin-top: 14px;">
+                <strong>Attachment:</strong><br>
+                ABVHPS_Donation_Receipt_{{ $donationData['receipt_number'] ?? '' }}.pdf
+            </p>
+
+            <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+                We sincerely appreciate your support and contribution toward the service activities and objectives of ABVHPS.
+            </p>
+        @endif
+
+        @include('emails.partials.footer')
     </div>
 </body>
 </html>

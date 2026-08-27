@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Mail\DonationReceiptMail;
 
 class DonationController extends Controller
 {
@@ -619,57 +621,75 @@ class DonationController extends Controller
     /**
      * Send donation confirmation email exactly once.
      *
-     * Uses NotificationLog::alreadySent() to ensure idempotency.
-     * Failure to send email does NOT fail the payment — errors are logged only.
+     * Uses atomic NotificationLog::claim() to guarantee idempotency across concurrent webhooks/redirects.
+     * Failure to send email does NOT fail the payment — errors are logged and marked retryable.
      */
     private function sendDonationConfirmation(Donation $donation): void
     {
-        $eventType = 'donation_paid';
-        $channel   = 'email';
-
-        if (empty($donation->email)) {
+        if (empty($donation->email) || !filter_var($donation->email, FILTER_VALIDATE_EMAIL)) {
             return;
         }
 
-        // Idempotency check — skip if already sent
-        if (NotificationLog::alreadySent(Donation::class, $donation->id, $channel, $eventType)) {
+        $donation->loadMissing('campaign');
+
+        $receiptNum = $donation->receipt_number ?? Donation::generateReceiptNumber($donation->id);
+        $paidDate = $donation->paid_at
+            ? Carbon::parse($donation->paid_at)->timezone('Asia/Kolkata')->format('d-M-Y')
+            : now('Asia/Kolkata')->format('d-M-Y');
+
+        $donationData = [
+            'receipt_number'    => $receiptNum,
+            'donor_name'        => $donation->name,
+            'amount'            => $donation->amount,
+            'donation_date'     => $paidDate,
+            'contribution_date' => $paidDate,
+            'date'              => $paidDate,
+            'donation_purpose'  => $donation->about ?? 'General Contribution Fund',
+            'purpose'           => $donation->about ?? 'General Contribution Fund',
+            'fundraiser_name'   => $donation->campaign?->title,
+        ];
+
+        $subject = !empty($donationData['fundraiser_name'])
+            ? "Thank You for Supporting {$donationData['fundraiser_name']} – ABVHPS Receipt {$receiptNum}"
+            : "Thank You for Your Donation to ABVHPS – Receipt {$receiptNum}";
+        $message = 'Donation confirmation sent for receipt: ' . $receiptNum;
+
+        $idempotencyKey = "donation_paid:{$donation->id}";
+        $claim = NotificationLog::claim(
+            $idempotencyKey,
+            'donation_paid',
+            Donation::class,
+            $donation->id,
+            'email',
+            $donation->email,
+            $donation->phone,
+            $subject,
+            $message
+        );
+
+        if (!$claim) {
+            // Already claimed or sent by another concurrent webhook callback
             return;
         }
 
-        $receiptToken = hash_hmac('sha256', $donation->id . '|' . $donation->created_at . '|' . $donation->phone, config('app.key'));
-        $activeCertificates = \App\Models\TaxCertificate::activeComplianceCertificates();
+        $pdfContent = null;
+        try {
+            $pdf = Pdf::loadView('pdf.donation_receipt_pdf', compact('donationData'));
+            $pdfContent = $pdf->output();
+        } catch (\Throwable $e) {
+            Log::warning('Donation PDF generation fallback: ' . $e->getMessage());
+        }
 
         try {
-            Mail::send(
-                'emails.donation_confirmation',
-                [
-                    'donation'           => $donation,
-                    'receiptToken'       => $receiptToken,
-                    'activeCertificates' => $activeCertificates,
-                ],
-                function ($message) use ($donation) {
-                    $message->to($donation->email, $donation->name)
-                            ->subject('🙏 ABVHPS — Donation Receipt & Confirmation');
-                }
-            );
-
-            NotificationLog::record([
-                'event_type'      => $eventType,
-                'notifiable_type' => Donation::class,
-                'notifiable_id'   => $donation->id,
-                'channel'         => $channel,
-                'recipient_email' => $donation->email,
-                'subject'         => 'ABVHPS Donation Receipt',
-                'message'         => 'Donation confirmation sent for receipt: ' . $donation->receipt_number,
-                'status'          => 'sent',
-                'sent_at'         => now(),
-            ]);
-        } catch (\Exception $e) {
+            Mail::to($donation->email)->send(new DonationReceiptMail($donationData, $pdfContent));
+            $claim->markSent($subject, $message);
+        } catch (\Throwable $e) {
             Log::error('DonationController: email notification failed', [
                 'donation_id' => $donation->id,
                 'error'       => $e->getMessage(),
                 // Never log email credentials or secrets
             ]);
+            $claim->markFailed($e->getMessage());
         }
     }
 

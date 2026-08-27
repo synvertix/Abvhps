@@ -1,174 +1,92 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>Welcome to ABVHPS Volunteer Wing</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background-color: #f8fafc;
-            margin: 0;
-            padding: 24px;
-            color: #334155;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        }
-        .header {
-            background-color: #1e293b;
-            color: #ffffff;
-            padding: 30px 20px;
-            text-align: center;
-            border-bottom: 4px solid #ea580c;
-        }
-        .header h1 {
-            color: #ea580c;
-            margin: 0;
-            font-size: 20px;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-        .header p {
-            color: #cbd5e1;
-            margin: 5px 0 0;
-            font-size: 12px;
-        }
-        .content {
-            padding: 30px;
-            line-height: 1.6;
-        }
-        .greeting {
-            font-size: 16px;
-            font-weight: bold;
-            color: #0f172a;
-            margin-bottom: 12px;
-        }
-        .credentials-box {
-            background-color: #fff7ed;
-            border: 2px solid #fed7aa;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-        .credentials-box h2 {
-            margin: 0 0 12px;
-            font-size: 14px;
-            color: #c2410c;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .credential-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 0;
-            border-bottom: 1px dashed #fdba74;
-            font-size: 13px;
-        }
-        .credential-row:last-child {
-            border-bottom: none;
-        }
-        .credential-label {
-            color: #7c2d12;
-            font-weight: 600;
-        }
-        .credential-value {
-            color: #0f172a;
-            font-weight: bold;
-            font-family: 'Consolas', 'Courier New', monospace;
-        }
-        .btn-portal {
-            display: inline-block;
-            background-color: #ea580c;
-            color: #ffffff !important;
-            text-decoration: none;
-            padding: 12px 28px;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 15px;
-        }
-        .footer {
-            background-color: #f1f5f9;
-            padding: 20px;
-            text-align: center;
-            font-size: 11px;
-            color: #64748b;
-            border-top: 1px solid #e2e8f0;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <title>Welcome to ABVHPS Volunteer Service – Volunteer ID {{ $volunteerData['volunteer_id'] ?? '' }}</title>
 </head>
-<body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <img src="{{ asset('images/ABVHPS_LOGO.jpg') }}" width="56" height="56" style="border-radius: 50%; object-fit: cover; display: inline-block; margin-bottom: 6px; border: 2px solid #ffffff;" alt="ABVHPS Logo">
-            <h1>AKHANDA BHARATHA VISWA HINDU PARIRAKSHANA SAMITI</h1>
-            <p>ABVHPS Central Administrative Board</p>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 24px; color: #374151;">
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb; padding: 28px;">
+
+        <p style="font-size: 15px; font-weight: bold; color: #111827; margin-top: 0;">
+            Namaste {{ $volunteerData['volunteer_name'] ?? ($volunteerData['full_name'] ?? 'Volunteer') }},
+        </p>
+
+        <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+            Congratulations.
+        </p>
+
+        <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+            Your application to serve as a Volunteer with Akhanda Bharatha Viswa Hindu Parirakshana Samiti (ABVHPS) has been approved.
+        </p>
+
+        <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+            Welcome to the ABVHPS Volunteer Service.
+        </p>
+
+        <div style="margin: 20px 0; padding: 16px; background-color: #fff7ed; border-left: 4px solid #ea580c; border-radius: 4px;">
+            <p style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #9a3412;">Your Official Volunteer Details</p>
+            <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Volunteer ID:</strong> {{ $volunteerData['volunteer_id'] ?? '' }}</p>
+            <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Membership ID:</strong> {{ $volunteerData['membership_id'] ?? '' }}</p>
+            <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Name:</strong> {{ $volunteerData['volunteer_name'] ?? ($volunteerData['full_name'] ?? '') }}</p>
+            <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Assigned Cadre:</strong> {{ $volunteerData['cadre_title'] ?? ($volunteerData['designation'] ?? 'Volunteer') }}</p>
+            <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Assigned Jurisdiction:</strong> {{ $volunteerData['jurisdiction'] ?? ($volunteerData['locality'] ?? 'HQ') }}</p>
+            <p style="margin: 4px 0; font-size: 13px; color: #374151;"><strong>Status:</strong> Approved &amp; Active</p>
         </div>
 
-        <!-- Content -->
-        <div class="content">
-            <div class="greeting">
-                Namaste {{ $volunteerData['full_name'] ?? 'Volunteer' }},
-            </div>
-            
-            <p>
-                Hearty congratulations! Your application for the <strong>ABVHPS Volunteer Wing</strong> has been verified and officially approved by the Central Administrative Board.
+        <div style="margin: 20px 0; padding: 16px; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px;">
+            <p style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #1e293b; text-transform: uppercase;">VOLUNTEER LOGIN DETAILS</p>
+            <p style="margin: 6px 0; font-size: 13px; color: #374151;">
+                <strong>Login ID:</strong><br>
+                <span style="font-family: monospace; font-size: 14px; font-weight: bold; color: #ea580c;">{{ $volunteerData['volunteer_login_id'] ?? '' }}</span>
             </p>
-
-            <!-- Credentials Box -->
-            <div class="credentials-box">
-                <h2>🔐 Your Official Volunteer Credentials</h2>
-                <div class="credential-row">
-                    <span class="credential-label">Volunteer ID:</span>
-                    <span class="credential-value" style="color: #ea580c; font-size: 16px; font-weight: bold;">{{ $volunteerData['volunteer_id'] ?? ($volunteerData['formatted_volunteer_id'] ?? 'N/A') }}</span>
-                </div>
-                <div class="credential-row">
-                    <span class="credential-label">Login ID:</span>
-                    <span class="credential-value" style="color: #ea580c; font-size: 15px; font-weight: bold;">{{ $volunteerData['volunteer_login_id'] ?? ($volunteerData['volunteer_id'] ?? 'N/A') }}</span>
-                </div>
-                <div class="credential-row">
-                    <span class="credential-label">Default Password:</span>
-                    <span class="credential-value" style="color: #047857; font-size: 14px;">{{ $volunteerData['plainPassword'] ?? 'password' }}</span>
-                </div>
-                <div class="credential-row">
-                    <span class="credential-label">Assigned Cadder:</span>
-                    <span class="credential-value">{{ $volunteerData['designation'] ?? ($volunteerData['cadre'] ?? 'Volunteer') }}</span>
-                </div>
-                <div class="credential-row">
-                    <span class="credential-label">Assigned Locality:</span>
-                    <span class="credential-value">{{ $volunteerData['locality'] ?? 'HQ' }}</span>
-                </div>
-            </div>
-
-            <p style="font-size: 13px; color: #475569;">
-                📎 <strong>Attached:</strong> Your official <strong>Digital PVC Volunteer Identity Card</strong> is attached to this email as a PDF. You may download, print, or present it as proof of your authorized voluntary affiliation.
+            @if(!empty($volunteerData['temporary_password']) || !empty($volunteerData['plainPassword']))
+            <p style="margin: 6px 0; font-size: 13px; color: #374151;">
+                <strong>Temporary Password:</strong><br>
+                <span style="font-family: monospace; font-size: 14px; font-weight: bold; color: #ea580c;">{{ $volunteerData['temporary_password'] ?? ($volunteerData['plainPassword'] ?? '') }}</span>
             </p>
-
-            <div style="text-align: center; margin: 25px 0 10px;">
-                <a href="{{ url('/volunteer/login') }}" class="btn-portal">
-                    Access Volunteer Portal &rarr;
+            @endif
+            <p style="margin: 6px 0; font-size: 13px; color: #374151;">
+                <strong>Volunteer Login Page:</strong><br>
+                <a href="{{ $volunteerData['volunteer_login_url'] ?? route('volunteer.login') }}" style="color: #ea580c; text-decoration: underline; font-weight: bold;">
+                    {{ $volunteerData['volunteer_login_url'] ?? route('volunteer.login') }}
                 </a>
-            </div>
-
-            <p style="font-size: 11px; color: #94a3b8; margin-top: 20px;">
-                * Please change your password upon your first login to keep your account secure.
             </p>
         </div>
 
-        <!-- Footer -->
-        <div class="footer">
-            &copy; 2026 ABVHPS Central Board. Survey No: 1826, Shanmukhapuram, Porumamilla, Kadapa, AP - 516193.<br>
-            Dedicated to the preservation and protection of Sanatana Dharma.
+        <div style="margin: 20px 0; padding: 14px 16px; background-color: #fef2f2; border-left: 4px solid #ef4444; border-radius: 4px;">
+            <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #991b1b; text-transform: uppercase;">IMPORTANT SECURITY INSTRUCTION</p>
+            <p style="margin: 4px 0; font-size: 12.5px; color: #7f1d1d; line-height: 1.5;">
+                The password provided above is a temporary first-login password.
+            </p>
+            <p style="margin: 4px 0; font-size: 12.5px; color: #7f1d1d; line-height: 1.5; font-weight: bold;">
+                Please log in to the ABVHPS Volunteer Portal and CHANGE YOUR PASSWORD IMMEDIATELY after your first successful login.
+            </p>
+            <p style="margin: 4px 0; font-size: 12.5px; color: #7f1d1d; line-height: 1.5;">
+                Do not share your Volunteer Login ID or password with anyone.
+            </p>
+            <p style="margin: 4px 0; font-size: 12.5px; color: #7f1d1d; line-height: 1.5;">
+                ABVHPS representatives will never ask you to send your password by email, telephone, WhatsApp, or any other communication channel.
+            </p>
         </div>
+
+        <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+            Your Volunteer Portal provides access according to the cadre and geographic jurisdiction officially assigned to you by the ABVHPS Administration.
+        </p>
+
+        <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+            Your official ABVHPS Volunteer ID Card is attached to this email as a PDF.
+        </p>
+
+        <p style="font-size: 13px; color: #4b5563; margin-top: 14px;">
+            <strong>Attachment:</strong><br>
+            ABVHPS_Volunteer_ID_{{ $volunteerData['volunteer_id'] ?? '' }}.pdf
+        </p>
+
+        <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+            We thank you for accepting the responsibility to serve through ABVHPS and wish you success in your assigned service responsibilities.
+        </p>
+
+        @include('emails.partials.footer')
     </div>
 </body>
 </html>

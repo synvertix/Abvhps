@@ -9,20 +9,20 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Queue\SerializesModels;
 
-class VolunteerWelcomeMail extends Mailable
+class DonationReceiptMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public array $volunteerData;
+    public array $donationData;
     protected ?string $pdfContent;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(array $volunteerData, ?string $pdfContent = null)
+    public function __construct(array $donationData, ?string $pdfContent = null)
     {
-        $this->volunteerData = $volunteerData;
-        $this->pdfContent = $pdfContent;
+        $this->donationData = $donationData;
+        $this->pdfContent   = $pdfContent;
     }
 
     /**
@@ -30,10 +30,17 @@ class VolunteerWelcomeMail extends Mailable
      */
     public function envelope(): Envelope
     {
-        $id = $this->volunteerData['volunteer_id'] ?? ($this->volunteerData['formatted_volunteer_id'] ?? '');
+        $receipt = $this->donationData['receipt_number'] ?? 'RECEIPT';
+        $fundraiser = $this->donationData['fundraiser_name'] ?? null;
+
+        if (!empty($fundraiser)) {
+            return new Envelope(
+                subject: "Thank You for Supporting {$fundraiser} – ABVHPS Receipt {$receipt}",
+            );
+        }
 
         return new Envelope(
-            subject: "Welcome to ABVHPS Volunteer Service – Volunteer ID {$id}",
+            subject: "Thank You for Your Donation to ABVHPS – Receipt {$receipt}",
         );
     }
 
@@ -43,9 +50,9 @@ class VolunteerWelcomeMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.volunteer_welcome',
+            view: 'emails.donation_confirmation',
             with: [
-                'volunteerData' => $this->volunteerData,
+                'donationData' => $this->donationData,
             ],
         );
     }
@@ -60,10 +67,13 @@ class VolunteerWelcomeMail extends Mailable
         $attachments = [];
 
         if (!empty($this->pdfContent)) {
-            $rawId = str_replace(' ', '', $this->volunteerData['volunteer_id'] ?? ($this->volunteerData['formatted_volunteer_id'] ?? 'VOLUNTEER'));
+            $receipt = $this->donationData['receipt_number'] ?? 'RECEIPT';
+            $cleanReceipt = preg_replace('/[^A-Za-z0-9_\-]/', '_', $receipt);
+            $prefix = !empty($this->donationData['fundraiser_name']) ? 'ABVHPS_Fundraiser_Receipt_' : 'ABVHPS_Donation_Receipt_';
+
             $attachments[] = Attachment::fromData(
                 fn () => $this->pdfContent,
-                'ABVHPS_Volunteer_ID_' . $rawId . '.pdf'
+                $prefix . $cleanReceipt . '.pdf'
             )->withMime('application/pdf');
         }
 

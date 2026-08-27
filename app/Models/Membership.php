@@ -121,6 +121,16 @@ class Membership extends Model
     }
 
     /**
+     * Scope query to valid, registered completed memberships.
+     */
+    public function scopeCompleted($query)
+    {
+        return $query->where('is_completed', true)
+                     ->whereNotNull('membership_id')
+                     ->where('membership_id', '!=', '');
+    }
+
+    /**
      * Canonical single source of truth for identity verification.
      *
      * Rules:

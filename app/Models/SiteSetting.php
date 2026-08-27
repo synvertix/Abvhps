@@ -85,4 +85,111 @@ class SiteSetting extends Model
 
         return $url;
     }
+
+    /**
+     * Get structured supporting partners list with backward compatibility.
+     *
+     * @return array<int, array{id: string, name: string, logo_path: ?string, order: int}>
+     */
+    public static function getSupportingPartners(): array
+    {
+        $json = static::get('homepage_sponsors_structured');
+        if ($json) {
+            $decoded = is_string($json) ? json_decode($json, true) : $json;
+            if (is_array($decoded) && count($decoded) > 0) {
+                usort($decoded, fn($a, $b) => ($a['order'] ?? 0) <=> ($b['order'] ?? 0));
+                return array_values($decoded);
+            }
+        }
+
+        // Backward compatibility fallback from homepage_sponsors_list
+        $rawList = static::get('homepage_sponsors_list');
+        $defaultNames = ['Synvertix Technologies', 'MMP', 'MMS', 'MMA', 'Taskly'];
+        $names = [];
+
+        if ($rawList) {
+            if (is_string($rawList)) {
+                $jsonParsed = json_decode($rawList, true);
+                if (is_array($jsonParsed)) {
+                    $names = array_filter(array_map('trim', $jsonParsed));
+                } else {
+                    $lines = preg_split('/\r\n|\r|\n/', $rawList);
+                    $names = array_values(array_filter(array_map('trim', $lines)));
+                }
+            }
+        }
+
+        if (empty($names)) {
+            $names = $defaultNames;
+        }
+
+        $structured = [];
+        $order = 1;
+        foreach ($names as $name) {
+            $structured[] = [
+                'id'        => 'partner_' . substr(md5($name . $order), 0, 10),
+                'name'      => $name,
+                'logo_path' => null,
+                'order'     => $order++,
+            ];
+        }
+
+        return $structured;
+    }
+
+    /**
+     * Store structured supporting partners list.
+     *
+     * @param array<int, array{id?: string, name: string, logo_path?: ?string, order?: int}> $partners
+     */
+    public static function setSupportingPartners(array $partners): void
+    {
+        $normalized = [];
+        $order = 1;
+        foreach ($partners as $p) {
+            if (empty($p['name']) || !is_string($p['name'])) {
+                continue;
+            }
+            $name = trim($p['name']);
+            if ($name === '') {
+                continue;
+            }
+            $normalized[] = [
+                'id'        => !empty($p['id']) ? (string)$p['id'] : 'partner_' . uniqid(),
+                'name'      => $name,
+                'logo_path' => !empty($p['logo_path']) ? (string)$p['logo_path'] : null,
+                'order'     => isset($p['order']) ? (int)$p['order'] : $order,
+            ];
+            $order++;
+        }
+
+        // Stable sort with index fallback
+        $indexed = [];
+        $i = 0;
+        foreach ($normalized as $item) {
+            $indexed[] = ['item' => $item, 'index' => $i++];
+        }
+        usort($indexed, function ($a, $b) {
+            $orderA = $a['item']['order'] ?? 0;
+            $orderB = $b['item']['order'] ?? 0;
+            if ($orderA === $orderB) {
+                return $a['index'] <=> $b['index'];
+            }
+            return $orderA <=> $orderB;
+        });
+        $normalized = array_column($indexed, 'item');
+
+        // Reset sequence integers 1..N
+        $seq = 1;
+        foreach ($normalized as &$item) {
+            $item['order'] = $seq++;
+        }
+        unset($item);
+
+        static::set('homepage_sponsors_structured', json_encode(array_values($normalized)));
+
+        // Keep homepage_sponsors_list synced for any legacy consumers
+        $namesOnly = implode("\n", array_column($normalized, 'name'));
+        static::set('homepage_sponsors_list', $namesOnly);
+    }
 }
