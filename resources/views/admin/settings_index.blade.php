@@ -88,25 +88,97 @@
                     </div>
                 </div>
 
-                <!-- Social Media URLs -->
-                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4 text-xs">
-                    <div class="border-b border-gray-100 pb-2">
-                        <h3 class="font-black text-sm text-gray-900 uppercase">Social Media Links</h3>
-                        <p class="text-[10px] text-gray-500">Synced to header bar social links and footer.</p>
+                <!-- Homepage Social Media & Official Channels -->
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-5 text-xs">
+                    <div class="border-b border-gray-100 pb-2 flex items-center justify-between">
+                        <div>
+                            <h3 class="font-black text-sm text-gray-900 uppercase flex items-center gap-2">
+                                <span class="text-brandOrange">🌐</span> HOMEPAGE SOCIAL MEDIA &amp; OFFICIAL CHANNELS
+                            </h3>
+                            <p class="text-[10px] text-gray-500">Configure public official social channels (Facebook, Instagram, YouTube, X/Twitter, LinkedIn, WhatsApp, Telegram).</p>
+                        </div>
+                        <span class="bg-orange-50 text-brandOrange text-[10px] font-black px-2.5 py-1 rounded-full border border-orange-200 uppercase">Public Connect</span>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Enable Toggle & Heading -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label class="block font-black text-gray-700 uppercase mb-1">Facebook URL</label>
-                            <input type="url" name="facebook_url" value="{{ old('facebook_url', $settings['facebook_url']) }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                            <label class="block font-black text-gray-700 uppercase mb-1">Section Enabled *</label>
+                            <select name="homepage_social_enabled" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                                <option value="1" {{ in_array($settings['homepage_social_enabled'] ?? '1', ['1', 'yes', true], true) ? 'selected' : '' }}>Yes (Enabled on Homepage)</option>
+                                <option value="0" {{ in_array($settings['homepage_social_enabled'] ?? '1', ['0', 'no', false], true) ? 'selected' : '' }}>No (Hidden from Homepage)</option>
+                            </select>
                         </div>
                         <div>
-                            <label class="block font-black text-gray-700 uppercase mb-1">Twitter / X URL</label>
-                            <input type="url" name="twitter_url" value="{{ old('twitter_url', $settings['twitter_url']) }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                            <label class="block font-black text-gray-700 uppercase mb-1">Section Heading *</label>
+                            <input type="text" name="homepage_social_heading" value="{{ old('homepage_social_heading', $settings['homepage_social_heading'] ?? 'CONNECT WITH ABVHPS') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
                         </div>
-                        <div>
-                            <label class="block font-black text-gray-700 uppercase mb-1">YouTube URL</label>
-                            <input type="url" name="youtube_url" value="{{ old('youtube_url', $settings['youtube_url']) }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block font-black text-gray-700 uppercase mb-1">Section Subtext / Description</label>
+                        <textarea name="homepage_social_subtext" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-semibold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">{{ old('homepage_social_subtext', $settings['homepage_social_subtext'] ?? 'Follow ABVHPS for updates on Seva activities, membership programs, volunteer initiatives, events, and organizational announcements.') }}</textarea>
+                    </div>
+
+                    <div class="border-t border-gray-100 pt-3">
+                        <label class="block font-black text-gray-800 uppercase tracking-wider text-[11px] mb-3">Official Platform Links (Only configured https:// URLs will render publicly)</label>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Facebook -->
+                            <div>
+                                <label class="block font-bold text-gray-700 uppercase mb-1 text-[11px] flex items-center gap-1.5">
+                                    <span class="text-[#1877F2]">f</span> Facebook Page URL
+                                </label>
+                                <input type="url" name="social_facebook_url" value="{{ old('social_facebook_url', $settings['social_facebook_url']) }}" placeholder="https://facebook.com/your-page" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                            </div>
+
+                            <!-- Instagram -->
+                            <div>
+                                <label class="block font-bold text-gray-700 uppercase mb-1 text-[11px] flex items-center gap-1.5">
+                                    <span class="text-[#E4405F]">📷</span> Instagram Profile URL
+                                </label>
+                                <input type="url" name="social_instagram_url" value="{{ old('social_instagram_url', $settings['social_instagram_url']) }}" placeholder="https://instagram.com/your-handle" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                            </div>
+
+                            <!-- YouTube -->
+                            <div>
+                                <label class="block font-bold text-gray-700 uppercase mb-1 text-[11px] flex items-center gap-1.5">
+                                    <span class="text-[#FF0000]">▶</span> YouTube Channel URL
+                                </label>
+                                <input type="url" name="social_youtube_url" value="{{ old('social_youtube_url', $settings['social_youtube_url']) }}" placeholder="https://youtube.com/@your-channel" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                            </div>
+
+                            <!-- X / Twitter -->
+                            <div>
+                                <label class="block font-bold text-gray-700 uppercase mb-1 text-[11px] flex items-center gap-1.5">
+                                    <span class="text-slate-900">𝕏</span> X (Twitter) Profile URL
+                                </label>
+                                <input type="url" name="social_x_url" value="{{ old('social_x_url', $settings['social_x_url']) }}" placeholder="https://x.com/your-handle" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                            </div>
+
+                            <!-- LinkedIn -->
+                            <div>
+                                <label class="block font-bold text-gray-700 uppercase mb-1 text-[11px] flex items-center gap-1.5">
+                                    <span class="text-[#0A66C2]">in</span> LinkedIn Organization URL
+                                </label>
+                                <input type="url" name="social_linkedin_url" value="{{ old('social_linkedin_url', $settings['social_linkedin_url']) }}" placeholder="https://linkedin.com/company/your-page" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                            </div>
+
+                            <!-- WhatsApp Channel / Group -->
+                            <div>
+                                <label class="block font-bold text-gray-700 uppercase mb-1 text-[11px] flex items-center gap-1.5">
+                                    <span class="text-[#25D366]">💬</span> WhatsApp Link (wa.me or api.whatsapp.com)
+                                </label>
+                                <input type="url" name="social_whatsapp_url" value="{{ old('social_whatsapp_url', $settings['social_whatsapp_url']) }}" placeholder="https://wa.me/919989980055 or https://api.whatsapp.com/..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                            </div>
+
+                            <!-- Telegram -->
+                            <div class="md:col-span-2">
+                                <label class="block font-bold text-gray-700 uppercase mb-1 text-[11px] flex items-center gap-1.5">
+                                    <span class="text-[#229ED9]">✈</span> Telegram Channel URL
+                                </label>
+                                <input type="url" name="social_telegram_url" value="{{ old('social_telegram_url', $settings['social_telegram_url']) }}" placeholder="https://t.me/your-channel" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                            </div>
                         </div>
                     </div>
                 </div>

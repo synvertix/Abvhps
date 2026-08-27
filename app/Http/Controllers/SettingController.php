@@ -42,6 +42,18 @@ class SettingController extends Controller
             'homepage_sponsors_heading' => SiteSetting::get('homepage_sponsors_heading', 'OUR SUPPORTING PARTNERS'),
             'homepage_sponsors_list' => SiteSetting::get('homepage_sponsors_list', "Synvertix Technologies\nMMP\nMMS\nMMA\nTaskly"),
             'supporting_partners' => SiteSetting::getSupportingPartners(),
+
+            // Homepage Social Media & Official Channels Settings
+            'homepage_social_enabled' => SiteSetting::get('homepage_social_enabled', '1'),
+            'homepage_social_heading' => SiteSetting::get('homepage_social_heading', 'CONNECT WITH ABVHPS'),
+            'homepage_social_subtext' => SiteSetting::get('homepage_social_subtext', 'Follow ABVHPS for updates on Seva activities, membership programs, volunteer initiatives, events, and organizational announcements.'),
+            'social_facebook_url' => SiteSetting::get('social_facebook_url', ''),
+            'social_instagram_url' => SiteSetting::get('social_instagram_url', ''),
+            'social_youtube_url' => SiteSetting::get('social_youtube_url', ''),
+            'social_x_url' => SiteSetting::get('social_x_url', ''),
+            'social_linkedin_url' => SiteSetting::get('social_linkedin_url', ''),
+            'social_whatsapp_url' => SiteSetting::get('social_whatsapp_url', ''),
+            'social_telegram_url' => SiteSetting::get('social_telegram_url', ''),
         ];
 
         return view('admin.settings_index', compact('settings'));
@@ -52,6 +64,52 @@ class SettingController extends Controller
      */
     public function adminUpdate(Request $request)
     {
+        $httpsUrlRule = [
+            'nullable',
+            'string',
+            'max:255',
+            function ($attribute, $value, $fail) {
+                if ($value === null || $value === '') return;
+                $trimmed = trim((string)$value);
+                if ($trimmed === '') return;
+                if (!str_starts_with(strtolower($trimmed), 'https://')) {
+                    $fail('The ' . str_replace('_', ' ', $attribute) . ' must be a secure URL starting with https://');
+                    return;
+                }
+                if (!filter_var($trimmed, FILTER_VALIDATE_URL)) {
+                    $fail('The ' . str_replace('_', ' ', $attribute) . ' must be a valid URL.');
+                    return;
+                }
+                if (preg_match('/^(javascript|data|file|vbscript):/i', $trimmed)) {
+                    $fail('The ' . str_replace('_', ' ', $attribute) . ' contains an unsafe URL scheme.');
+                    return;
+                }
+            }
+        ];
+
+        $whatsappSocialUrlRule = [
+            'nullable',
+            'string',
+            'max:255',
+            function ($attribute, $value, $fail) {
+                if ($value === null || $value === '') return;
+                $trimmed = trim((string)$value);
+                if ($trimmed === '') return;
+                if (!str_starts_with(strtolower($trimmed), 'https://wa.me/') && !str_starts_with(strtolower($trimmed), 'https://api.whatsapp.com/')) {
+                    $fail('The WhatsApp social link must start with https://wa.me/ or https://api.whatsapp.com/');
+                    return;
+                }
+                if (!filter_var($trimmed, FILTER_VALIDATE_URL)) {
+                    $fail('The WhatsApp social link must be a valid URL.');
+                    return;
+                }
+                if (preg_match('/^(javascript|data|file|vbscript):/i', $trimmed)) {
+                    $fail('The WhatsApp social link contains an unsafe URL scheme.');
+                    return;
+                }
+            }
+        ];
+
         $rules = [
             'site_title' => 'string|max:255',
             'contact_phone' => 'string|max:50',
@@ -69,9 +127,9 @@ class SettingController extends Controller
             ],
             'contact_email' => 'email|max:100',
             'contact_address' => 'string|max:500',
-            'facebook_url' => 'nullable|url|max:255',
-            'twitter_url' => 'nullable|url|max:255',
-            'youtube_url' => 'nullable|url|max:255',
+            'facebook_url' => $httpsUrlRule,
+            'twitter_url' => $httpsUrlRule,
+            'youtube_url' => $httpsUrlRule,
             'footer_about' => 'string|max:1000',
 
             // Homepage Floating Join / Membership Strip Validation
@@ -94,13 +152,39 @@ class SettingController extends Controller
             'partner_logos.*' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
             'partners.*.name' => 'nullable|string|max:120',
             'partners.*.order' => 'nullable|integer',
+
+            // Homepage Social Media & Official Channels Validation
+            'homepage_social_enabled' => 'nullable|in:0,1,yes,no',
+            'homepage_social_heading' => 'nullable|string|max:255',
+            'homepage_social_subtext' => 'nullable|string|max:1000',
+            'social_facebook_url' => $httpsUrlRule,
+            'social_instagram_url' => $httpsUrlRule,
+            'social_youtube_url' => $httpsUrlRule,
+            'social_x_url' => $httpsUrlRule,
+            'social_linkedin_url' => $httpsUrlRule,
+            'social_whatsapp_url' => $whatsappSocialUrlRule,
+            'social_telegram_url' => $httpsUrlRule,
         ];
 
         $request->validate($rules);
 
-        foreach (['site_title', 'contact_phone', 'whatsapp_number', 'contact_email', 'contact_address', 'facebook_url', 'twitter_url', 'youtube_url', 'footer_about', 'homepage_join_enabled', 'homepage_join_why_heading', 'homepage_join_why_text', 'homepage_join_member_heading', 'homepage_join_member_text', 'homepage_join_cta_text', 'homepage_join_secondary_cta_text', 'homepage_join_secondary_cta_url', 'homepage_sponsors_enabled', 'homepage_sponsors_heading'] as $key) {
+        $scalarKeys = [
+            'site_title', 'contact_phone', 'whatsapp_number', 'contact_email', 'contact_address',
+            'facebook_url', 'twitter_url', 'youtube_url', 'footer_about',
+            'homepage_join_enabled', 'homepage_join_why_heading', 'homepage_join_why_text',
+            'homepage_join_member_heading', 'homepage_join_member_text', 'homepage_join_cta_text',
+            'homepage_join_secondary_cta_text', 'homepage_join_secondary_cta_url',
+            'homepage_sponsors_enabled', 'homepage_sponsors_heading',
+            'homepage_social_enabled', 'homepage_social_heading', 'homepage_social_subtext',
+            'social_facebook_url', 'social_instagram_url', 'social_youtube_url',
+            'social_x_url', 'social_linkedin_url', 'social_whatsapp_url', 'social_telegram_url',
+        ];
+
+        foreach ($scalarKeys as $key) {
             if ($request->has($key)) {
-                SiteSetting::set($key, $request->input($key));
+                $val = $request->input($key);
+                $cleanVal = is_string($val) ? trim($val) : $val;
+                SiteSetting::set($key, $cleanVal !== '' ? $cleanVal : null);
             }
         }
 
