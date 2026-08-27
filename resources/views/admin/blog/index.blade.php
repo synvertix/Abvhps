@@ -2,13 +2,13 @@
 
 @section('content')
 <div class="min-h-screen bg-gray-100/60 flex flex-col md:flex-row select-none">
-    
+
     <!-- BLOCK 1: MASTER ADMINISTRATIVE LEFT SIDEBAR -->
     @include('admin.partials.sidebar')
 
     <!-- BLOCK 2: MASTER MAIN WORKSPACE VIEWPORT DESK -->
     <div class="flex-1 flex flex-col overflow-hidden">
-        
+
         <!-- Workspace Top Status Banner Navbar -->
         <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
             <div class="flex items-center gap-2">
@@ -23,7 +23,7 @@
 
         <!-- Dynamic Content Workspace Container -->
         <main class="flex-1 overflow-y-auto p-6 space-y-6">
-            
+
             <!-- Header Title and Add Button Node -->
             <div class="flex justify-between items-center">
                 <h3 class="text-xs font-black text-brandGray uppercase tracking-wider flex items-center gap-1.5">
@@ -102,7 +102,7 @@
                                         </a>
                                     </td>
                                     <td class="px-2 py-3.5">
-                                        <form action="{{ route('admin.blog.delete', $blog->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this blog post?');" class="inline-block">
+                                        <form action="{{ route('admin.blogs.delete', $blog->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this blog post?');" class="inline-block">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="bg-rose-500 hover:bg-rose-600 text-white font-black text-[9px] px-3 py-1 rounded shadow-sm uppercase transition">
