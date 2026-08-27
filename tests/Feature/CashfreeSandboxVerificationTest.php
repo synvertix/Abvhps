@@ -139,7 +139,13 @@ class CashfreeSandboxVerificationTest extends TestCase
         $this->assertNotNull($testDonation->id);
         $this->assertEquals(1116.00, (float)$testDonation->amount);
 
-        $receiptResponse = $this->get('/admin/donations/' . $testDonation->id . '/receipt');
+        $admin = \App\Models\User::create([
+            'name' => 'ADMIN TEST',
+            'email' => 'admin_receipt@test.com',
+            'password' => bcrypt('123456789')
+        ]);
+
+        $receiptResponse = $this->actingAs($admin)->get('/admin/donations/' . $testDonation->id . '/receipt');
         $receiptResponse->assertStatus(200);
         $this->assertStringContainsString('ABVHPS-TXN-', $receiptResponse->getContent());
         $this->assertStringContainsString('SRI RAMA BHAKTA DEVOTEE', $receiptResponse->getContent());
