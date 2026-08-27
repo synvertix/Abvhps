@@ -339,5 +339,160 @@ class HomepageSocialMediaLinksTest extends TestCase
         $response->assertDontSee('https://instagram.com/fake', false);
         $response->assertDontSee('https://x.com/fake', false);
         $response->assertDontSee('homepage-social-media-strip', false);
+        $response->assertDontSee('top-bar-social-links', false);
+    }
+
+    // =========================================================================
+    // 13. TOP BAR: CONFIGURED FACEBOOK APPEARS IN TOP BAR
+    // =========================================================================
+    public function test_configured_facebook_appears_in_top_bar(): void
+    {
+        $this->clearAllSocialSettings();
+        SiteSetting::set('homepage_social_enabled', '1');
+        SiteSetting::set('social_facebook_url', 'https://facebook.com/abvhps_top');
+
+        $response = $this->get('/');
+        $response->assertStatus(200);
+
+        $content = $response->getContent();
+        $this->assertStringContainsString('id="top-bar-social-links"', $content);
+        $this->assertStringContainsString('https://facebook.com/abvhps_top', $content);
+        $this->assertStringContainsString('aria-label="ABVHPS on Facebook"', $content);
+    }
+
+    // =========================================================================
+    // 14. TOP BAR: CONFIGURED INSTAGRAM APPEARS IN TOP BAR
+    // =========================================================================
+    public function test_configured_instagram_appears_in_top_bar(): void
+    {
+        $this->clearAllSocialSettings();
+        SiteSetting::set('homepage_social_enabled', '1');
+        SiteSetting::set('social_instagram_url', 'https://instagram.com/abvhps_top');
+
+        $response = $this->get('/');
+        $response->assertStatus(200);
+
+        $content = $response->getContent();
+        $this->assertStringContainsString('id="top-bar-social-links"', $content);
+        $this->assertStringContainsString('https://instagram.com/abvhps_top', $content);
+        $this->assertStringContainsString('aria-label="ABVHPS on Instagram"', $content);
+    }
+
+    // =========================================================================
+    // 15. TOP BAR: ALL CONFIGURED PLATFORMS RENDER IN TOP BAR
+    // =========================================================================
+    public function test_all_configured_platforms_render_in_top_bar(): void
+    {
+        $this->clearAllSocialSettings();
+        SiteSetting::set('homepage_social_enabled', '1');
+        SiteSetting::set('social_facebook_url', 'https://facebook.com/abvhps');
+        SiteSetting::set('social_instagram_url', 'https://instagram.com/abvhps');
+        SiteSetting::set('social_youtube_url', 'https://youtube.com/@abvhps');
+        SiteSetting::set('social_x_url', 'https://x.com/abvhps');
+        SiteSetting::set('social_linkedin_url', 'https://linkedin.com/company/abvhps');
+        SiteSetting::set('social_whatsapp_url', 'https://wa.me/919989980055');
+        SiteSetting::set('social_telegram_url', 'https://t.me/abvhps');
+
+        $response = $this->get('/');
+        $response->assertStatus(200);
+
+        $content = $response->getContent();
+        $topBarStart = strpos($content, 'id="top-bar-social-links"');
+        $this->assertNotFalse($topBarStart, 'Top bar social links container not found');
+
+        $topBarEnd = strpos($content, '</header>', $topBarStart);
+        $topBarHtml = substr($content, $topBarStart, $topBarEnd - $topBarStart);
+
+        $this->assertStringContainsString('aria-label="ABVHPS on Facebook"', $topBarHtml);
+        $this->assertStringContainsString('aria-label="ABVHPS on Instagram"', $topBarHtml);
+        $this->assertStringContainsString('aria-label="ABVHPS on YouTube"', $topBarHtml);
+        $this->assertStringContainsString('aria-label="ABVHPS on X"', $topBarHtml);
+        $this->assertStringContainsString('aria-label="ABVHPS on LinkedIn"', $topBarHtml);
+        $this->assertStringContainsString('aria-label="ABVHPS on WhatsApp"', $topBarHtml);
+        $this->assertStringContainsString('aria-label="ABVHPS on Telegram"', $topBarHtml);
+    }
+
+    // =========================================================================
+    // 16. TOP BAR: EMPTY PLATFORMS ARE OMITTED
+    // =========================================================================
+    public function test_empty_platform_is_omitted_from_top_bar(): void
+    {
+        $this->clearAllSocialSettings();
+        SiteSetting::set('homepage_social_enabled', '1');
+        SiteSetting::set('social_facebook_url', 'https://facebook.com/abvhps');
+        SiteSetting::set('social_telegram_url', null);
+
+        $response = $this->get('/');
+        $response->assertStatus(200);
+
+        $content = $response->getContent();
+        $topBarStart = strpos($content, 'id="top-bar-social-links"');
+        $this->assertNotFalse($topBarStart);
+
+        $topBarEnd = strpos($content, '</header>', $topBarStart);
+        $topBarHtml = substr($content, $topBarStart, $topBarEnd - $topBarStart);
+
+        $this->assertStringContainsString('aria-label="ABVHPS on Facebook"', $topBarHtml);
+        $this->assertStringNotContainsString('aria-label="ABVHPS on Telegram"', $topBarHtml);
+    }
+
+    // =========================================================================
+    // 17. TOP BAR: SOCIAL_ENABLED=FALSE HIDES TOP-BAR SOCIAL ICONS
+    // =========================================================================
+    public function test_social_enabled_false_hides_top_bar_social_icons(): void
+    {
+        $this->clearAllSocialSettings();
+        SiteSetting::set('social_facebook_url', 'https://facebook.com/abvhps');
+        SiteSetting::set('homepage_social_enabled', '0');
+
+        $response = $this->get('/');
+        $response->assertStatus(200);
+
+        $content = $response->getContent();
+        $this->assertStringNotContainsString('id="top-bar-social-links"', $content);
+    }
+
+    // =========================================================================
+    // 18. TOP BAR: TARGET="_BLANK" AND REL="NOOPENER NOREFERRER"
+    // =========================================================================
+    public function test_top_bar_links_have_security_attributes(): void
+    {
+        $this->clearAllSocialSettings();
+        SiteSetting::set('homepage_social_enabled', '1');
+        SiteSetting::set('social_facebook_url', 'https://facebook.com/abvhps');
+
+        $response = $this->get('/');
+        $response->assertStatus(200);
+
+        $content = $response->getContent();
+        $topBarStart = strpos($content, 'id="top-bar-social-links"');
+        $this->assertNotFalse($topBarStart);
+
+        $topBarEnd = strpos($content, '</header>', $topBarStart);
+        $topBarHtml = substr($content, $topBarStart, $topBarEnd - $topBarStart);
+
+        $this->assertStringContainsString('target="_blank"', $topBarHtml);
+        $this->assertStringContainsString('rel="noopener noreferrer"', $topBarHtml);
+    }
+
+    // =========================================================================
+    // 19. TOP BAR: PHONE AND EMAIL REMAIN VISIBLE
+    // =========================================================================
+    public function test_existing_phone_and_info_email_remain_visible(): void
+    {
+        SiteSetting::set('contact_phone', '+91 8884933379');
+        SiteSetting::set('contact_email', 'info@abvhps.org');
+        SiteSetting::set('social_facebook_url', 'https://facebook.com/abvhps');
+
+        $response = $this->get('/');
+        $response->assertStatus(200);
+
+        $content = $response->getContent();
+        $headerStart = strpos($content, '<header');
+        $headerEnd = strpos($content, '</header>', $headerStart);
+        $headerHtml = substr($content, $headerStart, $headerEnd - $headerStart);
+
+        $this->assertStringContainsString('+91 8884933379', $headerHtml);
+        $this->assertStringContainsString('info@abvhps.org', $headerHtml);
     }
 }
