@@ -192,4 +192,107 @@ class SiteSetting extends Model
         $namesOnly = implode("\n", array_column($normalized, 'name'));
         static::set('homepage_sponsors_list', $namesOnly);
     }
+
+    /**
+     * Supported social media platform definitions.
+     *
+     * @return array<string, array{key: string, name: string, short_name: string, aria_label: string}>
+     */
+    public static function getSupportedSocialPlatforms(): array
+    {
+        return [
+            'facebook' => [
+                'key'        => 'social_facebook_url',
+                'name'       => 'Facebook',
+                'short_name' => 'Facebook',
+                'aria_label' => 'ABVHPS on Facebook',
+            ],
+            'instagram' => [
+                'key'        => 'social_instagram_url',
+                'name'       => 'Instagram',
+                'short_name' => 'Instagram',
+                'aria_label' => 'ABVHPS on Instagram',
+            ],
+            'youtube' => [
+                'key'        => 'social_youtube_url',
+                'name'       => 'YouTube',
+                'short_name' => 'YouTube',
+                'aria_label' => 'ABVHPS on YouTube',
+            ],
+            'x' => [
+                'key'        => 'social_x_url',
+                'name'       => 'X / Twitter',
+                'short_name' => 'X / Twitter',
+                'aria_label' => 'ABVHPS on X',
+            ],
+            'linkedin' => [
+                'key'        => 'social_linkedin_url',
+                'name'       => 'LinkedIn',
+                'short_name' => 'LinkedIn',
+                'aria_label' => 'ABVHPS on LinkedIn',
+            ],
+            'whatsapp' => [
+                'key'        => 'social_whatsapp_url',
+                'name'       => 'WhatsApp',
+                'short_name' => 'WhatsApp',
+                'aria_label' => 'ABVHPS on WhatsApp',
+            ],
+            'telegram' => [
+                'key'        => 'social_telegram_url',
+                'name'       => 'Telegram',
+                'short_name' => 'Telegram',
+                'aria_label' => 'ABVHPS on Telegram',
+            ],
+        ];
+    }
+
+    /**
+     * Get active, validated social media links for public display.
+     * Returns only platforms with valid, non-empty, safe URLs.
+     *
+     * @return array<string, array{id: string, name: string, short_name: string, url: string, aria_label: string}>
+     */
+    public static function getActiveSocialLinks(): array
+    {
+        $platforms = static::getSupportedSocialPlatforms();
+        $active = [];
+
+        foreach ($platforms as $id => $meta) {
+            $rawUrl = static::get($meta['key']);
+
+            if (!empty($rawUrl) && is_string($rawUrl)) {
+                $trimmed = trim($rawUrl);
+                if ($trimmed === '') {
+                    continue;
+                }
+
+                // Strictly require https:// scheme and valid URL format
+                if (!str_starts_with(strtolower($trimmed), 'https://') || !filter_var($trimmed, FILTER_VALIDATE_URL)) {
+                    continue;
+                }
+
+                // WhatsApp specific strict domain check (wa.me or api.whatsapp.com)
+                if ($id === 'whatsapp') {
+                    if (!str_starts_with(strtolower($trimmed), 'https://wa.me/') && !str_starts_with(strtolower($trimmed), 'https://api.whatsapp.com/')) {
+                        continue;
+                    }
+                }
+
+                // Reject unsafe schemes / payloads
+                if (preg_match('/^(javascript|data|file|vbscript):/i', $trimmed)) {
+                    continue;
+                }
+
+                $active[$id] = [
+                    'id'         => $id,
+                    'name'       => $meta['name'],
+                    'short_name' => $meta['short_name'],
+                    'url'        => $trimmed,
+                    'aria_label' => $meta['aria_label'],
+                ];
+            }
+        }
+
+        return $active;
+    }
 }

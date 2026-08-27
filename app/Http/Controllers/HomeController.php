@@ -106,8 +106,21 @@ class HomeController extends Controller
             'sponsors' => array_column($supportingPartners, 'name'),
         ];
 
+        // Homepage Social Media Links Strip Settings
+        $rawSocialEnabled = \App\Models\SiteSetting::get('homepage_social_enabled', '1');
+        $socialHeading = \App\Models\SiteSetting::get('homepage_social_heading', 'CONNECT WITH ABVHPS');
+        $socialSubtext = \App\Models\SiteSetting::get('homepage_social_subtext', 'Follow ABVHPS for updates on Seva activities, membership programs, volunteer initiatives, events, and organizational announcements.');
+        $activeSocialLinks = \App\Models\SiteSetting::getActiveSocialLinks();
+
+        $socialStrip = [
+            'enabled'   => in_array($rawSocialEnabled, ['1', 'yes', true, 1], true) && count($activeSocialLinks) > 0,
+            'heading'   => $socialHeading,
+            'subtext'   => $socialSubtext,
+            'platforms' => $activeSocialLinks,
+        ];
+
         // Pass all database items to the view folder
-        return view('home', compact('sliders', 'projects', 'fundraising', 'fundraisingCampaigns', 'liveCounts', 'publishedExams', 'joinStrip', 'sponsorsStrip'));
+        return view('home', compact('sliders', 'projects', 'fundraising', 'fundraisingCampaigns', 'liveCounts', 'publishedExams', 'joinStrip', 'sponsorsStrip', 'socialStrip'));
     }
 
     // 2. Public Website About Page Node
