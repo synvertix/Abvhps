@@ -30,6 +30,16 @@ class SiteSetting extends Model
             ['value' => $value, 'group' => $group]
         );
         Cache::forget("site_setting_{$key}");
+
+        // Batch 2 — Realtime invalidation for home-affecting settings.
+        // Dispatch ONLY for 'contact_phone' in this first proof.
+        // DB is committed and cache is cold before this fires.
+        // ShouldDispatchAfterCommit on HomeContentUpdated guarantees
+        // zero broadcasts if an outer transaction rolls back.
+        if ($key === 'contact_phone') {
+            event(new \App\Events\HomeContentUpdated());
+        }
+
         return $setting;
     }
 
