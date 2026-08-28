@@ -105,7 +105,27 @@
                             </div>
                             <div class="bg-gray-50 p-2.5 rounded-lg border border-gray-100">
                                 <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Date of Birth & Age</span>
-                                <span class="font-bold text-gray-800">{{ $member->dob }} ({{ $member->age }} Yrs)</span>
+                                @php
+                                    $calculatedAge = null;
+                                    $isAgeEligible = false;
+                                    if (!empty($member->dob)) {
+                                        try {
+                                            $calculatedAge = \App\Services\RudrasenaEligibilityService::calculateAge($member->dob);
+                                            $isAgeEligible = \App\Services\RudrasenaEligibilityService::isAgeEligible($member->dob);
+                                        } catch (\Throwable $e) {}
+                                    }
+                                @endphp
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="font-bold text-gray-800">{{ $member->dob ?: 'N/A' }}</span>
+                                    @if($calculatedAge !== null)
+                                        <span class="font-bold text-gray-700">({{ $calculatedAge }} Yrs)</span>
+                                        @if($isAgeEligible)
+                                            <span class="bg-emerald-100 text-emerald-800 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Eligible (24–44)</span>
+                                        @else
+                                            <span class="bg-rose-100 text-rose-800 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Ineligible (Req 24–44)</span>
+                                        @endif
+                                    @endif
+                                </div>
                             </div>
                             <div class="bg-gray-50 p-2.5 rounded-lg border border-gray-100">
                                 <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Gotram</span>

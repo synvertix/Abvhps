@@ -68,6 +68,31 @@
                         <p class="text-[10px] text-gray-400 font-semibold mt-1">Membership ID: {{ implode(' ', str_split($member->membership_id, 4)) }} | Volunteer Type: {{ $member->volunteer_type ?? 'Standard' }}</p>
                     </div>
 
+                    <!-- 1B. Date of Birth & Age Verification Indicator -->
+                    @php
+                        $calcAge = null;
+                        $isAgeEligible = false;
+                        if (!empty($member->dob)) {
+                            try {
+                                $calcAge = \App\Services\RudrasenaEligibilityService::calculateAge($member->dob);
+                                $isAgeEligible = \App\Services\RudrasenaEligibilityService::isAgeEligible($member->dob);
+                            } catch (\Throwable $e) {}
+                        }
+                    @endphp
+                    <div class="p-3.5 rounded-lg border {{ $isAgeEligible ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200' }}">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-bold text-gray-700">Date of Birth & Age:</span>
+                            <span class="font-black {{ $isAgeEligible ? 'text-emerald-800' : 'text-rose-800' }}">
+                                {{ $member->dob ?: 'Missing DOB' }}
+                                @if($calcAge !== null)
+                                    ({{ $calcAge }} Years Old) — {{ $isAgeEligible ? 'Eligible (24–44 Years)' : 'Ineligible (Requires 24–44)' }}
+                                @else
+                                    — Ineligible (Missing DOB)
+                                @endif
+                            </span>
+                        </div>
+                    </div>
+
                     <!-- 2. Status -->
                     <div>
                         <label class="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">Verification Status *</label>

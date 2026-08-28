@@ -12,6 +12,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use App\Models\RudrasenaMember;
 use App\Mail\RudrasenaWelcomeMail;
+use App\Services\RudrasenaEligibilityService;
 
 class RudrasenaController extends Controller
 {
@@ -24,7 +25,7 @@ class RudrasenaController extends Controller
     }
 
     /**
-     * Verify Core 12-Digit Membership Status and Calculate Strict Age Constraints (24-45)
+     * Verify Core 12-Digit Membership Status and Calculate Strict Age Constraints (24-44)
      */
     public function verifyCoreMembership(Request $request)
     {
@@ -44,15 +45,28 @@ class RudrasenaController extends Controller
             ]);
         }
 
-        // Carbon Matrix Age Verification Layer (Strictly 24 to 45 Years window)
-        $dobField = $member->date_of_birth ?? '1990-08-15';
-        $dob = Carbon::parse($dobField);
-        $age = $dob->age;
-
-        if ($age < 24 || $age > 45) {
+        // Carbon Matrix Age Verification Layer (Strictly 24 to 44 Years window)
+        $dobField = $member->dob ?? ($member->date_of_birth ?? null);
+        if (empty($dobField)) {
             return response()->json([
                 'success' => false,
-                'message' => "Eligibility Restriction: Age must be between 24 and 45. Your current calculated age is {$age}."
+                'message' => 'Your core membership profile does not have a valid Date of Birth recorded.'
+            ]);
+        }
+
+        try {
+            $age = RudrasenaEligibilityService::calculateAge($dobField);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or future Date of Birth recorded in core membership profile.'
+            ]);
+        }
+
+        if (!RudrasenaEligibilityService::isAgeEligible($dobField)) {
+            return response()->json([
+                'success' => false,
+                'message' => RudrasenaEligibilityService::validationMessage($age)
             ]);
         }
 
@@ -84,7 +98,6 @@ class RudrasenaController extends Controller
             'mobile' => 'required|string',
             'volunteer_type' => 'required|string|max:255',
             'dob' => 'required|date',
-            'age' => 'required|integer|between:24,45',
             
             // Nominee Validation Parameters
             'nominee_name' => 'required|string|max:255',
@@ -107,6 +120,23 @@ class RudrasenaController extends Controller
             'disclaimer_accepted' => 'required|accepted',
             'family' => 'nullable|array'
         ]);
+
+        // Server-Side Strict DOB Age Verification (24-44) - Do not trust client age
+        try {
+            $calculatedAge = RudrasenaEligibilityService::calculateAge($request->dob);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Date of birth cannot be in the future or invalid.'
+            ], 422);
+        }
+
+        if (!RudrasenaEligibilityService::isAgeEligible($request->dob)) {
+            return response()->json([
+                'success' => false,
+                'message' => RudrasenaEligibilityService::validationMessage($calculatedAge)
+            ], 422);
+        }
 
         // Anti-Fraud Duplication Layer Check
         $exists = DB::table('rudrasena_members')
@@ -360,6 +390,27 @@ class RudrasenaController extends Controller
         }
 
         if ($mappedStatus === 'verified') {
+            // Approval Time Recalculation: Verify member's current age against 24-44 policy
+            if (empty($member->dob)) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors(['status' => 'Cannot approve member: Date of Birth is missing.']);
+            }
+
+            try {
+                $approvalAge = RudrasenaEligibilityService::calculateAge($member->dob);
+            } catch (\Throwable $e) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors(['status' => 'Cannot approve member: Date of birth is invalid or in the future.']);
+            }
+
+            if (!RudrasenaEligibilityService::isAgeEligible($member->dob)) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors(['status' => 'Cannot approve member: ' . RudrasenaEligibilityService::validationMessage($approvalAge)]);
+            }
+
             $isFirstTimeApproval = empty($member->rudrasena_id);
             $generatedId = $member->rudrasena_id;
 
