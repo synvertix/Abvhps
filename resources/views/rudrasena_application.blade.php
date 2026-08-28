@@ -70,7 +70,7 @@
                             Core Membership Verification Gate
                         </h2>
                         <p class="text-xs text-gray-600 mt-1 leading-relaxed">
-                            Only verified, registered members of ABVHPS (Age 24–45 years) are eligible to enlist into the Rudrasena Wing.
+                            Only verified, registered members of ABVHPS (Age 24–44 years) are eligible to enlist into the Rudrasena Wing.
                         </p>
                     </div>
                 </div>

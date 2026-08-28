@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Laravel\Sanctum\HasApiTokens;
 
 class Membership extends Model
 {
+    use HasApiTokens;
     /**
      * The official database table associated with the model.
      *
