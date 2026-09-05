@@ -35,9 +35,9 @@ class RazorpayPaymentService implements PaymentGatewayInterface
 
     public function __construct()
     {
-        $this->keyId         = config('services.razorpay.key_id', '');
-        $this->keySecret     = config('services.razorpay.key_secret', '');
-        $this->webhookSecret = config('services.razorpay.webhook_secret', '');
+        $this->keyId         = trim((string) config('services.razorpay.key_id', ''));
+        $this->keySecret     = trim((string) config('services.razorpay.key_secret', ''));
+        $this->webhookSecret = trim((string) config('services.razorpay.webhook_secret', ''));
 
         $this->isConfigured = !empty($this->keyId) && !empty($this->keySecret);
     }
@@ -87,6 +87,16 @@ class RazorpayPaymentService implements PaymentGatewayInterface
         }
 
         if (!$this->isConfigured) {
+            // In production, missing or invalid credentials must FAIL CLOSED.
+            // Never simulate orders, never return fake key_ids, and never bypass the gateway.
+            if (app()->environment('production')) {
+                Log::error('RazorpayPaymentService: Payment initialization rejected in production due to missing credentials');
+                return [
+                    'success' => false,
+                    'message' => 'Payment gateway is temporarily unavailable. Please try again later or contact support.',
+                ];
+            }
+
             $mockOrderId = 'order_SIMULATION_' . strtoupper(uniqid());
             return [
                 'success'      => true,
@@ -198,8 +208,17 @@ class RazorpayPaymentService implements PaymentGatewayInterface
             ];
         }
 
-        // Simulation mode
+        // Simulation mode (disabled in production)
         if (!$this->isConfigured) {
+            if (app()->environment('production')) {
+                Log::error('RazorpayPaymentService: Payment verification rejected in production due to unconfigured gateway');
+                return [
+                    'success' => false,
+                    'status'  => 'failed',
+                    'message' => 'Payment verification unavailable.',
+                ];
+            }
+
             return [
                 'success'    => true,
                 'payment_id' => $razorpayPaymentId ?: 'SIM_PAY_' . strtoupper(uniqid()),
@@ -333,6 +352,13 @@ class RazorpayPaymentService implements PaymentGatewayInterface
     public function getPaymentStatus(string $gatewayOrderId): array
     {
         if (!$this->isConfigured) {
+            if (app()->environment('production')) {
+                return [
+                    'success' => false,
+                    'message' => 'Payment status lookup unavailable in production.',
+                ];
+            }
+
             return [
                 'success'      => true,
                 'is_simulated' => true,

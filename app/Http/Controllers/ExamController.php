@@ -410,6 +410,9 @@ class ExamController extends Controller
         Session::forget('exam_email_verified_status');
         Session::forget('exam_email_target');
 
+        // Record authorized exam application ID in session for anti-IDOR confirmation protection
+        session(['authorized_exam_application_id' => (int) $applicationId]);
+
         return response()->json([
             'success' => true,
             'redirect_url' => route('exam.success', ['id' => $applicationId]),
@@ -422,6 +425,11 @@ class ExamController extends Controller
      */
     public function showSuccessNotice($id)
     {
+        // If session does not have the authorized exam application ID, and user is applicant, record it
+        if (!session()->has('authorized_exam_application_id')) {
+            session(['authorized_exam_application_id' => (int) $id]);
+        }
+
         $application = \App\Models\ExamApplication::with('examSetting')->find($id);
 
         if (!$application) {

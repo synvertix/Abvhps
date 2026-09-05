@@ -129,6 +129,12 @@ class HomeController extends Controller
         return view('about');
     }
 
+    // 2b. Public Website Centralized Policy Center
+    public function policyCenter()
+    {
+        return view('policy_center');
+    }
+
     // 3. Public Website Gallery Page Node
     public function gallery()
     {

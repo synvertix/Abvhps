@@ -27,12 +27,12 @@ use App\Http\Controllers\MembershipController;
 
 // 1. Membership OTP Verification Process Routes
 Route::get('/membership', [MembershipController::class, 'showOtpForm'])->name('membership.form');
-Route::post('/membership/send-otp', [MembershipController::class, 'sendOtp']);
-Route::post('/membership/verify-otp', [MembershipController::class, 'verifyOtp']);
+Route::post('/membership/send-otp', [MembershipController::class, 'sendOtp'])->middleware('throttle:5,1');
+Route::post('/membership/verify-otp', [MembershipController::class, 'verifyOtp'])->middleware('throttle:10,1');
 
 // 2. Membership Gateway Payment Process Routes
 Route::get('/membership/payment', [MembershipController::class, 'showPaymentPage']);
-Route::post('/membership/payment/razorpay/initiate', [MembershipController::class, 'initiateRazorpayPayment'])->name('membership.payment.razorpay.initiate');
+Route::post('/membership/payment/razorpay/initiate', [MembershipController::class, 'initiateRazorpayPayment'])->name('membership.payment.razorpay.initiate')->middleware('throttle:15,1');
 Route::post('/membership/payment/razorpay/verify', [MembershipController::class, 'verifyRazorpayPayment'])->name('membership.payment.razorpay.verify');
 
 // 2b. Membership Identity Verification Routes (Any ONE of 5 methods)
@@ -150,8 +150,8 @@ use App\Http\Controllers\ExamController;
 Route::get('/exam-application', [ExamController::class, 'showApplicationForm'])->name('exam.form');
 
 // Security & Verification Channels
-Route::post('/exam-application/send-otp', [ExamController::class, 'sendEmailOtp'])->name('exam.send_otp');
-Route::post('/exam-application/verify-otp', [ExamController::class, 'verifyEmailOtp'])->name('exam.verify_otp');
+Route::post('/exam-application/send-otp', [ExamController::class, 'sendEmailOtp'])->name('exam.send_otp')->middleware('throttle:5,1');
+Route::post('/exam-application/verify-otp', [ExamController::class, 'verifyEmailOtp'])->name('exam.verify_otp')->middleware('throttle:10,1');
 Route::post('/exam-application/check-membership', [ExamController::class, 'checkMembershipId'])->name('exam.check_membership');
 
 // Anti-Fraud Payment Delivery Engine & Success Handlers
@@ -197,8 +197,8 @@ Route::get('/donations/campaign/{id}', [FundraisingController::class, 'showCampa
 
 // Payment initiation (server-side order creation — returns JSON)
 // CSRF protected — called via JS Fetch with X-CSRF-TOKEN header
-Route::post('/donations/initiate-cashfree', [DonationController::class, 'initiateCashfreePayment'])->name('donations.initiate_cashfree');
-Route::post('/donations/initiate-razorpay', [DonationController::class, 'initiateRazorpayPayment'])->name('donations.initiate_razorpay');
+Route::post('/donations/initiate-cashfree', [DonationController::class, 'initiateCashfreePayment'])->name('donations.initiate_cashfree')->middleware('throttle:15,1');
+Route::post('/donations/initiate-razorpay', [DonationController::class, 'initiateRazorpayPayment'])->name('donations.initiate_razorpay')->middleware('throttle:15,1');
 
 // Razorpay browser-callback server-side signature verification
 Route::post('/donations/verify-razorpay', [DonationController::class, 'verifyRazorpayPayment'])->name('donations.verify_razorpay');
@@ -237,7 +237,7 @@ Route::get('/admin', function () {
 Route::get('/admin/login', [AdminAuthController::class, 'showLoginView'])->name('login');
 Route::post('/admin/login', [AdminAuthController::class, 'executeAuthentication'])->name('admin.login.submit');
 
-// CENTRAL CADRE ROSTER: Protected Administrative Team Manager
+// PUBLIC ROSTER LOOKUP ENGINE: Accessible to all public devotees and guests globally via /team; admin roster requires auth
 Route::get('/admin/our-team', [OurTeamController::class, 'index'])->name('admin.our_team.index')->middleware('auth:web');
 Route::get('/verify-member/{membership_id}', [\App\Http\Controllers\OurTeamController::class, 'publicLiveVerification'])->name('member.public_verify');
 
@@ -279,38 +279,35 @@ Route::get('/verify/grama-seva-dal/{groupId}', [\App\Http\Controllers\PublicVeri
 Route::get('/verify-member/{membership_id}', [\App\Http\Controllers\PublicVerificationController::class, 'verifyMembership']);
 Route::get('/verify-volunteer/{id}', [\App\Http\Controllers\PublicVerificationController::class, 'verifyVolunteer']);
 
-   // ======================================================================
-// 📜 CENTRAL DONATION LEDGER INDEPENDENT PIPELINES (OUTSIDE GROUP)
 // ======================================================================
-Route::get('/admin/donations', [\App\Http\Controllers\DonationController::class, 'index'])->name('admin.donation.index')->middleware('auth:web');
-Route::get('/admin/donations/{id}/receipt', [\App\Http\Controllers\DonationController::class, 'downloadReceipt'])->name('admin.donation.receipt')->middleware('auth:web');
+// 📜 CENTRAL DONATION, BLOG, GALLERY & SUPPORT ADMIN PIPELINES
+// ======================================================================
+Route::middleware(['auth:web'])->group(function () {
+    // Donations
+    Route::get('/admin/donations', [\App\Http\Controllers\DonationController::class, 'index'])->name('admin.donation.index');
+    Route::get('/admin/donations/{id}/receipt', [\App\Http\Controllers\DonationController::class, 'downloadReceipt'])->name('admin.donation.receipt');
 
-// ======================================================================
-// 📝 CENTRAL BLOGS MANAGEMENT INDEPENDENT PIPELINES (OUTSIDE GROUP)
-// ======================================================================
-Route::get('/admin/blogs', [\App\Http\Controllers\BlogController::class, 'index'])->name('admin.blog.index')->middleware('auth:web');
-Route::get('/admin/blogs/create', [\App\Http\Controllers\BlogController::class, 'create'])->name('admin.blog.create')->middleware('auth:web');
-Route::post('/admin/blogs/store', [\App\Http\Controllers\BlogController::class, 'store'])->name('admin.blog.store')->middleware('auth:web');
-Route::get('/admin/blogs/{id}/edit', [\App\Http\Controllers\BlogController::class, 'edit'])->name('admin.blog.edit')->middleware('auth:web');
-Route::post('/admin/blogs/{id}/update', [\App\Http\Controllers\BlogController::class, 'update'])->name('admin.blog.update')->middleware('auth:web');
-Route::post('/admin/blogs/{id}/delete', [\App\Http\Controllers\BlogController::class, 'destroy'])->name('admin.blog.destroy')->middleware('auth:web');
+    // Blogs
+    Route::get('/admin/blogs', [\App\Http\Controllers\BlogController::class, 'index'])->name('admin.blog.index');
+    Route::get('/admin/blogs/create', [\App\Http\Controllers\BlogController::class, 'create'])->name('admin.blog.create');
+    Route::post('/admin/blogs/store', [\App\Http\Controllers\BlogController::class, 'store'])->name('admin.blog.store');
+    Route::get('/admin/blogs/{id}/edit', [\App\Http\Controllers\BlogController::class, 'edit'])->name('admin.blog.edit');
+    Route::post('/admin/blogs/{id}/update', [\App\Http\Controllers\BlogController::class, 'update'])->name('admin.blog.update');
+    Route::post('/admin/blogs/{id}/delete', [\App\Http\Controllers\BlogController::class, 'destroy'])->name('admin.blog.destroy');
 
-// ======================================================================
-// 🖼️ CENTRAL GALLERY HUB INDEPENDENT PIPELINES (OUTSIDE GROUP)
-// ======================================================================
-Route::get('/admin/gallery', [\App\Http\Controllers\GalleryController::class, 'index'])->name('admin.gallery.index')->middleware('auth:web');
-Route::post('/admin/gallery/store', [\App\Http\Controllers\GalleryController::class, 'store'])->name('admin.gallery.store')->middleware('auth:web');
-Route::post('/admin/gallery/{id}/delete', [\App\Http\Controllers\GalleryController::class, 'destroy'])->name('admin.gallery.destroy')->middleware('auth:web');
+    // Gallery
+    Route::get('/admin/gallery', [\App\Http\Controllers\GalleryController::class, 'index'])->name('admin.gallery.index');
+    Route::post('/admin/gallery/store', [\App\Http\Controllers\GalleryController::class, 'store'])->name('admin.gallery.store');
+    Route::post('/admin/gallery/{id}/delete', [\App\Http\Controllers\GalleryController::class, 'destroy'])->name('admin.gallery.destroy');
 
-// ======================================================================
-// 🤝 OUR SUPPORT CORE MISSIONS INDEPENDENT PIPELINES (OUTSIDE GROUP)
-// ======================================================================
-Route::get('/admin/our-supports', [\App\Http\Controllers\OurSupportController::class, 'index'])->name('admin.our_support.index')->middleware('auth:web');
-Route::get('/admin/our-supports/create', [\App\Http\Controllers\OurSupportController::class, 'create'])->name('admin.our_support.create')->middleware('auth:web');
-Route::post('/admin/our-supports/store', [\App\Http\Controllers\OurSupportController::class, 'store'])->name('admin.our_support.store')->middleware('auth:web');
-Route::get('/admin/our-supports/{id}/edit', [\App\Http\Controllers\OurSupportController::class, 'edit'])->name('admin.our_supports.edit')->middleware('auth:web');
-Route::post('/admin/our-supports/{id}/update', [\App\Http\Controllers\OurSupportController::class, 'update'])->name('admin.our_supports.update')->middleware('auth:web');
-Route::post('/admin/our-supports/{id}/delete', [\App\Http\Controllers\OurSupportController::class, 'destroy'])->name('admin.our_supports.destroy')->middleware('auth:web');
+    // Our Supports
+    Route::get('/admin/our-supports', [\App\Http\Controllers\OurSupportController::class, 'index'])->name('admin.our_support.index');
+    Route::get('/admin/our-supports/create', [\App\Http\Controllers\OurSupportController::class, 'create'])->name('admin.our_support.create');
+    Route::post('/admin/our-supports/store', [\App\Http\Controllers\OurSupportController::class, 'store'])->name('admin.our_support.store');
+    Route::get('/admin/our-supports/{id}/edit', [\App\Http\Controllers\OurSupportController::class, 'edit'])->name('admin.our_supports.edit');
+    Route::post('/admin/our-supports/{id}/update', [\App\Http\Controllers\OurSupportController::class, 'update'])->name('admin.our_supports.update');
+    Route::post('/admin/our-supports/{id}/delete', [\App\Http\Controllers\OurSupportController::class, 'destroy'])->name('admin.our_supports.destroy');
+});
 
 Route::get('/admin/membership-ledger', [App\Http\Controllers\MembershipController::class, 'adminIndex'])->name('admin.membership.ledger')->middleware('auth:web');
 
@@ -424,7 +421,7 @@ Route::get('/admin/membership-ledger', [App\Http\Controllers\MembershipControlle
     Route::post('/admin/contacts/{id}/notes', [App\Http\Controllers\ContactController::class, 'adminSaveNotes'])->name('admin.contacts.notes')->middleware('auth:web');
     Route::delete('/admin/contacts/delete/{id}', [App\Http\Controllers\ContactController::class, 'adminDelete'])->name('admin.contacts.delete')->middleware('auth:web');
     Route::get('/contact', [App\Http\Controllers\ContactController::class, 'showContactPage'])->name('public.contact');
-    Route::post('/contact/submit', [App\Http\Controllers\ContactController::class, 'submitContact'])->name('public.contact.submit');
+    Route::post('/contact/submit', [App\Http\Controllers\ContactController::class, 'submitContact'])->name('public.contact.submit')->middleware('throttle:5,1');
 
     // 14. ABVHPS Donation & Tax Certificates Core Gateway
     Route::get('/admin/certificates', [App\Http\Controllers\CertificateController::class, 'adminIndex'])->name('admin.certificates.index')->middleware('auth:web');
@@ -470,5 +467,17 @@ Route::get('/team', [App\Http\Controllers\HomeController::class, 'team'])->name(
 
 // Public Web Single Project Full Details Route Link
 Route::get('/project/{id}', [App\Http\Controllers\HomeController::class, 'showProject'])->name('public.project.show');
+
+// Public Web Centralized Policy Center Routes
+Route::get('/policy-center', [App\Http\Controllers\HomeController::class, 'policyCenter'])->name('public.policy_center');
+Route::get('/terms', function() {
+    return redirect()->route('public.policy_center', '#terms-and-conditions');
+})->name('public.terms');
+Route::get('/privacy', function() {
+    return redirect()->route('public.policy_center', '#privacy-policy');
+})->name('public.privacy');
+Route::get('/refund-policy', function() {
+    return redirect()->route('public.policy_center', '#refund-policy');
+})->name('public.refund_policy');
 
 

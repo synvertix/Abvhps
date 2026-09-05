@@ -351,4 +351,82 @@ class SecurityHardeningTest extends TestCase
             'marks' => 95,
         ]);
     }
+
+    /**
+     * 11. Negative Security Test: Unauthenticated user cannot access newly protected admin routes.
+     */
+    public function test_negative_unauthenticated_user_blocked_from_all_admin_endpoints(): void
+    {
+        // Donated admin routes
+        $this->get('/admin/donations')->assertRedirect(route('login'));
+        $this->get('/admin/donations/1/receipt')->assertRedirect(route('login'));
+
+        // Blog admin routes
+        $this->get('/admin/blogs')->assertRedirect(route('login'));
+        $this->get('/admin/blogs/create')->assertRedirect(route('login'));
+        $this->post('/admin/blogs/store', ['title' => 'Hacked'])->assertRedirect(route('login'));
+
+        // Gallery admin routes
+        $this->get('/admin/gallery')->assertRedirect(route('login'));
+        $this->post('/admin/gallery/store', [])->assertRedirect(route('login'));
+
+        // Support admin routes
+        $this->get('/admin/our-supports')->assertRedirect(route('login'));
+        $this->get('/admin/our-supports/create')->assertRedirect(route('login'));
+
+        // Volunteer admin endpoints
+        $this->post('/admin/volunteer/approve', ['id' => 1])->assertRedirect(route('login'));
+        $this->get('/admin/volunteer/view-card/RS0001')->assertRedirect(route('login'));
+
+        // Team admin endpoints
+        $this->get('/admin/our-team')->assertRedirect(route('login'));
+    }
+
+    /**
+     * 12. Negative Security Test: Hardcoded bypass credentials are rejected.
+     */
+    public function test_negative_hardcoded_bypass_credentials_rejected(): void
+    {
+        $response = $this->post('/volunteer/process-login', [
+            'volunteer_id' => '662424',
+            'password' => 'ABVHPS@2026'
+        ]);
+
+        $this->assertNull(session('auth_volunteer_code'));
+        $this->assertNull(session('auth_volunteer_role'));
+    }
+
+    /**
+     * 13. Negative Security Test: Sensitive candidate mobile number is masked on public hall ticket view.
+     */
+    public function test_candidate_phone_masked_on_public_hall_ticket(): void
+    {
+        $exam = ExamSetting::create([
+            'exam_title' => 'Sanatana Dharma Annual Exam 2026',
+            'exam_date_time' => '2026-10-15 10:00:00',
+            'exam_center_location' => 'Central Center, Kadapa',
+            'syllabus_pdf_path' => 'syllabus.pdf',
+            'prize_details_json' => json_encode(['1st' => 'Gold Medal']),
+            'application_fee' => 41.00,
+            'status' => 'active',
+            'exam_type' => 'theory'
+        ]);
+
+        $app = ExamApplication::create([
+            'exam_setting_id' => $exam->id,
+            'email' => 'student_phone@test.com',
+            'is_email_verified' => 1,
+            'full_name' => 'STUDENT CANDIDATE',
+            'dob' => '2008-04-10',
+            'address' => 'Porumamilla, Kadapa',
+            'mobile' => '9876543210',
+            'payment_status' => 'success',
+            'hall_ticket_number' => '58374291640',
+        ]);
+
+        $res = $this->get(route('exam.success', ['id' => $app->id]));
+        $res->assertStatus(200);
+        $res->assertSee('98******10');
+        $res->assertDontSee('9876543210');
+    }
 }

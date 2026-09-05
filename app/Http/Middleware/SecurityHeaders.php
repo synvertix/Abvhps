@@ -25,7 +25,7 @@ class SecurityHeaders
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
         // 4. Permissions Policy
-        $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+        $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(self "https://api.razorpay.com" "https://checkout.razorpay.com" "https://*.cashfree.com")');
 
         // 5. Content Security Policy (Strict yet compatible with Tailwind CDN, Google Fonts, dynamic QR, Cashfree & Razorpay)
         $csp = [
@@ -33,8 +33,8 @@ class SecurityHeaders
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://sdk.cashfree.com https://checkout.razorpay.com https://api.razorpay.com https://cdn.razorpay.com",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
             "font-src 'self' https://fonts.gstatic.com data:",
-            "img-src 'self' data: blob: https: http:",
-            "connect-src 'self' https: http: https://api.cashfree.com https://sandbox.cashfree.com https://api.razorpay.com",
+            "img-src 'self' data: blob: https:",
+            "connect-src 'self' https: wss: ws: https://api.cashfree.com https://sandbox.cashfree.com https://api.razorpay.com https://lumberjack.razorpay.com",
             "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://sdk.cashfree.com https://sandbox.cashfree.com https://api.razorpay.com https://checkout.razorpay.com",
             "object-src 'none'",
             "base-uri 'self'",

@@ -214,7 +214,13 @@
                             </div>
                             <div>
                                 <span class="text-[10px] uppercase font-bold text-gray-400 block">Mobile Number</span>
-                                <span class="font-mono font-bold text-gray-800">{{ $application->mobile ?? 'N/A' }}</span>
+                                <span class="font-mono font-bold text-gray-800">
+                                    @if(!empty($application->mobile))
+                                        {{ substr($application->mobile, 0, 2) . '******' . substr($application->mobile, -2) }}
+                                    @else
+                                        N/A
+                                    @endif
+                                </span>
                             </div>
                         </div>
 
