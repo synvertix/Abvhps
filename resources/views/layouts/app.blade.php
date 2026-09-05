@@ -475,6 +475,13 @@
                 <span class="truncate">CONTACT US</span>
             </a>
 
+            <a href="{{ route('public.policy_center') }}" 
+               onclick="togglePublicMobileMenu(false)" 
+               class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->routeIs('public.policy_center*') ? 'is-active' : '' }}"
+               @if(request()->routeIs('public.policy_center*')) aria-current="page" @endif>
+                <span class="truncate">POLICY CENTER</span>
+            </a>
+
             <!-- CTA: LOGIN & MAKE A DONATION -->
             <div class="pt-2 pb-1 space-y-2">
                 @if(!auth()->guard('web')->check() && !auth()->guard('volunteer')->check())
@@ -512,45 +519,66 @@
 
     <!-- 4. Footer Component -->
     <footer class="bg-brandDarkGray text-gray-300 pt-10 pb-4 px-4 mt-12">
-        <div class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6 border-b border-gray-700 pb-8">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 border-b border-gray-700 pb-8">
             <div>
-                <h3 class="text-white font-bold text-lg mb-4 text-brandOrange">About ABVHPS</h3>
-                <p class="text-sm leading-relaxed">
+                <h3 class="text-white font-bold text-base mb-3 text-brandOrange uppercase tracking-wide">About ABVHPS</h3>
+                <p class="text-xs text-gray-300 leading-relaxed">
                     {{ \App\Models\SiteSetting::get('footer_about', 'Dedicated to preserving and promoting Hindu culture and values worldwide under the behest of Rajaguru Sri Sri Sri Subrahmanneswara Swamy Garu.') }}
                 </p>
             </div>
             <div>
-                <h3 class="text-white font-bold text-lg mb-4 text-brandOrange">Quick Links</h3>
-                <div class="grid grid-cols-1 gap-1.5 text-sm">
-                    <a href="/about" class="hover:text-white">About Us</a>
-                    <a href="/membership" class="hover:text-white">Membership</a>
-                    <a href="/volunteer" class="hover:text-white">Volunteer</a>
-                    <a href="/donation" class="hover:text-white">Donation</a>
-                    <a href="{{ route('public.contact') }}" class="hover:text-white">Contact Us</a>
-                    <a href="{{ route('public.certificates') }}" class="hover:text-white">80G / 12A</a>
+                <h3 class="text-white font-bold text-base mb-3 text-brandOrange uppercase tracking-wide">Quick Links</h3>
+                <div class="grid grid-cols-1 gap-1.5 text-xs">
+                    <a href="/about" class="text-gray-300 hover:text-white transition">About Us</a>
+                    <a href="/membership" class="text-gray-300 hover:text-white transition">Membership</a>
+                    <a href="/volunteer" class="text-gray-300 hover:text-white transition">Volunteer</a>
+                    <a href="{{ route('donations.grid') }}" class="text-gray-300 hover:text-white transition">Donation</a>
+                    <a href="{{ route('public.certificates') }}" class="text-gray-300 hover:text-white transition">80G / 12A</a>
+                    <a href="{{ route('public.blogs') }}" class="text-gray-300 hover:text-white transition">Blogs & Updates</a>
                 </div>
             </div>
             <div>
-                <h3 class="text-white font-bold text-lg mb-4 text-brandOrange">Our Wings</h3>
-                <div class="space-y-1.5 text-sm">
-                    <a href="{{ route('rudrasena.form') }}" class="hover:text-white block">Rudrasena Dal</a>
-                    <a href="{{ route('kalabrundam.form') }}" class="hover:text-white block">Kala Brundam</a>
-                    <a href="{{ route('gramasevadal.form') }}" class="hover:text-white block">Grama Seva Dal</a>
-                    <a href="{{ route('organicfarmers.form') }}" class="hover:text-white block font-bold text-emerald-400">Organic Farmers</a>
+                <h3 class="text-white font-bold text-base mb-3 text-brandOrange uppercase tracking-wide">Our Wings</h3>
+                <div class="space-y-1.5 text-xs">
+                    <a href="{{ route('rudrasena.form') }}" class="text-gray-300 hover:text-white block transition">Rudrasena Dal</a>
+                    <a href="{{ route('kalabrundam.form') }}" class="text-gray-300 hover:text-white block transition">Kala Brundam</a>
+                    <a href="{{ route('gramasevadal.form') }}" class="text-gray-300 hover:text-white block transition">Grama Seva Dal</a>
+                    <a href="{{ route('organicfarmers.form') }}" class="hover:text-white block font-bold text-emerald-400 transition">Organic Farmers</a>
+                    <a href="{{ route('public.exams_board') }}" class="text-gray-300 hover:text-white block transition">Exams Notice Board</a>
                 </div>
             </div>
             <div>
-                <h3 class="text-white font-bold text-lg mb-4 text-brandOrange">Services & Exams</h3>
-                <div class="space-y-1.5 text-sm">
-                    <a href="{{ route('public.exams_board') }}" class="hover:text-white block">Exams Notice Board</a>
-                    <a href="{{ route('exam.form') }}" class="hover:text-white block">Exam Application</a>
-                    <a href="{{ route('exam.results_portal') }}" class="hover:text-white block">Check Results</a>
-                    <a href="{{ route('donations.grid') }}" class="hover:text-white block">Fundraise Campaigns</a>
+                <h3 class="text-white font-bold text-base mb-3 text-brandOrange uppercase tracking-wide">Support</h3>
+                <div class="space-y-2 text-xs">
+                    <div>
+                        <span class="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">Official Support Email</span>
+                        <a href="mailto:{{ \App\Models\SiteSetting::get('contact_email', 'info@abvhps.org') }}" class="text-orange-400 font-semibold hover:underline block break-all">
+                            {{ \App\Models\SiteSetting::get('contact_email', 'info@abvhps.org') }}
+                        </a>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">Helpline</span>
+                        <a href="tel:{{ \App\Models\SiteSetting::get('contact_phone', '+91 8884933379') }}" class="text-gray-300 hover:text-white block font-mono">
+                            {{ \App\Models\SiteSetting::get('contact_phone', '+91 8884933379') }}
+                        </a>
+                    </div>
+                    <div class="pt-1">
+                        <a href="{{ route('public.policy_center') }}" class="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wide text-brandOrange hover:text-orange-300 bg-gray-800/80 hover:bg-gray-800 px-3 py-1.5 rounded-lg border border-orange-500/30 transition shadow-xs">
+                            <span>📜</span>
+                            <span>Policy Center</span>
+                            <span>&rarr;</span>
+                        </a>
+                    </div>
+                    <div>
+                        <a href="{{ route('public.contact') }}" class="text-gray-400 hover:text-white block text-xs transition">
+                            Grievance Redressal
+                        </a>
+                    </div>
                 </div>
             </div>
             <div>
-                <h3 class="text-white font-bold text-lg mb-4 text-brandOrange">Contact Us</h3>
-                <p class="text-sm leading-relaxed mb-2">
+                <h3 class="text-white font-bold text-base mb-3 text-brandOrange uppercase tracking-wide">Contact Us</h3>
+                <p class="text-xs text-gray-300 leading-relaxed mb-2">
                     {{ \App\Models\SiteSetting::get('contact_address', 'Survey No:1826, Shanmukhapuram, Akkalareddy Palli Village and Post, Porumamilla Mandalam, Kadapa, A.P - 516193') }}
                 </p>
                 <div class="text-xs font-mono text-gray-400 space-y-1">
@@ -559,8 +587,19 @@
                 </div>
             </div>
         </div>
-        <div class="text-center text-xs text-gray-500 pt-4">
-            &copy; {{ date('Y') }} ABVHPS. All Rights Reserved.
+        <div class="max-w-7xl mx-auto pt-4 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 gap-2">
+            <div>
+                &copy; {{ date('Y') }} ABVHPS. All Rights Reserved.
+            </div>
+            <div class="flex items-center gap-4 text-xs font-medium">
+                <a href="{{ route('public.policy_center') }}" class="text-gray-400 hover:text-white transition">Policy Center</a>
+                <span class="text-gray-700">|</span>
+                <a href="{{ route('public.terms') }}" class="text-gray-400 hover:text-white transition">Terms</a>
+                <span class="text-gray-700">|</span>
+                <a href="{{ route('public.privacy') }}" class="text-gray-400 hover:text-white transition">Privacy</a>
+                <span class="text-gray-700">|</span>
+                <a href="{{ route('public.refund_policy') }}" class="text-gray-400 hover:text-white transition">Refunds</a>
+            </div>
         </div>
     </footer>
 

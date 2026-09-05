@@ -1106,66 +1106,10 @@ class VolunteerController extends Controller
         return view('volunteer_login');
     }
         
-    // 10. Process Secure Credentials Supporting Entire 5-Tier Strategic Pipeline Bypass Slots Safely
+    // 10. Process Secure Credentials Delegated to VolunteerAuthController
     public function processLogin(Request $request)
     {
-        $request->validate([
-            'volunteer_id' => 'required|string',
-            'password' => 'required|string'
-        ]);
-
-        $volunteerId = $request->input('volunteer_id');
-        $passwordInput = $request->input('password');
-
-        // STRICT LOGICAL TEST SWITCH: Matching explicit keys instantly to bypass any database row deadlock hurdles
-        if ($passwordInput === 'ABVHPS@2026') {
-            
-            // NODE 1: Village President Ground Force Test Login Check
-            if ($volunteerId === '662424') {
-                session([
-                    'auth_volunteer_db_id' => 1, 'auth_volunteer_code' => '662424',
-                    'auth_volunteer_role' => 'village_president', 'auth_volunteer_locality' => 'BADVEL, A.P STATE'
-                ]);
-                return redirect('/volunteer/dashboard/village')->with('success', 'Logged in successfully!');
-            }
-
-            // NODE 2: Mandal President Hierarchy Test Login Check
-            if ($volunteerId === '773434') {
-                session([
-                    'auth_volunteer_db_id' => 2, 'auth_volunteer_code' => '773434',
-                    'auth_volunteer_role' => 'mandal_president', 'auth_volunteer_locality' => 'PORUMAMILLA'
-                ]);
-                return redirect('/volunteer/dashboard/mandal')->with('success', 'Logged in successfully!');
-            }
-
-            // NODE 3: Assembly Segment President Constituency Test Login Check
-            if ($volunteerId === '884545') {
-                session([
-                    'auth_volunteer_db_id' => 3, 'auth_volunteer_code' => '884545',
-                    'auth_volunteer_role' => 'assembly_president', 'auth_volunteer_locality' => 'BADVEL'
-                ]);
-                return redirect('/volunteer/dashboard/assembly')->with('success', 'Logged in successfully!');
-            }
-
-            // NODE 4: High Level Apex Pipelines Layout (District, State, National, Global, IT Support)
-            $bypassRoles = [
-                '995656' => ['role' => 'district_president', 'locality' => 'KADAPA DISTRICT'],
-                '551111' => ['role' => 'state_president', 'locality' => 'ANDHRA PRADESH STATE'],
-                '772222' => ['role' => 'national_president', 'locality' => 'BHARATH DESAM'],
-                '993333' => ['role' => 'international_president', 'locality' => 'GLOBAL OVERSEAS'],
-                '110011' => ['role' => 'support_team', 'locality' => 'CENTRAL IT INFRASTRUCTURE']
-            ];
-
-            if (array_key_exists($volunteerId, $bypassRoles)) {
-                session([
-                    'auth_volunteer_db_id' => rand(10, 99), 'auth_volunteer_code' => $volunteerId,
-                    'auth_volunteer_role' => $bypassRoles[$volunteerId]['role'], 'auth_volunteer_locality' => $bypassRoles[$volunteerId]['locality']
-                ]);
-                return redirect('/volunteer/dashboard/global')->with('success', 'Apex council pipeline activated successfully!');
-            }
-        }
-
-        return redirect()->back()->with('error', 'Invalid Volunteer ID or Password credentials entry. Please try again.');
+        return app(VolunteerAuthController::class)->login($request);
     }
 
 

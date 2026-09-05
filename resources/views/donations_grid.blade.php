@@ -298,7 +298,7 @@
             </div>
 
             <!-- Form Content -->
-            <form id="donation_form" method="POST" onsubmit="event.preventDefault(); handleDonationSubmit(event);" class="p-6 sm:p-10 space-y-8">
+            <form id="donation_form" method="POST" action="{{ route('donations.initiate_razorpay') }}" onsubmit="handleDonationSubmit(event); return false;" class="p-6 sm:p-10 space-y-8">
                 @csrf
 
                 <!-- STEP 1: AMOUNT SELECTION -->

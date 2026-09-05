@@ -752,7 +752,7 @@ class DonationPaymentIntegrationTest extends TestCase
         $response->assertStatus(200);
 
         // Form tag must declare method="POST" and preventDefault on submit
-        $response->assertSee('<form id="donation_form" method="POST" onsubmit="event.preventDefault(); handleDonationSubmit(event);"', false);
+        $response->assertSee('<form id="donation_form" method="POST" action="' . route('donations.initiate_razorpay') . '" onsubmit="handleDonationSubmit(event); return false;"', false);
 
         // Gateway radio options: Razorpay active/checked, Cashfree disabled
         $response->assertSee('id="radio_razorpay" checked', false);
@@ -823,4 +823,172 @@ class DonationPaymentIntegrationTest extends TestCase
         // Must not contain secret key patterns
         $response->assertDontSee('key_secret', false);
     }
+
+    // =========================================================================
+    // PRODUCTION SECURITY TESTS: RAZORPAY FAIL-CLOSED BEHAVIOR
+    // =========================================================================
+
+    public function test_production_with_valid_razorpay_credentials_creates_order(): void
+    {
+        $this->app->detectEnvironment(fn() => 'production');
+        \Illuminate\Support\Facades\Config::set('services.razorpay.key_id', 'rzp_live_test_valid');
+        \Illuminate\Support\Facades\Config::set('services.razorpay.key_secret', 'rzp_live_secret_valid');
+
+        $campaign = $this->createCampaign();
+
+        $response = $this->postDonationJson('/donations/initiate-razorpay', [
+            'donor_name'  => 'SANATANA DONOR',
+            'email'       => 'donor@example.com',
+            'phone'       => '9876543210',
+            'amount'      => 500,
+            'campaign_id' => $campaign->id,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success'      => true,
+            'gateway'      => 'razorpay',
+            'is_simulated' => false,
+        ]);
+        $response->assertJsonPath('session_data.key_id', 'rzp_live_test_valid');
+        $response->assertJsonPath('session_data.razorpay_order_id', 'order_RZP_MOCK_123');
+    }
+
+    public function test_production_with_missing_key_id_fails_closed(): void
+    {
+        $this->app->detectEnvironment(fn() => 'production');
+        \Illuminate\Support\Facades\Config::set('services.razorpay.key_id', '');
+        \Illuminate\Support\Facades\Config::set('services.razorpay.key_secret', 'rzp_live_secret_valid');
+
+        $campaign = $this->createCampaign();
+
+        $response = $this->postDonationJson('/donations/initiate-razorpay', [
+            'donor_name'  => 'SANATANA DONOR',
+            'email'       => 'donor@example.com',
+            'phone'       => '9876543210',
+            'amount'      => 500,
+            'campaign_id' => $campaign->id,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJson([
+            'success' => false,
+            'message' => 'Payment gateway is temporarily unavailable. Please try again later or contact support.',
+        ]);
+
+        $this->assertDatabaseHas('donations', [
+            'name'           => 'SANATANA DONOR',
+            'payment_status' => 'failed',
+        ]);
+    }
+
+    public function test_production_with_missing_key_secret_fails_closed(): void
+    {
+        $this->app->detectEnvironment(fn() => 'production');
+        \Illuminate\Support\Facades\Config::set('services.razorpay.key_id', 'rzp_live_test_valid');
+        \Illuminate\Support\Facades\Config::set('services.razorpay.key_secret', '');
+
+        $campaign = $this->createCampaign();
+
+        $response = $this->postDonationJson('/donations/initiate-razorpay', [
+            'donor_name'  => 'SANATANA DONOR',
+            'email'       => 'donor@example.com',
+            'phone'       => '9876543210',
+            'amount'      => 500,
+            'campaign_id' => $campaign->id,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJson([
+            'success' => false,
+            'message' => 'Payment gateway is temporarily unavailable. Please try again later or contact support.',
+        ]);
+
+        $this->assertDatabaseHas('donations', [
+            'name'           => 'SANATANA DONOR',
+            'payment_status' => 'failed',
+        ]);
+    }
+
+    public function test_production_with_both_credentials_missing_fails_closed(): void
+    {
+        $this->app->detectEnvironment(fn() => 'production');
+        \Illuminate\Support\Facades\Config::set('services.razorpay.key_id', '');
+        \Illuminate\Support\Facades\Config::set('services.razorpay.key_secret', '');
+
+        $campaign = $this->createCampaign();
+
+        $response = $this->postDonationJson('/donations/initiate-razorpay', [
+            'donor_name'  => 'SANATANA DONOR',
+            'email'       => 'donor@example.com',
+            'phone'       => '9876543210',
+            'amount'      => 500,
+            'campaign_id' => $campaign->id,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJson([
+            'success' => false,
+            'message' => 'Payment gateway is temporarily unavailable. Please try again later or contact support.',
+        ]);
+    }
+
+    public function test_production_simulated_payment_attempt_must_not_mark_donation_paid(): void
+    {
+        $this->app->detectEnvironment(fn() => 'production');
+        \Illuminate\Support\Facades\Config::set('services.razorpay.key_id', '');
+        \Illuminate\Support\Facades\Config::set('services.razorpay.key_secret', '');
+
+        $donation = Donation::create([
+            'name'            => 'ATTEMPTED SIMULATOR',
+            'email'           => 'attacker@example.com',
+            'phone'           => '9876543210',
+            'contact'         => '9876543210',
+            'amount'          => 1000.00,
+            'payment_gateway' => 'razorpay',
+            'payment_status'  => 'pending',
+            'gateway_order_id'=> 'order_SIMULATION_FAKE123',
+        ]);
+
+        $response = $this->postDonationJson('/donations/verify-razorpay', [
+            'donation_id'         => $donation->id,
+            'razorpay_payment_id' => 'SIM_PAY_123456789',
+            'razorpay_signature'  => 'SIM_SIGNATURE',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJson([
+            'success' => false,
+            'status'  => 'failed',
+        ]);
+
+        $freshDonation = $donation->fresh();
+        $this->assertNotEquals('paid', $freshDonation->payment_status);
+        $this->assertEquals('failed', $freshDonation->payment_status);
+    }
+
+    public function test_testing_environment_preserves_offline_simulation_if_unconfigured(): void
+    {
+        // When not in production and keys are intentionally unconfigured
+        $this->app->detectEnvironment(fn() => 'testing');
+        \Illuminate\Support\Facades\Config::set('services.razorpay.key_id', '');
+        \Illuminate\Support\Facades\Config::set('services.razorpay.key_secret', '');
+
+        $campaign = $this->createCampaign();
+
+        $response = $this->postDonationJson('/donations/initiate-razorpay', [
+            'donor_name'  => 'LOCAL TESTER',
+            'email'       => 'local@example.com',
+            'phone'       => '9876543210',
+            'amount'      => 200,
+            'campaign_id' => $campaign->id,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success'      => true,
+            'is_simulated' => true,
+        ]);
+    }
 }
+
