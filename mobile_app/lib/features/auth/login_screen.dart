@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../core/widgets/legal_links_note.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -240,6 +241,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+      bottomNavigationBar: const LegalLinksNote(),
       appBar: AppBar(
         title: const Text(
           'Sign in to ABVHPS',

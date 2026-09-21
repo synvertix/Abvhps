@@ -134,5 +134,15 @@
   "VOLUNTEER LOGIN": "ಸ್ವಯಂಸೇವಕ ಲಾಗಿನ್",
   "LOGIN AS VOLUNTEER": "ಸ್ವಯಂಸೇವಕರಾಗಿ ಲಾಗಿನ್",
   "Close navigation": "ಮೆನು ಮುಚ್ಚಿ",
-  "Choose language": "ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+  "Choose language": "ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+  "Privacy Policy": "ಗೌಪ್ಯತಾ ನೀತಿ",
+  "PRIVACY POLICY": "ಗೌಪ್ಯತಾ ನೀತಿ",
+  "Terms & Conditions": "ನಿಯಮಗಳು ಮತ್ತು ಷರತ್ತುಗಳು",
+  "TERMS & CONDITIONS": "ನಿಯಮಗಳು ಮತ್ತು ಷರತ್ತುಗಳು",
+  "Refund Policy": "ಮರುಪಾವತಿ ನೀತಿ",
+  "REFUND POLICY": "ಮರುಪಾವತಿ ನೀತಿ",
+  "Donation & Payment Policy": "ದೇಣಿಗೆ ಮತ್ತು ಪಾವತಿ ನೀತಿ",
+  "Delete My Data": "ನನ್ನ ಡೇಟಾ ಅಳಿಸಿ",
+  "DELETE MY ACCOUNT / DATA": "ನನ್ನ ಡೇಟಾ ಅಳಿಸಿ",
+  "Legal & Policies": "ಕಾನೂನು ಮತ್ತು ನೀತಿಗಳು"
 }

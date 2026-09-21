@@ -8,6 +8,19 @@ class AppConfig {
     defaultValue: 'http://10.0.2.2:8000/api/v1',
   );
 
+  /// Website origin (the API base URL without `/api/v1`), used for the public legal pages.
+  static String get siteUrl {
+    final base = apiBaseUrl.replaceFirst(RegExp(r'/api/v\d+/?$'), '');
+    return base.endsWith('/') ? base.substring(0, base.length - 1) : base;
+  }
+
+  /// Public legal documents (also required by app stores).
+  static String get privacyPolicyUrl => '$siteUrl/privacy-policy';
+  static String get termsUrl => '$siteUrl/terms-and-conditions';
+  static String get refundPolicyUrl => '$siteUrl/refund-cancellation-policy';
+  static String get donationPolicyUrl => '$siteUrl/donation-payment-policy';
+  static String get accountDeletionUrl => '$siteUrl/account-deletion';
+
   static const String appName = 'ABVHPS';
   static const String organizationName = 'Akhanda Bharata Viswa Hindu Parirakshana Samiti';
   static const String defaultPhone = '+91 9989980055';

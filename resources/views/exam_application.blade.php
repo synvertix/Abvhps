@@ -315,6 +315,7 @@
                     </button>
                 </div>
 
+                @include('partials.legal-consent', ['type' => 'exam'])
                 <div id="final_submit_wrapper" class="hidden animate-bounce mt-2">
                     <p class="text-green-700 text-xs font-bold mb-2">🎉 Payment Captured Successfully! Terminal Submissions Unlocked.</p>
                     <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-extrabold text-base py-2.5 px-10 rounded-lg shadow-md transition transform hover:scale-102">

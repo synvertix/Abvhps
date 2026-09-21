@@ -197,6 +197,7 @@
         </div>
 
         <!-- 9. Final Application Form Submit Trigger Block Component -->
+        @include('partials.legal-consent', ['type' => 'volunteer'])
         <div class="pt-2">
             <button type="submit"
                 class="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-brandOrange hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brandOrange shadow-md transition">

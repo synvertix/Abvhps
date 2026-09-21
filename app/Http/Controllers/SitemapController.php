@@ -34,6 +34,12 @@ class SitemapController extends Controller
             ['loc' => $baseUrl . '/compliance-certificates', 'changefreq' => 'monthly', 'priority' => '0.7', 'lastmod' => null],
             ['loc' => $baseUrl . '/exam-results', 'changefreq' => 'weekly', 'priority' => '0.8', 'lastmod' => null],
             ['loc' => $baseUrl . '/exams-notice-board', 'changefreq' => 'weekly', 'priority' => '0.8', 'lastmod' => null],
+            ['loc' => $baseUrl . '/legal', 'changefreq' => 'yearly', 'priority' => '0.4', 'lastmod' => null],
+            ['loc' => $baseUrl . '/privacy-policy', 'changefreq' => 'yearly', 'priority' => '0.4', 'lastmod' => null],
+            ['loc' => $baseUrl . '/terms-and-conditions', 'changefreq' => 'yearly', 'priority' => '0.4', 'lastmod' => null],
+            ['loc' => $baseUrl . '/refund-cancellation-policy', 'changefreq' => 'yearly', 'priority' => '0.4', 'lastmod' => null],
+            ['loc' => $baseUrl . '/donation-payment-policy', 'changefreq' => 'yearly', 'priority' => '0.4', 'lastmod' => null],
+            ['loc' => $baseUrl . '/account-deletion', 'changefreq' => 'yearly', 'priority' => '0.4', 'lastmod' => null],
         ];
 
         // Dynamic active public fundraising campaigns

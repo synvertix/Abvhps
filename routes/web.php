@@ -459,6 +459,21 @@ Route::get('/admin/membership-ledger', [App\Http\Controllers\MembershipControlle
 
     // 🔱 ABVHPS PUBLIC WEBSITE MAIN NAVIGATION ROUTES
 // ----------------------------------------------------------------------
+// Legal documents (Privacy Policy, Terms, Refund, Donation & Payment, Data Deletion)
+Route::get('/legal', [App\Http\Controllers\LegalController::class, 'index'])->name('legal.index');
+Route::get('/privacy-policy', [App\Http\Controllers\LegalController::class, 'privacy'])->name('legal.privacy');
+Route::get('/terms-and-conditions', [App\Http\Controllers\LegalController::class, 'terms'])->name('legal.terms');
+Route::get('/refund-cancellation-policy', [App\Http\Controllers\LegalController::class, 'refund'])->name('legal.refund');
+Route::get('/donation-payment-policy', [App\Http\Controllers\LegalController::class, 'donationPayments'])->name('legal.donation_payments');
+Route::get('/account-deletion', [App\Http\Controllers\LegalController::class, 'accountDeletion'])->name('legal.account_deletion');
+Route::post('/account-deletion/request', [App\Http\Controllers\LegalController::class, 'submitDataRequest'])->middleware('throttle:5,10')->name('legal.data_request');
+// Friendly aliases people (and app stores) commonly type
+Route::get('/privacy', fn () => redirect()->route('legal.privacy', [], 301));
+Route::get('/terms', fn () => redirect()->route('legal.terms', [], 301));
+Route::get('/refund-policy', fn () => redirect()->route('legal.refund', [], 301));
+Route::get('/delete-account', fn () => redirect()->route('legal.account_deletion', [], 301));
+Route::get('/data-deletion', fn () => redirect()->route('legal.account_deletion', [], 301));
+
 // Public site language switcher (English + major Indian languages)
 Route::get('/lang/{locale}', [App\Http\Controllers\LocaleController::class, 'switch'])->name('lang.switch');
 

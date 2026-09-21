@@ -334,8 +334,8 @@
         <div class="bg-brandLightOrange p-5 rounded-lg border border-orange-100 text-xs text-gray-700 space-y-4 leading-relaxed">
             <p class="font-bold text-brandOrange uppercase tracking-wider text-[11px]">Disclaimer & Data Security Policy</p>
             <p class="text-gray-600">
-                The identity and personal data collected through this application is strictly used for individual membership verification purpose only. This process is digitally executed with the applicant's explicit consent. In accordance with the Data Protection regulations of India, your personal information is stored securely in highly encrypted servers and will never be transferred to third parties or misused under any circumstances.
-            </p>
+                The identity and personal data collected through this application is used only for membership verification and administration. This process is carried out with the applicant's explicit consent, in line with the Digital Personal Data Protection Act, 2023. Your information is stored with reasonable security safeguards, used only for the purposes described in our Privacy Policy, and shared only with the service providers that help us verify identity, take payments and send messages. We do not sell your data.
+                </p>
             
             <div class="space-y-3 pt-3 border-t border-orange-200/60">
                 <label class="flex items-start gap-3 cursor-pointer group">
@@ -365,6 +365,7 @@
         <input type="hidden" name="phone" value="{{ $phone ?? session('verified_membership_phone') }}">
 
         <!-- 9. Final Application Form Submit Action Button Trigger -->
+        @include('partials.legal-consent', ['type' => 'membership'])
         <div class="pt-2">
             <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-brandOrange hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brandOrange shadow-md transition cursor-pointer">
                 Submit Registration & Generate ID Card

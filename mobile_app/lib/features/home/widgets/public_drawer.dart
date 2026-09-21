@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import '../../../core/utils/url_helper.dart';
 import '../../../core/i18n/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -780,6 +781,35 @@ class _PublicDrawerState extends State<PublicDrawer> {
                         ),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 14),
+                  // ==========================================
+                  // LEGAL & POLICIES (open the official web pages)
+                  // ==========================================
+                  _buildSectionHeading('LEGAL & POLICIES'),
+                  _buildNavItem(
+                    title: 'PRIVACY POLICY',
+                    key: const Key('drawer_nav_privacy'),
+                    isActive: false,
+                    onTap: () => UrlHelper.launchSafeUrl(AppConfig.privacyPolicyUrl),
+                  ),
+                  _buildNavItem(
+                    title: 'TERMS & CONDITIONS',
+                    key: const Key('drawer_nav_terms'),
+                    isActive: false,
+                    onTap: () => UrlHelper.launchSafeUrl(AppConfig.termsUrl),
+                  ),
+                  _buildNavItem(
+                    title: 'REFUND POLICY',
+                    key: const Key('drawer_nav_refund'),
+                    isActive: false,
+                    onTap: () => UrlHelper.launchSafeUrl(AppConfig.refundPolicyUrl),
+                  ),
+                  _buildNavItem(
+                    title: 'DELETE MY ACCOUNT / DATA',
+                    key: const Key('drawer_nav_delete_data'),
+                    isActive: false,
+                    onTap: () => UrlHelper.launchSafeUrl(AppConfig.accountDeletionUrl),
                   ),
                 ],
               ),

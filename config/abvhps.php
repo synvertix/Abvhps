@@ -45,4 +45,29 @@ return [
 
         'footer_about' => 'Dedicated to preserving and promoting Hindu culture and values worldwide under the guidance of Rajaguru Sri Sri Sri Subrahmanneswara Swamy Garu.',
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Legal documents (Privacy Policy, Terms, Refund, Donation & Payment, Data Deletion)
+    |--------------------------------------------------------------------------
+    | Bump `version` / `updated` whenever a policy text changes materially. The Grievance
+    | Officer's name is optional: set LEGAL_GRIEVANCE_OFFICER_NAME (and LEGAL_GRIEVANCE_EMAIL if it
+    | differs from the organisation e-mail) in .env — the pages show only what is configured.
+    */
+    'legal' => [
+        'version'   => '1.0',
+        'effective' => '21 September 2026',
+        'updated'   => '21 September 2026',
+        'entity'    => 'Akhanda Bharatha Viswa Hindu Parirakshana Samiti',
+        'short'     => 'ABVHPS',
+        'registration' => 'Registration No. 20/2023',
+        'website'   => 'https://abvhps.org',
+        'jurisdiction' => 'Kadapa, Andhra Pradesh',
+        'grievance_officer_name'  => env('LEGAL_GRIEVANCE_OFFICER_NAME'),
+        'grievance_officer_email' => env('LEGAL_GRIEVANCE_EMAIL'),
+        'acknowledge_days' => 3,   // working days
+        'resolve_days'     => 30,  // calendar days
+        'refund_request_days' => 7,
+        'refund_process_days' => 10, // working days after approval
+    ],
 ];
