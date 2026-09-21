@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../core/i18n/i18n.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_network_image.dart';
 
@@ -164,8 +165,8 @@ class _HeroBannerState extends State<HeroBanner> {
   }
 
   Widget _buildSlide(Map<String, String?> slide) {
-    final title = slide['title'] ?? '';
-    final subtitle = slide['subtitle'] ?? '';
+    final title = context.tr(slide['title'] ?? '');
+    final subtitle = context.tr(slide['subtitle'] ?? '');
 
     return Stack(
       fit: StackFit.expand,

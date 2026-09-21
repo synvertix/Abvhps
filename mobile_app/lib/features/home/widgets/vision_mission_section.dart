@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
+import '../../../core/i18n/i18n.dart';
 import '../../../core/theme/app_theme.dart';
 
 class VisionMissionSection extends StatelessWidget {
   const VisionMissionSection({super.key});
+
+  // English source sentences — also the translation keys (see assets/i18n/*.json).
+  static const String _vision =
+      'To see Sanatana Dharma flourish in every village — with temples restored and newly built as living centres of prayer, learning and seva, and with every family, whatever their means, treated with dignity, equality and love.';
+  static const String _mission =
+      'To gather willing hearts as members and volunteers and turn devotion into service — offering Annapurna meals to the hungry, education to children, relief to the poor and medical aid to the sick, with humility and without expectation.';
+  static const String _goal =
+      'To protect our sacred traditions, rituals and festivals and hand them down, unbroken, to the next generation — building a united family of devotees, strong in brotherhood and working together, from every village to every corner of the world.';
 
   @override
   Widget build(BuildContext context) {
@@ -17,62 +26,60 @@ class VisionMissionSection extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Column(
         children: [
-          _buildHeading(),
+          _buildHeading(context),
           const SizedBox(height: 18),
           _buildPillarCard(
             icon: Icons.wb_sunny_outlined,
-            title: 'Our Vision',
-            description:
-                'To see Sanatana Dharma flourish in every village — with temples restored and newly built as living centres of prayer, learning and seva, and with every family, whatever their means, treated with dignity, equality and love.',
+            title: context.tr('Our Vision'),
+            description: context.tr(_vision),
           ),
           const SizedBox(height: 14),
           _buildPillarCard(
             icon: Icons.favorite_border,
-            title: 'Our Mission',
-            description:
-                'To gather willing hearts as members and volunteers and turn devotion into service — offering Annapurna meals to the hungry, education to children, relief to the poor and medical aid to the sick, with humility and without expectation.',
+            title: context.tr('Our Mission'),
+            description: context.tr(_mission),
           ),
           const SizedBox(height: 14),
           _buildPillarCard(
             icon: Icons.local_fire_department_outlined,
-            title: 'The Goal',
-            description:
-                'To protect our sacred traditions, rituals and festivals and hand them down, unbroken, to the next generation — building a united family of devotees, strong in brotherhood and working together, from every village to every corner of the world.',
+            title: context.tr('The Goal'),
+            description: context.tr(_goal),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHeading() {
-    return const Column(
+  Widget _buildHeading(BuildContext context) {
+    return Column(
       children: [
         Text(
-          'VISION · MISSION · GOAL',
-          style: TextStyle(
+          context.tr('Vision · Mission · Goal').toUpperCase(),
+          style: const TextStyle(
             color: Color(0xFFB8860B),
             fontSize: 10,
             fontWeight: FontWeight.w900,
             letterSpacing: 2.6,
           ),
         ),
-        SizedBox(height: 6),
+        const SizedBox(height: 6),
         Text(
-          'The Sacred Purpose Behind Our Seva',
+          context.tr('The Sacred Purpose Behind Our Seva'),
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             color: AppTheme.neutralGray,
             fontSize: 20,
             fontWeight: FontWeight.w800,
           ),
         ),
-        SizedBox(height: 8),
-        _GoldDivider(width: 44),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
+        const _GoldDivider(width: 44),
+        const SizedBox(height: 8),
         Text(
-          'Rooted in Dharma, driven by Seva — three promises we hold to, together with every member, volunteer and well-wisher.',
+          context.tr(
+              'Rooted in Dharma, driven by Seva — three promises we hold to, together with every member, volunteer and well-wisher.'),
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             color: AppTheme.textSecondary,
             fontSize: 12,
             height: 1.5,

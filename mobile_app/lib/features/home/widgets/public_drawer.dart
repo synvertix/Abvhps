@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import '../../../core/i18n/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/config/app_config.dart';
@@ -79,12 +80,12 @@ class _PublicDrawerState extends State<PublicDrawer> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'SELECT LOGIN PORTAL',
+                                context.tr('SELECT LOGIN PORTAL'),
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w900,
@@ -166,12 +167,12 @@ class _PublicDrawerState extends State<PublicDrawer> {
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  const Expanded(
+                                  Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          'ADMIN LOGIN',
+                                          context.tr('ADMIN LOGIN'),
                                           style: TextStyle(
                                             color: Color(0xFF1E293B),
                                             fontWeight: FontWeight.w900,
@@ -211,8 +212,8 @@ class _PublicDrawerState extends State<PublicDrawer> {
                                     ),
                                     elevation: 0,
                                   ),
-                                  child: const Text(
-                                    'LOGIN AS ADMIN  →',
+                                  child: Text(
+                                    '${context.tr('LOGIN AS ADMIN')}  →',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w900,
@@ -261,12 +262,12 @@ class _PublicDrawerState extends State<PublicDrawer> {
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  const Expanded(
+                                  Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          'VOLUNTEER LOGIN',
+                                          context.tr('VOLUNTEER LOGIN'),
                                           style: TextStyle(
                                             color: AppTheme.primaryOrange,
                                             fontWeight: FontWeight.w900,
@@ -306,8 +307,8 @@ class _PublicDrawerState extends State<PublicDrawer> {
                                     ),
                                     elevation: 2,
                                   ),
-                                  child: const Text(
-                                    'LOGIN AS VOLUNTEER  →',
+                                  child: Text(
+                                    '${context.tr('LOGIN AS VOLUNTEER')}  →',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w900,
@@ -470,7 +471,7 @@ class _PublicDrawerState extends State<PublicDrawer> {
                   // 58x58 Square Close Button with Bold Orange Outline
                   Semantics(
                     button: true,
-                    label: 'Close navigation',
+                    label: context.tr('Close navigation'),
                     child: InkWell(
                       key: const Key('drawer_close_button'),
                       onTap: () => Navigator.of(context).pop(),
@@ -711,7 +712,7 @@ class _PublicDrawerState extends State<PublicDrawer> {
                           constraints: const BoxConstraints(minHeight: 48),
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           alignment: Alignment.center,
-                          child: const Row(
+                          child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
@@ -721,7 +722,7 @@ class _PublicDrawerState extends State<PublicDrawer> {
                               ),
                               SizedBox(width: 8),
                               Text(
-                                'LOGIN PORTALS',
+                                context.tr('LOGIN PORTALS'),
                                 style: TextStyle(
                                   color: AppTheme.primaryOrange,
                                   fontWeight: FontWeight.w900,
@@ -767,8 +768,8 @@ class _PublicDrawerState extends State<PublicDrawer> {
                           constraints: const BoxConstraints(minHeight: 48),
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           alignment: Alignment.center,
-                          child: const Text(
-                            'MAKE A DONATION',
+                          child: Text(
+                            context.tr('MAKE A DONATION'),
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w900,
@@ -875,7 +876,7 @@ class _PublicDrawerState extends State<PublicDrawer> {
         ),
       ),
       child: Text(
-        title,
+        context.tr(title),
         style: const TextStyle(
           color: AppTheme.primaryOrange,
           fontSize: 9.5,
@@ -922,7 +923,7 @@ class _PublicDrawerState extends State<PublicDrawer> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             alignment: Alignment.centerLeft,
             child: Text(
-              title,
+              context.tr(title),
               style: TextStyle(
                 color: isActive ? Colors.white : const Color(0xFFE5E7EB),
                 fontWeight: isActive ? FontWeight.w900 : FontWeight.w800,
@@ -972,7 +973,7 @@ class _PublicDrawerState extends State<PublicDrawer> {
                     children: [
                       Expanded(
                         child: Text(
-                          title,
+                          context.tr(title),
                           style: TextStyle(
                             color: isExpanded ? AppTheme.primaryOrange : const Color(0xFFE5E7EB),
                             fontWeight: FontWeight.w800,
@@ -1035,7 +1036,7 @@ class _PublicDrawerState extends State<PublicDrawer> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 12),
             child: Text(
-              title,
+              context.tr(title),
               style: const TextStyle(
                 color: Color(0xFFD1D5DB),
                 fontWeight: FontWeight.w700,

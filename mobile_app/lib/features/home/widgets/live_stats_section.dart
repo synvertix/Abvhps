@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/i18n/i18n.dart';
 import '../../../core/theme/app_theme.dart';
 
 class LiveStatsSection extends StatelessWidget {
@@ -61,7 +62,7 @@ class LiveStatsSection extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
             child: Column(
               children: [
-                _buildHeading(),
+                _buildHeading(context),
                 const SizedBox(height: 18),
                 Wrap(
                   alignment: WrapAlignment.center,
@@ -72,7 +73,7 @@ class LiveStatsSection extends StatelessWidget {
                         width: tiles.length >= 4
                             ? (MediaQuery.of(context).size.width - 32) / 2
                             : (MediaQuery.of(context).size.width - 32) / 3,
-                        child: _buildStatItem(count: t.$1, label: t.$2),
+                        child: _buildStatItem(count: t.$1, label: context.tr(t.$2)),
                       ),
                   ],
                 ),
@@ -106,7 +107,7 @@ class LiveStatsSection extends StatelessWidget {
     return tiles;
   }
 
-  Widget _buildHeading() {
+  Widget _buildHeading(BuildContext context) {
     Widget line(bool fadeLeft) => Expanded(
           child: Container(
             height: 1,
@@ -126,10 +127,10 @@ class LiveStatsSection extends StatelessWidget {
     return Row(
       children: [
         line(true),
-        const Padding(
+        Padding(
           padding: EdgeInsets.symmetric(horizontal: 10),
           child: Text(
-            'OUR SEVA IN NUMBERS',
+            context.tr('OUR SEVA IN NUMBERS'),
             style: TextStyle(
               color: Colors.white,
               fontSize: 10,

@@ -99,4 +99,15 @@ class LanguageSwitchTest extends TestCase
             $this->assertArrayHasKey(config('abvhps.copy.' . $copyKey), $reference, "No translation entry for copy: {$copyKey}");
         }
     }
+
+    public function test_mobile_app_translations_are_identical_to_the_website_ones(): void
+    {
+        foreach (array_diff(array_keys(config('abvhps.locales')), ['en']) as $code) {
+            $this->assertSame(
+                File::get(base_path("lang/{$code}.json")),
+                File::get(base_path("mobile_app/assets/i18n/{$code}.json")),
+                "mobile_app/assets/i18n/{$code}.json is out of sync with lang/{$code}.json (copy it over)"
+            );
+        }
+    }
 }

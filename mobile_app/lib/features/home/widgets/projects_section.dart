@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/i18n/i18n.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_network_image.dart';
 
@@ -23,8 +24,8 @@ class ProjectsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'COMPREHENSIVE SEVA MODULES',
+          Text(
+            context.tr('COMPREHENSIVE SEVA MODULES'),
             style: TextStyle(
               color: AppTheme.primaryOrange,
               fontSize: 11,
@@ -33,8 +34,8 @@ class ProjectsSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Our Core Service Projects',
+          Text(
+            context.tr('Our Core Service Projects'),
             style: TextStyle(
               color: AppTheme.neutralGray,
               fontSize: 22,
@@ -43,8 +44,8 @@ class ProjectsSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Dedicated community initiatives for heritage preservation and social welfare.',
+          Text(
+            context.tr("Seva in action — caring for temples, Goshalas, Annapurna meals and children's literacy."),
             style: TextStyle(
               color: AppTheme.textSecondary,
               fontSize: 12,

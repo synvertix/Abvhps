@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/config/app_config.dart';
+import '../../../core/i18n/i18n.dart';
 import '../../../core/theme/app_theme.dart';
 
 class PublicFooter extends StatelessWidget {
@@ -23,8 +24,8 @@ class PublicFooter extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // About ABVHPS
-          const Text(
-            'About ABVHPS',
+          Text(
+            context.tr('About ABVHPS'),
             style: TextStyle(
               color: AppTheme.primaryOrange,
               fontSize: 16,
@@ -32,8 +33,8 @@ class PublicFooter extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Dedicated to preserving and promoting Hindu culture and values worldwide under the guidance of Rajaguru Sri Sri Sri Subrahmanneswara Swamy Garu.',
+          Text(
+            context.tr('Dedicated to preserving and promoting Hindu culture and values worldwide under the guidance of Rajaguru Sri Sri Sri Subrahmanneswara Swamy Garu.'),
             style: TextStyle(
               color: Colors.white70,
               fontSize: 12,
@@ -43,8 +44,8 @@ class PublicFooter extends StatelessWidget {
           const SizedBox(height: 20),
 
           // Contact Info
-          const Text(
-            'Contact Us',
+          Text(
+            context.tr('Contact Us'),
             style: TextStyle(
               color: AppTheme.primaryOrange,
               fontSize: 16,

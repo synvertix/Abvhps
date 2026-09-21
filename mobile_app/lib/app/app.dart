@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/i18n/i18n.dart';
 import '../core/sync/app_lifecycle_sync_observer.dart';
 import '../core/sync/sync_coordinator.dart';
 import '../core/theme/app_theme.dart';
@@ -33,11 +34,13 @@ class _AbvhpsAppState extends ConsumerState<AbvhpsApp> {
     // Initialize Central Sync Coordinator
     ref.watch(syncCoordinatorProvider);
     final router = ref.watch(appRouterProvider);
+    final i18n = ref.watch(i18nProvider);
 
     return MaterialApp.router(
       title: 'ABVHPS',
       theme: AppTheme.lightTheme,
       routerConfig: router,
+      builder: (context, child) => I18nScope(i18n: i18n, child: child ?? const SizedBox.shrink()),
       debugShowCheckedModeBanner: false,
     );
   }
