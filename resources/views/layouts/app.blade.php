@@ -75,16 +75,20 @@
         <style>body, button, input, select, textarea { font-family: '{{ $__loc['font'] }}', 'Nirmala UI', system-ui, sans-serif; }</style>
     @endif
 
-    <!-- Tailwind CSS v4 Browser/Play CDN Link -->
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <style type="text/tailwindcss">
-        @theme {
-            --color-brandOrange: #FF6600;
-            --color-brandGray: #4A4A4A;
-            --color-brandDarkGray: #1A1A1A;
-            --color-brandLightOrange: #FFF5EE;
-        }
-    </style>
+    {{-- Tailwind CSS: compiled by Vite when available (fast, cacheable); otherwise the Tailwind CDN build as a safe fallback --}}
+    @if(\App\Support\CompiledAssets::cssAvailable())
+        @vite('resources/css/app.css')
+    @else
+        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+        <style type="text/tailwindcss">
+            @theme {
+                --color-brandOrange: #FF6600;
+                --color-brandGray: #4A4A4A;
+                --color-brandDarkGray: #1A1A1A;
+                --color-brandLightOrange: #FFF5EE;
+            }
+        </style>
+    @endif
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans">
     {{-- Sacred geometry (mandala) symbol, reused as a devotional watermark across pages --}}
