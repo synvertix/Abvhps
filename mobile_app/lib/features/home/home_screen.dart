@@ -61,8 +61,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: SafeArea(
         top: true,
         bottom: false,
-        child: SingleChildScrollView(
-          child: Column(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(homeDataProvider);
+            await ref.read(homeDataProvider.future);
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // 1. Dark Top Contact & Social Bar
@@ -103,6 +109,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               PublicFooter(contact: contact),
             ],
           ),
+        ),
         ),
       ),
     );

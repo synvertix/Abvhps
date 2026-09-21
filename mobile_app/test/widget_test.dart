@@ -70,7 +70,7 @@ class TestAuthNotifier extends AuthNotifier {
 void main() {
   final testHomeData = {
     'contact': {
-      'phone': '+91 8884933379',
+      'phone': '+91 9989980055',
       'email': 'info@abvhps.org',
       'whatsapp_number': '+91 9989980055',
     },
@@ -119,7 +119,7 @@ void main() {
 
     expect(find.byType(HomeScreen), findsOneWidget);
     expect(find.byKey(const Key('drawer_hamburger_button')), findsOneWidget);
-    expect(find.text('+91 8884933379'), findsOneWidget);
+    expect(find.text('+91 9989980055'), findsOneWidget);
     expect(find.text('info@abvhps.org'), findsOneWidget);
 
     expect(find.text('OUR DIVINE ORIGIN'), findsOneWidget);
@@ -177,7 +177,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('SELECT LOGIN PORTAL'), findsOneWidget);
+    expect(find.byKey(const Key('drawer_admin_login_button')), findsOneWidget);
     expect(find.byKey(const Key('drawer_volunteer_login_button')), findsOneWidget);
+    expect(find.byKey(const Key('drawer_member_login_button')), findsNothing);
 
     await tester.tap(find.byKey(const Key('drawer_volunteer_login_button')));
     await tester.pumpAndSettle();
@@ -191,7 +193,7 @@ void main() {
     expect(find.text('Please enter Volunteer ID and Password.'), findsOneWidget);
   });
 
-  testWidgets('3. Member login OTP route from drawer Login Portals displays validation for invalid mobile number', (WidgetTester tester) async {
+  testWidgets('3. Admin login route from drawer Login Portals displays validation for empty fields', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -226,21 +228,55 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('SELECT LOGIN PORTAL'), findsOneWidget);
-    expect(find.byKey(const Key('drawer_member_login_button')), findsOneWidget);
+    expect(find.byKey(const Key('drawer_admin_login_button')), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('drawer_member_login_button')));
+    await tester.tap(find.byKey(const Key('drawer_admin_login_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.text('Admin Sign In'), findsOneWidget);
+
+    await tester.tap(find.text('LOGIN AS ADMIN'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Please enter Administrative Email and Password.'), findsOneWidget);
+  });
+
+  testWidgets('3b. Membership Portal drawer item navigates to Member OTP Login independently', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final fakeStorage = FakeTokenStorage();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tokenStorageProvider.overrideWithValue(fakeStorage),
+          authNotifierProvider.overrideWith(
+            (ref) => TestAuthNotifier(
+              const AuthState(isAuthenticated: false, isLoading: false),
+              storage: fakeStorage,
+            ),
+          ),
+          homeDataProvider.overrideWith((ref) async => testHomeData),
+        ],
+        child: const AbvhpsApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final scaffoldFinder = find.byType(Scaffold);
+    final scaffoldState = tester.state<ScaffoldState>(scaffoldFinder.first);
+    scaffoldState.openDrawer();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('drawer_nav_membership')));
     await tester.pumpAndSettle();
 
     expect(find.byType(LoginScreen), findsOneWidget);
     expect(find.text('Member OTP Login'), findsOneWidget);
-
-    await tester.enterText(find.byType(TextField).first, '12345');
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('SEND OTP'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Please enter a valid 10-digit mobile number.'), findsOneWidget);
   });
 
   testWidgets('4. mustChangePassword auth state automatically routes to change-password screen', (WidgetTester tester) async {

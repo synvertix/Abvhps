@@ -1,13 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/sync/app_lifecycle_sync_observer.dart';
+import '../core/sync/sync_coordinator.dart';
 import '../core/theme/app_theme.dart';
 import 'router.dart';
 
-class AbvhpsApp extends ConsumerWidget {
+class AbvhpsApp extends ConsumerStatefulWidget {
   const AbvhpsApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AbvhpsApp> createState() => _AbvhpsAppState();
+}
+
+class _AbvhpsAppState extends ConsumerState<AbvhpsApp> {
+  late final AppLifecycleSyncObserver _lifecycleObserver;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycleObserver = AppLifecycleSyncObserver(ref: ref);
+    WidgetsBinding.instance.addObserver(_lifecycleObserver);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(_lifecycleObserver);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Initialize Central Sync Coordinator
+    ref.watch(syncCoordinatorProvider);
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(

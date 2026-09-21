@@ -3,6 +3,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../core/auth/auth_notifier.dart';
 import '../features/about/about_screen.dart';
+import '../features/admin/admin_dashboard_screen.dart';
+import '../features/admin/memberships/admin_approved_memberships_screen.dart';
+import '../features/admin/memberships/admin_pending_memberships_screen.dart';
+import '../features/admin/volunteers/admin_volunteer_desk_screen.dart';
+import '../features/admin/volunteer_events/admin_volunteer_events_screen.dart';
+import '../features/admin/rudrasena/admin_rudrasena_screen.dart';
+import '../features/admin/local_gateways/admin_local_gateways_screen.dart';
+import '../features/admin/team/admin_team_screen.dart';
+import '../features/admin/donations/admin_donations_screen.dart';
+import '../features/admin/blogs/admin_blogs_screen.dart';
+import '../features/admin/gallery/admin_gallery_screen.dart';
+import '../features/admin/support_cores/admin_support_cores_screen.dart';
+import '../features/admin/exams/admin_exams_screen.dart';
+import '../features/admin/fundraising/admin_fundraising_screen.dart';
+import '../features/admin/contacts/admin_contacts_screen.dart';
+import '../features/admin/tax_certificates/admin_tax_certificates_screen.dart';
+import '../features/admin/settings/admin_site_settings_screen.dart';
+import '../features/admin/banners/admin_banners_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/volunteer_change_password_screen.dart';
 import '../features/blogs/blog_detail_screen.dart';
@@ -39,7 +57,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       // Protected authenticated-only route prefixes
-      final isProtectedRoute = loc.startsWith('/volunteer') || loc.startsWith('/member');
+      final isProtectedRoute = loc.startsWith('/volunteer') || loc.startsWith('/member') || loc.startsWith('/admin');
 
       if (!authState.isAuthenticated) {
         if (isProtectedRoute) {
@@ -56,9 +74,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-      // If already logged in and at /login, /, or change-password, redirect to dashboard
+      // If already logged in and at /login, /, or change-password, redirect to appropriate dashboard
       if (isLoggingIn || loc == '/' || loc == '/volunteer/change-password') {
-        if (authState.accountType == 'volunteer') {
+        if (authState.accountType == 'admin') {
+          return '/admin/dashboard';
+        } else if (authState.accountType == 'volunteer') {
           return '/volunteer/dashboard';
         } else if (authState.accountType == 'member') {
           return '/member/dashboard';
@@ -194,6 +214,78 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/volunteer/change-password',
         builder: (context, state) => const VolunteerChangePasswordScreen(),
+      ),
+      GoRoute(
+        path: '/admin/dashboard',
+        builder: (context, state) => const AdminDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/admin/team',
+        builder: (context, state) => const AdminTeamScreen(),
+      ),
+      GoRoute(
+        path: '/admin/donations',
+        builder: (context, state) => const AdminDonationsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/blogs',
+        builder: (context, state) => const AdminBlogsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/gallery',
+        builder: (context, state) => const AdminGalleryScreen(),
+      ),
+      GoRoute(
+        path: '/admin/support-cores',
+        builder: (context, state) => const AdminSupportCoresScreen(),
+      ),
+      GoRoute(
+        path: '/admin/memberships/pending',
+        builder: (context, state) => const AdminPendingMembershipsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/memberships',
+        builder: (context, state) => const AdminApprovedMembershipsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/volunteers',
+        builder: (context, state) => const AdminVolunteerDeskScreen(),
+      ),
+      GoRoute(
+        path: '/admin/volunteer-events',
+        builder: (context, state) => const AdminVolunteerEventsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/rudrasena',
+        builder: (context, state) => const AdminRudrasenaScreen(),
+      ),
+      GoRoute(
+        path: '/admin/local-gateways',
+        builder: (context, state) => const AdminLocalGatewaysScreen(),
+      ),
+      GoRoute(
+        path: '/admin/exams',
+        builder: (context, state) => const AdminExamsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/fundraising',
+        builder: (context, state) => const AdminFundraisingScreen(),
+      ),
+      GoRoute(
+        path: '/admin/contacts',
+        builder: (context, state) => const AdminContactsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/tax-certificates',
+        builder: (context, state) => const AdminTaxCertificatesScreen(),
+      ),
+      GoRoute(
+        path: '/admin/settings',
+        builder: (context, state) => const AdminSiteSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/banners',
+        builder: (context, state) => const AdminBannersScreen(),
       ),
       GoRoute(
         path: '/volunteer/dashboard',

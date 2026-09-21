@@ -176,10 +176,42 @@ class VolunteerDashboardScreen extends ConsumerWidget {
                   ),
                 ),
                 error: (err, _) => Card(
-                  color: Colors.red.shade50,
+                  color: const Color(0xFFFEF2F2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: Color(0xFFFECACA)),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: Text('Could not load statistics: $err'),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Unable to load dashboard statistics',
+                              style: TextStyle(
+                                color: Color(0xFF991B1B),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'A network or server error occurred. Please check your connection.',
+                          style: TextStyle(color: Color(0xFF7F1D1D), fontSize: 12),
+                        ),
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          onPressed: () => ref.refresh(volunteerDashboardDataProvider),
+                          icon: const Icon(Icons.refresh, size: 16),
+                          label: const Text('RETRY'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

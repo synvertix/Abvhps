@@ -57,6 +57,21 @@ class EnsureApiAccountType
                     'message' => 'Forbidden: Token lacks member account permissions.',
                 ], 403);
             }
+        } elseif ($accountType === 'admin') {
+            if (!($user instanceof \App\Models\User)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Forbidden: This endpoint requires an Admin account token.',
+                ], 403);
+            }
+
+            // Check admin token ability if tokens are used
+            if ($user->currentAccessToken() && !$user->tokenCan('account:admin')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Forbidden: Token lacks admin account permissions.',
+                ], 403);
+            }
         } else {
             return response()->json([
                 'success' => false,

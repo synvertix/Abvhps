@@ -65,6 +65,27 @@ class MeController extends Controller
             ]);
         }
 
+        if ($user instanceof \App\Models\User) {
+            $capabilities = [
+                'is_admin'          => true,
+                'can_manage_system' => true,
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data'    => [
+                    'account_type' => 'admin',
+                    'profile'      => [
+                        'id'    => $user->id,
+                        'name'  => $user->name,
+                        'email' => $user->email,
+                    ],
+                    'capabilities' => $capabilities,
+                ],
+                'message' => null,
+            ]);
+        }
+
         return response()->json([
             'success' => false,
             'message' => 'Unrecognized principal type.',
@@ -79,7 +100,10 @@ class MeController extends Controller
         $user = $request->user();
 
         if ($user && $request->user()->currentAccessToken()) {
-            $identifier = $user instanceof Volunteer ? $user->volunteer_id : ($user->membership_id ?? $user->id);
+            $identifier = $user instanceof Volunteer
+                ? $user->volunteer_id
+                : ($user instanceof \App\Models\User ? $user->email : ($user->membership_id ?? $user->id));
+
             AuditLogger::log('API_TOKEN_REVOKED', get_class($user), $identifier, [
                 'token_name' => $request->user()->currentAccessToken()->name,
             ], get_class($user), $identifier, $user->id);
@@ -101,7 +125,10 @@ class MeController extends Controller
         $user = $request->user();
 
         if ($user) {
-            $identifier = $user instanceof Volunteer ? $user->volunteer_id : ($user->membership_id ?? $user->id);
+            $identifier = $user instanceof Volunteer
+                ? $user->volunteer_id
+                : ($user instanceof \App\Models\User ? $user->email : ($user->membership_id ?? $user->id));
+
             AuditLogger::log('API_ALL_TOKENS_REVOKED', get_class($user), $identifier, [], get_class($user), $identifier, $user->id);
 
             $user->tokens()->delete();

@@ -60,6 +60,52 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<bool> loginAdmin({
+    required String email,
+    required String password,
+    String deviceName = 'ABVHPS Mobile App',
+  }) async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
+    try {
+      final response = await apiClient.post(
+        '/auth/admin/login',
+        data: {
+          'email': email,
+          'password': password,
+          'device_name': deviceName,
+        },
+      );
+
+      if (response.data['success'] == true) {
+        final data = response.data['data'] as Map<String, dynamic>;
+        final token = data['token'] as String;
+
+        await tokenStorage.saveToken(token);
+        await tokenStorage.saveAccountType('admin');
+
+        state = AuthState(
+          isAuthenticated: true,
+          isLoading: false,
+          accountType: 'admin',
+          mustChangePassword: false,
+          profile: data['profile'] as Map<String, dynamic>?,
+        );
+        return true;
+      }
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: response.data['message']?.toString() ?? 'Login failed',
+      );
+      return false;
+    } on ApiException catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.message);
+      return false;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      return false;
+    }
+  }
+
   Future<bool> loginVolunteer({
     required String loginId,
     required String password,

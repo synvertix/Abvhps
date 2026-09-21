@@ -17,7 +17,7 @@ class ContactController extends Controller
     // ─────────────────────────────────────────────────────────────────
     public function showContactPage()
     {
-        $contactPhone   = SiteSetting::get('contact_phone', '+91 8884933379');
+        $contactPhone   = SiteSetting::get('contact_phone', '+91 9989980055');
         $contactEmail   = SiteSetting::get('contact_email', 'info@abvhps.org');
         $contactAddress = SiteSetting::get('contact_address', 'Survey No:1826, Shanmukhapuram, Akkalareddy Palli, Porumamilla, Kadapa, A.P - 516193');
 
