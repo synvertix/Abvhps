@@ -41,10 +41,10 @@
             </div>
         </div>
     @else
-        <!-- 1. Hero Section — Video Background with Dynamic Slider Content -->
-        <div class="relative w-full overflow-hidden bg-gray-900 h-[450px]" data-banner-page="home">
+        <!-- 1. Hero Section — Video Background with Rotating Slides -->
+        <div class="relative w-full overflow-hidden bg-gradient-to-br from-[#2a1204] via-[#4a1f06] to-[#0f172a] h-[460px] sm:h-[480px]" data-banner-page="home" id="hero-slider" role="region" aria-roledescription="carousel" aria-label="ABVHPS highlights">
 
-            {{-- Background Video --}}
+            {{-- Background Video (falls back to the warm gradient above if it cannot load) --}}
             <video
                 class="absolute inset-0 w-full h-full object-cover object-center"
                 style="z-index: 0;"
@@ -53,40 +53,97 @@
                 loop
                 playsinline
                 preload="metadata"
+                aria-hidden="true"
             >
-                <source src="{{ asset('videos/hero.mp4') }}" type="video/mp4">
+                <source src="{{ asset('images/hero.mp4') }}" type="video/mp4">
             </video>
 
-            {{-- Subtle dark overlay for text readability --}}
-            <div class="absolute inset-0" style="background: rgba(5, 15, 30, 0.38); z-index: 1;"></div>
+            {{-- Warm dark overlay for text readability --}}
+            <div class="absolute inset-0" style="background: linear-gradient(180deg, rgba(20, 8, 2, 0.55) 0%, rgba(20, 8, 2, 0.48) 45%, rgba(20, 8, 2, 0.62) 100%); z-index: 1;"></div>
 
-            {{-- Existing Slider Content — sits above video and overlay --}}
-            @if(isset($sliders) && count($sliders) > 0)
-                @foreach($sliders as $index => $slider)
-                <div class="absolute inset-0 transition-opacity duration-1000 ease-in-out {{ $index == 0 ? 'opacity-100' : 'opacity-0' }}" id="slide-{{ $index }}" style="z-index: 2;">
-                    <div class="absolute inset-0 flex flex-col justify-center items-center text-center px-4">
-                        <h2 class="text-white text-3xl md:text-5xl font-extrabold mb-4 drop-shadow-md">{{ $slider->title }}</h2>
-                        <p class="text-brandLightOrange text-base md:text-xl max-w-2xl drop-shadow-sm">{{ $slider->subtitle }}</p>
+            {{-- Slowly turning golden mandala watermark --}}
+            <svg class="hero-mandala absolute left-1/2 top-1/2 w-[40rem] h-[40rem] text-[#FFE7A3]/[0.09] pointer-events-none" style="z-index: 1;" viewBox="0 0 200 200" aria-hidden="true"><use href="#abvhps-mandala" width="200" height="200"/></svg>
+
+            {{-- Slides --}}
+            @foreach($sliders as $index => $slider)
+                <div class="hero-slide absolute inset-0 transition-opacity duration-1000 ease-in-out {{ $index == 0 ? 'opacity-100' : 'opacity-0 pointer-events-none' }}"
+                     id="slide-{{ $index }}" data-hero-slide role="group" aria-roledescription="slide" aria-label="{{ $index + 1 }} of {{ count($sliders) }}" @if($index != 0) aria-hidden="true" @endif style="z-index: 2;">
+                    @if(!empty($slider['image_url']))
+                        <img src="{{ $slider['image_url'] }}" alt="" class="absolute inset-0 w-full h-full object-cover" onerror="this.remove()" @if($index != 0) loading="lazy" @endif>
+                        <div class="absolute inset-0 bg-black/35"></div>
+                    @endif
+                    <div class="absolute inset-0 flex flex-col justify-center items-center text-center px-6 sm:px-10">
+                        <span class="hero-rise inline-flex items-center gap-2 text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] text-[#FFE7A3] mb-4" style="--d: 0ms">
+                            <span class="h-px w-8 sm:w-12 bg-gradient-to-r from-transparent to-[#FFE7A3]"></span>
+                            <span>&#2384; ABVHPS</span>
+                            <span class="h-px w-8 sm:w-12 bg-gradient-to-l from-transparent to-[#FFE7A3]"></span>
+                        </span>
+                        @if($index == 0)
+                            <h1 class="hero-rise text-white text-3xl sm:text-4xl md:text-5xl font-extrabold mb-4 drop-shadow-lg max-w-4xl leading-tight" style="--d: 120ms">{{ __($slider['title']) }}</h1>
+                        @else
+                            <h2 class="hero-rise text-white text-3xl sm:text-4xl md:text-5xl font-extrabold mb-4 drop-shadow-lg max-w-4xl leading-tight" style="--d: 120ms">{{ __($slider['title']) }}</h2>
+                        @endif
+                        <p class="hero-rise text-brandLightOrange text-base md:text-xl max-w-2xl drop-shadow-md leading-relaxed" style="--d: 240ms">{{ __($slider['subtitle']) }}</p>
+                        @if(!empty($slider['cta_label']) && !empty($slider['cta_url']))
+                            <a href="{{ $slider['cta_url'] }}" class="hero-rise mt-7 inline-flex items-center gap-2 bg-gradient-to-r from-[#E8890C] to-[#FF6600] hover:from-[#F5A524] hover:to-[#FF7A1A] text-white text-xs sm:text-sm font-black uppercase tracking-wider px-6 py-3 rounded-full shadow-lg shadow-black/30 ring-1 ring-[#FFE7A3]/60 transition focus:outline-none focus:ring-2 focus:ring-white" style="--d: 360ms">
+                                <span>{{ __($slider['cta_label']) }}</span><span aria-hidden="true">&rarr;</span>
+                            </a>
+                        @endif
                     </div>
                 </div>
-                @endforeach
-            @else
-                <div class="absolute inset-0 flex flex-col justify-center items-center text-center px-4" style="z-index: 2;">
-                    <h2 class="text-white text-3xl md:text-5xl font-extrabold mb-4 drop-shadow-md">Akhanda Bharatha Viswa Hindu Parirakshana Samiti</h2>
-                    <p class="text-brandLightOrange text-base md:text-xl max-w-2xl drop-shadow-sm">Preserving Sanathana Dharma and Empowering Communities</p>
+            @endforeach
+
+            @if(count($sliders) > 1)
+                {{-- Previous / Next --}}
+                <button type="button" id="hero-prev" class="absolute left-2 sm:left-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/30 hover:bg-black/55 text-white flex items-center justify-center backdrop-blur-sm ring-1 ring-white/25 transition focus:outline-none focus:ring-2 focus:ring-[#FFE7A3]" style="z-index: 5;" aria-label="Previous slide">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+                </button>
+                <button type="button" id="hero-next" class="absolute right-2 sm:right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/30 hover:bg-black/55 text-white flex items-center justify-center backdrop-blur-sm ring-1 ring-white/25 transition focus:outline-none focus:ring-2 focus:ring-[#FFE7A3]" style="z-index: 5;" aria-label="Next slide">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+                </button>
+
+                {{-- Dots --}}
+                <div class="absolute bottom-6 left-0 right-0 flex items-center justify-center gap-2.5" style="z-index: 5;" id="hero-dots">
+                    @foreach($sliders as $index => $slider)
+                        <button type="button" class="hero-dot h-2.5 rounded-full transition-all duration-300 {{ $index == 0 ? 'w-7 bg-[#FFE7A3]' : 'w-2.5 bg-white/55 hover:bg-white' }}" data-hero-dot="{{ $index }}" aria-label="Go to slide {{ $index + 1 }}"></button>
+                    @endforeach
                 </div>
             @endif
 
+            {{-- Gold base line --}}
+            <div class="absolute bottom-0 inset-x-0 h-1" style="z-index: 6; background: linear-gradient(90deg, #B8860B, #F6D77B 25%, #FF6600 50%, #F6D77B 75%, #B8860B);"></div>
+
+            <style>
+                .hero-mandala { transform: translate(-50%, -50%); animation: heroMandala 160s linear infinite; }
+                @keyframes heroMandala { to { transform: translate(-50%, -50%) rotate(360deg); } }
+                /* Text rises in each time a slide becomes active */
+                .hero-slide .hero-rise { opacity: 0; transform: translateY(16px); }
+                .hero-slide.opacity-100 .hero-rise { opacity: 1; transform: none; transition: opacity .8s ease var(--d, 0ms), transform .8s ease var(--d, 0ms); }
+                @media (prefers-reduced-motion: reduce) {
+                    .hero-mandala { animation: none; }
+                    .hero-slide .hero-rise { opacity: 1; transform: none; transition: none; }
+                }
+            </style>
         </div>
     @endif
 
+
+{{-- Sanskrit shloka strip: sets the devotional tone right below the hero --}}
+<section class="relative overflow-hidden bg-gradient-to-r from-[#FFF1D0] via-[#FFF9EC] to-[#FFF1D0] border-b border-amber-200/80" id="shloka-strip" aria-label="Sanskrit shloka">
+    <svg class="absolute -left-10 top-1/2 -translate-y-1/2 w-44 h-44 text-[#D4A017]/[0.16] pointer-events-none" viewBox="0 0 200 200" aria-hidden="true"><use href="#abvhps-mandala" width="200" height="200"/></svg>
+    <svg class="absolute -right-10 top-1/2 -translate-y-1/2 w-44 h-44 text-[#D4A017]/[0.16] pointer-events-none" viewBox="0 0 200 200" aria-hidden="true"><use href="#abvhps-mandala" width="200" height="200"/></svg>
+    <div class="relative max-w-5xl mx-auto px-4 py-5 sm:py-6 text-center">
+        <p lang="sa" class="text-xl sm:text-2xl font-extrabold text-[#8A5A00] tracking-wide" style="font-family: 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', serif;">&#2405; &#2343;&#2352;&#2381;&#2350;&#2379; &#2352;&#2325;&#2381;&#2359;&#2340;&#2367; &#2352;&#2325;&#2381;&#2359;&#2367;&#2340;&#2307; &#2405;</p>
+        <p class="text-xs sm:text-sm text-gray-600 mt-1.5 font-semibold">{{ __('Dharma protects those who protect it.') }}</p>
+    </div>
+</section>
 
 {{-- Official Latest Announcements Desk --}}
 @if(isset($publishedExams) && $publishedExams->isNotEmpty())
 <section class="bg-amber-50 border-y border-amber-200 py-3 px-4">
     <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
         <div class="flex items-center gap-2 text-amber-900 font-bold">
-            <span class="bg-amber-600 text-white text-[10px] uppercase tracking-wider font-black px-2 py-0.5 rounded">Announcement</span>
+            <span class="bg-amber-600 text-white text-[10px] uppercase tracking-wider font-black px-2 py-0.5 rounded">{{ __('Announcement') }}</span>
             <span>📢 Examination Results Announced:</span>
             <span class="font-normal text-gray-800">
                 @foreach($publishedExams as $pExam)
@@ -97,54 +154,106 @@
         </div>
         <a href="{{ route('exam.results_portal') }}"
            class="bg-amber-700 hover:bg-amber-800 text-white font-black text-[11px] px-3.5 py-1.5 rounded uppercase tracking-wider transition whitespace-nowrap">
-            View Results →
+            {{ __('View Results') }} →
         </a>
     </div>
 </section>
 @endif
 
 <!-- 2. Organization Origin & Message From Guru Garu -->
-<section class="py-16 px-4 bg-white">
-    <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-        <div class="md:col-span-2">
-            <span class="text-brandOrange font-bold tracking-wider text-xs uppercase">Our Divine Origin</span>
-            <h2 class="text-3xl font-extrabold text-brandGray mt-2 mb-4">Why and How ABVHPS Was Founded</h2>
-            <p class="text-gray-600 leading-relaxed text-sm mb-4">
-                The Akhanda Bharata Viswa Hindu Parirakshana Samithi was set up in the year of 2023 and having the Registration Number 20/2023 for the social process. It recognizes activities preserving Sanatana Dharma under the behest of Rajaguru <strong>Sri Sri Sri Subrahmanneswara Swamy Garu</strong>.
+<section class="relative overflow-hidden py-16 sm:py-20 px-4 bg-gradient-to-b from-white via-[#FFFAF0] to-white" id="divine-origin">
+    {{-- Golden mandala watermarks --}}
+    <svg class="absolute -left-40 -top-32 w-[30rem] h-[30rem] text-[#D4A017]/[0.09] pointer-events-none" viewBox="0 0 200 200" aria-hidden="true"><use href="#abvhps-mandala" width="200" height="200"/></svg>
+    <svg class="absolute -right-32 -bottom-40 w-[28rem] h-[28rem] text-[#D4A017]/[0.08] pointer-events-none" viewBox="0 0 200 200" aria-hidden="true"><use href="#abvhps-mandala" width="200" height="200"/></svg>
+
+    <div class="relative max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-10 lg:gap-14 items-center">
+        {{-- Story --}}
+        <div class="lg:col-span-3" data-reveal>
+            <div class="inline-flex items-center gap-2.5 mb-3">
+                <span class="text-lg text-[#B8860B] font-bold" aria-hidden="true">&#2384;</span>
+                <span class="text-[#B8860B] font-black tracking-[0.3em] text-[11px] sm:text-xs uppercase">{{ __('Our Divine Origin') }}</span>
+                <span class="h-px w-14 bg-gradient-to-r from-[#D4A017] to-transparent" aria-hidden="true"></span>
+            </div>
+            <h2 class="text-3xl sm:text-4xl font-extrabold text-brandGray leading-tight">{!! __('Why and How :name Was Founded', ['name' => '<span class="text-brandOrange">ABVHPS</span>']) !!}</h2>
+            <div class="flex items-center gap-2 mt-4 mb-6 text-[#D4A017]" aria-hidden="true">
+                <span class="h-px w-16 bg-gradient-to-r from-[#D4A017] to-transparent"></span>
+                <span class="text-[10px]">&#9670;</span>
+            </div>
+
+            <p class="text-gray-700 leading-8 text-[15px] sm:text-base mb-4">
+                {!! __(config('abvhps.copy.origin_1'), ['guru' => '<strong class="text-brandGray">' . e(config('abvhps.copy.guru')) . '</strong>']) !!}
             </p>
-            <p class="text-gray-600 leading-relaxed text-sm">
-                This charitable trust is dedicated to uplift mankind mentally, morally, or physically. Trust is to beautify designated villages and focus on spiritual awareness, temple wellbeing, and deep patriotism.
+            <p class="text-gray-700 leading-8 text-[15px] sm:text-base">
+                {{ __(config('abvhps.copy.origin_2')) }}
             </p>
+
+            <div class="mt-7 grid grid-cols-3 gap-3 sm:gap-4 max-w-xl">
+                <div class="rounded-xl border border-[#E9C46A]/60 bg-white/80 px-3 py-3 text-center shadow-sm">
+                    <span class="block text-xl sm:text-2xl font-extrabold text-brandOrange leading-none">2023</span>
+                    <span class="block text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-gray-500 mt-1.5">{{ __('Founded') }}</span>
+                </div>
+                <div class="rounded-xl border border-[#E9C46A]/60 bg-white/80 px-3 py-3 text-center shadow-sm">
+                    <span class="block text-xl sm:text-2xl font-extrabold text-brandOrange leading-none">20/2023</span>
+                    <span class="block text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-gray-500 mt-1.5">{{ __('Registration No.') }}</span>
+                </div>
+                <div class="rounded-xl border border-[#E9C46A]/60 bg-white/80 px-3 py-3 text-center shadow-sm">
+                    <span class="block text-xl sm:text-2xl font-extrabold text-brandOrange leading-none" aria-hidden="true">&#2384;</span>
+                    <span class="block text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-gray-500 mt-1.5">{{ __('Charitable Trust') }}</span>
+                </div>
+            </div>
         </div>
-        <div class="bg-brandLightOrange p-6 rounded-lg border-l-4 border-brandOrange">
-            <h3 class="font-bold text-lg text-brandOrange mb-2">Divine Blessings</h3>
-            <p class="text-xs italic text-gray-700 leading-relaxed">
-                "Our main objective is to protect Hindu Sanathana Dharma, construct new temples, expand Goushalas, distribute daily meals under Annapurna, and support children's literacy across every Grama Panchayat."
-            </p>
-            <span class="block text-xs font-bold text-brandGray mt-4 text-right">- Sri Sri Sri Subrahmanneswara Swamy Garu</span>
+
+        {{-- Divine Blessings --}}
+        <div class="lg:col-span-2" data-reveal style="--d: 150ms">
+            <figure class="relative overflow-hidden rounded-3xl border border-[#E9C46A]/70 bg-gradient-to-br from-[#FFF6E0] via-white to-[#FFEFCF] p-7 sm:p-9 shadow-xl shadow-amber-900/10">
+                <span class="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#B8860B] via-[#F6D77B] to-[#B8860B]" aria-hidden="true"></span>
+                <svg class="absolute -right-14 -bottom-14 w-56 h-56 text-[#D4A017]/[0.12] pointer-events-none" viewBox="0 0 200 200" aria-hidden="true"><use href="#abvhps-mandala" width="200" height="200"/></svg>
+
+                <div class="relative">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="flex items-center justify-center w-11 h-11 rounded-full bg-gradient-to-br from-[#FFF3D1] to-[#FBE3A1] ring-2 ring-[#D4A017]/50 ring-offset-2 ring-offset-white text-xl text-[#B8860B] font-bold" aria-hidden="true">&#2384;</span>
+                        <figcaption class="text-[#B8860B] font-black uppercase tracking-[0.25em] text-[11px] sm:text-xs">{{ __('Divine Blessings') }}</figcaption>
+                    </div>
+
+                    <svg class="w-9 h-9 text-[#D4A017]/70 mb-1" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.6 5C6.5 6.7 4 9.7 4 13.6V19h6.6v-6.6H7.3c.1-2.1 1.3-3.8 3.5-5L9.6 5zm9 0c-3.1 1.7-5.6 4.7-5.6 8.6V19h6.6v-6.6h-3.3c.1-2.1 1.3-3.8 3.5-5L18.6 5z"/></svg>
+
+                    <blockquote class="font-serif italic text-[17px] sm:text-lg leading-8 text-gray-800">
+                        {{ __(config('abvhps.copy.blessing')) }}
+                    </blockquote>
+
+                    <div class="flex items-center gap-3 mt-6 pt-5 border-t border-[#D4A017]/30">
+                        <span class="h-px w-8 bg-[#D4A017]" aria-hidden="true"></span>
+                        <div>
+                            <span class="block text-sm font-extrabold text-brandGray leading-tight">{{ config('abvhps.copy.guru') }}</span>
+                            <span class="block text-[11px] font-bold uppercase tracking-wider text-[#B8860B] mt-0.5">{{ __('Rajaguru') }}</span>
+                        </div>
+                    </div>
+                </div>
+            </figure>
         </div>
     </div>
+
+    <style>
+        /* Scroll reveal — items are only hidden once JS has armed them, so no-JS visitors still see everything */
+        [data-reveal].reveal-armed { opacity: 0; transform: translateY(22px); }
+        [data-reveal].reveal-armed.is-in { opacity: 1; transform: none; transition: opacity .8s ease var(--d, 0ms), transform .8s ease var(--d, 0ms); }
+        @media (prefers-reduced-motion: reduce) { [data-reveal].reveal-armed { opacity: 1; transform: none; } }
+    </style>
+    <script>
+        (function () {
+            var items = document.querySelectorAll('#divine-origin [data-reveal]');
+            if (!items.length || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            var io = new IntersectionObserver(function (entries) {
+                entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } });
+            }, { threshold: 0.15 });
+            items.forEach(function (el) { el.classList.add('reveal-armed'); io.observe(el); });
+        })();
+    </script>
 </section>
 
 <!-- 3. Vision, Mission & Goal Section -->
-<section class="py-12 px-4 bg-gray-50 border-t border-gray-200 relative @if(!empty($joinStrip['enabled'])) pb-16 sm:pb-20 @endif">
-    <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-white p-6 rounded shadow-sm text-center">
-            <div class="text-2xl mb-2">👁️</div>
-            <h3 class="font-bold text-brandGray text-lg mb-2">Our Vision</h3>
-            <p class="text-xs text-gray-600 leading-relaxed">To develop Temples as a part of Sanathana Dharma, construct new worship spaces, and bring social equality to the underprivileged sections of society.</p>
-        </div>
-        <div class="bg-white p-6 rounded shadow-sm text-center">
-            <div class="text-2xl mb-2">🚀</div>
-            <h3 class="font-bold text-brandGray text-lg mb-2">Our Mission</h3>
-            <p class="text-xs text-gray-600 leading-relaxed">Giving voluntary memberships to those ready to deliver services covering poor relief, education, food distribution, and medical aid maps.</p>
-        </div>
-        <div class="bg-white p-6 rounded shadow-sm text-center">
-            <div class="text-2xl mb-2">🎯</div>
-            <h3 class="font-bold text-brandGray text-lg mb-2">The Goal</h3>
-            <p class="text-xs text-gray-600 leading-relaxed">Protect and promote Hindu traditions, rituals, and festivals for future generations, fostering brotherhood and collaboration globally.</p>
-        </div>
-    </div>
+<section class="py-12 px-4 bg-gradient-to-b from-[#FFF8EC] to-[#FFFDF8] border-t border-amber-200/70 relative @if(!empty($joinStrip['enabled'])) pb-16 sm:pb-20 @endif">
+    @include('partials.pillars')
 
     @if(!empty($joinStrip['enabled']))
     <!-- Floating Upper Layer: Join / Volunteer Strip -->
@@ -155,30 +264,30 @@
                 <div class="lg:col-span-7 space-y-3">
                     <div class="inline-flex items-center gap-1.5 text-[11px] font-black text-brandOrange uppercase tracking-wider bg-orange-50 px-2.5 py-1 rounded-full border border-orange-200/60">
                         <span>🕉️</span>
-                        <span>Seva Community</span>
+                        <span>{{ __('Seva Community') }}</span>
                     </div>
                     <h3 class="text-xl sm:text-2xl font-extrabold text-brandGray uppercase tracking-tight">
-                        {{ $joinStrip['why_heading'] ?? 'WHY JOIN ABVHPS?' }}
+                        {{ __($joinStrip['why_heading'] ?? 'WHY JOIN ABVHPS?') }}
                     </h3>
                     <p class="text-xs sm:text-sm text-gray-600 leading-relaxed font-medium">
-                        {{ $joinStrip['why_text'] ?? 'Become part of a service-oriented community committed to Dharma, social service, cultural awareness and organized voluntary service.' }}
+                        {{ __($joinStrip['why_text'] ?? 'Become part of a service-oriented community committed to Dharma, social service, cultural awareness and organized voluntary service.') }}
                     </p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 text-[11px] font-bold text-gray-700">
                         <div class="flex items-center gap-1.5">
                             <span class="text-brandOrange text-xs font-black">✓</span>
-                            <span>Serve the Community</span>
+                            <span>{{ __('Serve the Community') }}</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <span class="text-brandOrange text-xs font-black">✓</span>
-                            <span>Support Dharma Activities</span>
+                            <span>{{ __('Support Dharma Activities') }}</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <span class="text-brandOrange text-xs font-black">✓</span>
-                            <span>Participate in Seva Programs</span>
+                            <span>{{ __('Participate in Seva Programs') }}</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <span class="text-brandOrange text-xs font-black">✓</span>
-                            <span>Build Local Leadership</span>
+                            <span>{{ __('Build Local Leadership') }}</span>
                         </div>
                     </div>
                 </div>
@@ -186,22 +295,22 @@
                 <!-- Right Side: Membership CTA (5 cols) -->
                 <div class="lg:col-span-5 bg-gradient-to-br from-orange-50/70 to-amber-50/40 p-5 sm:p-6 rounded-xl border border-orange-200/70 flex flex-col justify-between space-y-4">
                     <div>
-                        <span class="text-[10px] font-black text-brandOrange uppercase tracking-wider block">ABVHPS MEMBERSHIP</span>
+                        <span class="text-[10px] font-black text-brandOrange uppercase tracking-wider block">{{ __('ABVHPS MEMBERSHIP') }}</span>
                         <h4 class="text-base sm:text-lg font-extrabold text-gray-900 uppercase tracking-tight mt-0.5">
-                            {{ $joinStrip['member_heading'] ?? 'BECOME AN ABVHPS MEMBER' }}
+                            {{ __($joinStrip['member_heading'] ?? 'BECOME AN ABVHPS MEMBER') }}
                         </h4>
                         <p class="text-xs text-gray-600 leading-relaxed mt-1.5 font-medium">
-                            {{ $joinStrip['member_text'] ?? 'Join our growing community and participate in Dharma, Seva, cultural and social initiatives through ABVHPS.' }}
+                            {{ __($joinStrip['member_text'] ?? 'Join our growing community and participate in Dharma, Seva, cultural and social initiatives through ABVHPS.') }}
                         </p>
                     </div>
                     <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-1">
                         <a href="{{ route('membership.form') }}" class="inline-flex items-center justify-center gap-2 bg-brandOrange hover:bg-orange-600 text-white text-xs font-black py-3 px-5 rounded-xl shadow-md uppercase tracking-wider transition group">
-                            <span>{{ $joinStrip['cta_text'] ?? 'BECOME A MEMBER' }}</span>
+                            <span>{{ __($joinStrip['cta_text'] ?? 'BECOME A MEMBER') }}</span>
                             <span class="group-hover:translate-x-1 transition-transform">→</span>
                         </a>
                         @if(!empty($joinStrip['secondary_cta_text']) && !empty($joinStrip['secondary_cta_url']))
-                            <a href="{{ $joinStrip['secondary_cta_url'] }}" class="inline-flex items-center justify-center text-xs font-bold text-gray-700 hover:text-brandOrange py-2 px-3 transition uppercase tracking-wider">
-                                {{ $joinStrip['secondary_cta_text'] }}
+                            <a href="{{ __($joinStrip['secondary_cta_url']) }}" class="inline-flex items-center justify-center text-xs font-bold text-gray-700 hover:text-brandOrange py-2 px-3 transition uppercase tracking-wider">
+                                {{ __($joinStrip['secondary_cta_text']) }}
                             </a>
                         @endif
                     </div>
@@ -213,25 +322,90 @@
 </section>
 
 <!-- 4. Live Counter Statistics Strip (Transition Band) -->
-<section class="w-full bg-brandOrange text-white @if(!empty($joinStrip['enabled'])) pt-20 sm:pt-24 pb-10 @else py-10 @endif px-4 shadow-inner relative z-10" id="homepage-statistics-strip">
-    <div class="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center">
-        <div class="p-2">
-            <span class="block text-3xl sm:text-4xl font-extrabold mb-1 tracking-tight">{{ number_format($liveCounts['donors']) }}</span>
-            <span class="text-[11px] sm:text-xs uppercase font-bold tracking-wider text-orange-100">Verified Donors</span>
+@php
+    // Show only real, non-zero counters. Zero counters are hidden (never padded with invented numbers);
+    // the band is completed with true organisation facts instead.
+    $statTiles = [];
+    foreach ([['donors', 'Verified Donors'], ['members', 'Registered Members'], ['volunteers', 'Total Volunteers']] as [$statKey, $statLabel]) {
+        if ((int) ($liveCounts[$statKey] ?? 0) > 0) {
+            $statTiles[] = ['value' => (int) $liveCounts[$statKey], 'label' => $statLabel, 'count' => true];
+        }
+    }
+    if ((int) ($liveCounts['years'] ?? 0) > 0) {
+        $statTiles[] = ['value' => (int) $liveCounts['years'], 'label' => 'Years of Service', 'count' => true];
+    }
+    foreach ([['2023', 'Established'], ['20/2023', 'Registration No.']] as [$factValue, $factLabel]) {
+        if (count($statTiles) < 4) {
+            $statTiles[] = ['value' => $factValue, 'label' => $factLabel, 'count' => false];
+        }
+    }
+    $statCols = count($statTiles) >= 4 ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3';
+@endphp
+<section class="stats-devotional w-full text-white @if(!empty($joinStrip['enabled'])) pt-20 sm:pt-24 pb-12 @else py-12 @endif px-4 relative overflow-hidden z-10" id="homepage-statistics-strip">
+    {{-- Devotional watermarks: slow-turning mandala + a soft second one --}}
+    <svg class="stats-mandala absolute -right-28 top-1/2 -translate-y-1/2 w-[34rem] h-[34rem] text-[#FFE7A3]/20 pointer-events-none" viewBox="0 0 200 200" aria-hidden="true"><use href="#abvhps-mandala" width="200" height="200"/></svg>
+    <svg class="absolute -left-24 -bottom-28 w-80 h-80 text-white/10 pointer-events-none" viewBox="0 0 200 200" aria-hidden="true"><use href="#abvhps-mandala" width="200" height="200"/></svg>
+
+    <div class="relative z-10 max-w-6xl mx-auto">
+        <div class="flex items-center justify-center gap-3 mb-7 text-[#FFE7A3]" aria-hidden="true">
+            <span class="h-px w-12 sm:w-28 bg-gradient-to-r from-transparent to-[#FFE7A3]/80"></span>
+            <span class="text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] text-white">{{ __('Our Seva in Numbers') }}</span>
+            <span class="h-px w-12 sm:w-28 bg-gradient-to-l from-transparent to-[#FFE7A3]/80"></span>
         </div>
-        <div class="p-2">
-            <span class="block text-3xl sm:text-4xl font-extrabold mb-1 tracking-tight">{{ number_format($liveCounts['members']) }}</span>
-            <span class="text-[11px] sm:text-xs uppercase font-bold tracking-wider text-orange-100">Registered Members</span>
-        </div>
-        <div class="p-2">
-            <span class="block text-3xl sm:text-4xl font-extrabold mb-1 tracking-tight">{{ number_format($liveCounts['volunteers']) }}</span>
-            <span class="text-[11px] sm:text-xs uppercase font-bold tracking-wider text-orange-100">Total Volunteers</span>
-        </div>
-        <div class="p-2">
-            <span class="block text-3xl sm:text-4xl font-extrabold mb-1 tracking-tight">{{ number_format($liveCounts['years']) }}</span>
-            <span class="text-[11px] sm:text-xs uppercase font-bold tracking-wider text-orange-100">Years of Service</span>
+
+        <div class="grid {{ $statCols }} gap-y-8 text-center">
+            @foreach($statTiles as $tile)
+                <div class="px-2 {{ !$loop->first ? 'md:border-l md:border-[#FFE7A3]/35' : '' }}">
+                    <span class="block text-3xl sm:text-4xl font-extrabold mb-1 tracking-tight drop-shadow-[0_2px_6px_rgba(110,35,0,0.35)]" @if($tile['count']) data-count-to="{{ $tile['value'] }}" @endif>{{ $tile['count'] ? number_format($tile['value']) : $tile['value'] }}</span>
+                    <span class="text-[11px] sm:text-xs uppercase font-bold tracking-wider text-amber-50/95">{{ __($tile['label']) }}</span>
+                </div>
+            @endforeach
         </div>
     </div>
+
+    <style>
+        /* Deep saffron -> orange -> warm gold, with a soft golden glow, framed by gold hairlines */
+        .stats-devotional {
+            background:
+                radial-gradient(60rem 22rem at 85% -10%, rgba(255, 214, 102, 0.38), transparent 60%),
+                radial-gradient(40rem 20rem at 5% 110%, rgba(140, 30, 0, 0.35), transparent 60%),
+                linear-gradient(110deg, #C93F00 0%, #F26200 42%, #F28A0F 100%);
+        }
+        .stats-devotional::before, .stats-devotional::after {
+            content: ""; position: absolute; left: 0; right: 0; height: 3px; pointer-events: none;
+            background: linear-gradient(90deg, transparent, #F6D77B 20%, #B8860B 50%, #F6D77B 80%, transparent);
+        }
+        .stats-devotional::before { top: 0; }
+        .stats-devotional::after { bottom: 0; }
+        .stats-mandala { animation: mandalaSpin 140s linear infinite; }
+        @keyframes mandalaSpin { to { transform: translateY(-50%) rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) { .stats-mandala { animation: none; } }
+    </style>
+    <script>
+        // Count-up when the band scrolls into view. The final numbers are already in the HTML, so no-JS visitors see them too.
+        (function () {
+            var band = document.getElementById('homepage-statistics-strip');
+            var nodes = band ? band.querySelectorAll('[data-count-to]') : [];
+            if (!nodes.length || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            var fmt = function (n) { return n.toLocaleString('en-IN'); };
+            var run = function () {
+                nodes.forEach(function (el) {
+                    var target = parseInt(el.getAttribute('data-count-to'), 10) || 0, start = null, dur = 1600;
+                    var step = function (ts) {
+                        if (start === null) start = ts;
+                        var p = Math.min((ts - start) / dur, 1), eased = 1 - Math.pow(1 - p, 3);
+                        el.textContent = fmt(Math.round(target * eased));
+                        if (p < 1) requestAnimationFrame(step);
+                    };
+                    el.textContent = fmt(0);
+                    requestAnimationFrame(step);
+                });
+            };
+            new IntersectionObserver(function (entries, obs) {
+                if (entries[0].isIntersecting) { run(); obs.disconnect(); }
+            }, { threshold: 0.35 }).observe(band);
+        })();
+    </script>
 </section>
 
 <!-- 5. Fundraising Campaigns (Dynamic Admin Fundraising Campaigns) -->
@@ -239,14 +413,14 @@
     <div class="max-w-6xl mx-auto">
         <div class="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4">
             <div>
-                <span class="text-xs font-bold text-brandOrange uppercase tracking-wider block">Dharma Seva Initiatives</span>
-                <h2 class="text-2xl sm:text-3xl font-extrabold text-brandGray uppercase tracking-tight mt-1">Fundraising Campaigns</h2>
-                <p class="text-xs text-gray-500 mt-1">Support meaningful initiatives and help us serve communities across India.</p>
+                <span class="text-xs font-bold text-brandOrange uppercase tracking-wider block">{{ __('Dharma Seva Initiatives') }}</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-brandGray uppercase tracking-tight mt-1">{{ __('Fundraising Campaigns') }}</h2>
+                <p class="text-xs text-gray-500 mt-1">{{ __('Support meaningful initiatives and help us serve communities across India.') }}</p>
                 <div class="h-1 w-16 bg-brandOrange mt-3"></div>
             </div>
             @if(isset($fundraisingCampaigns) && $fundraisingCampaigns->isNotEmpty())
                 <a href="{{ route('donations.grid') }}" class="bg-brandOrange hover:bg-opacity-90 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition uppercase tracking-wider inline-flex items-center gap-1 shrink-0 self-start sm:self-auto">
-                    View All Campaigns →
+                    {{ __('View All Campaigns') }} →
                 </a>
             @endif
         </div>
@@ -271,7 +445,7 @@
                                     <div class="w-full h-full flex items-center justify-center text-3xl">🌾</div>
                                 @endif
                                 <span class="absolute top-2.5 left-2.5 bg-brandOrange text-white text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase shadow-xs">
-                                    Active Cause
+                                    {{ __('Active Cause') }}
                                 </span>
                                 @if(!empty($campaign->end_date))
                                     <span class="absolute top-2.5 right-2.5 bg-black/60 backdrop-blur-xs text-white text-[9px] font-bold px-2 py-0.5 rounded uppercase">
@@ -302,8 +476,8 @@
                                     <div class="bg-brandOrange h-full rounded-full transition-all duration-500" style="width: {{ $percent }}%"></div>
                                 </div>
                                 <div class="flex justify-between text-[11px] font-bold text-gray-600">
-                                    <span>Raised: <strong class="text-brandOrange font-mono">{{ \App\Models\FundraisingCampaign::formatIndianCurrency($raised) }}</strong> ({{ $percent }}%)</span>
-                                    <span>Target: <strong class="text-gray-900 font-mono">{{ \App\Models\FundraisingCampaign::formatIndianCurrency($target) }}</strong></span>
+                                    <span>{{ __('Raised:') }} <strong class="text-brandOrange font-mono">{{ \App\Models\FundraisingCampaign::formatIndianCurrency($raised) }}</strong> ({{ $percent }}%)</span>
+                                    <span>{{ __('Target:') }} <strong class="text-gray-900 font-mono">{{ \App\Models\FundraisingCampaign::formatIndianCurrency($target) }}</strong></span>
                                 </div>
                             </div>
                         </div>
@@ -316,7 +490,7 @@
                                 </a>
                                 <a href="{{ $campaign->whatsapp_share_url }}" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-1.5 bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-center py-2.5 px-3 rounded-xl text-xs uppercase tracking-wider shadow-xs transition" aria-label="Share {{ $campaign->title }} on WhatsApp">
                                     <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.072-2.176-.543-1.894-.787-3.111-2.724-3.206-2.85-.095-.125-.769-1.025-.769-1.954 0-.93.486-1.385.66-1.575.174-.189.38-.238.508-.238.127 0 .253.002.364.007.117.006.275-.044.429.327.16.386.547 1.332.595 1.43.048.098.08.213.016.338-.064.126-.096.205-.19.316-.095.111-.2.247-.286.332-.095.095-.194.198-.083.389.111.19.493.814 1.057 1.317.725.646 1.337.846 1.528.941.19.095.302.08.413-.048.111-.127.476-.556.603-.746.127-.19.254-.158.428-.095.175.063 1.111.524 1.301.62.19.095.317.143.365.222.048.079.048.46-.096.865z"/></svg>
-                                    <span>Share</span>
+                                    <span>{{ __('Share') }}</span>
                                 </a>
                             </div>
                         </div>
@@ -327,8 +501,8 @@
             <!-- Clean Empty State -->
             <div class="text-center py-12 bg-gray-50 rounded-2xl border border-gray-200 p-8 max-w-md mx-auto">
                 <span class="text-3xl block mb-2">🕉️</span>
-                <h3 class="text-sm font-bold text-gray-700 uppercase">Fundraising Campaigns</h3>
-                <p class="text-xs text-gray-500 mt-1">No active fundraising campaigns at the moment.</p>
+                <h3 class="text-sm font-bold text-gray-700 uppercase">{{ __('Fundraising Campaigns') }}</h3>
+                <p class="text-xs text-gray-500 mt-1">{{ __('No active fundraising campaigns at the moment.') }}</p>
             </div>
         @endif
     </div>
@@ -338,9 +512,9 @@
 <section class="py-16 px-4 bg-gray-50 border-t border-gray-100">
     <div class="max-w-6xl mx-auto">
         <div class="text-center mb-12">
-            <span class="text-xs font-bold text-brandOrange uppercase tracking-wider block">Comprehensive Seva Modules</span>
-            <h2 class="text-2xl sm:text-3xl font-extrabold text-brandGray uppercase tracking-tight mt-1">Our Core Service Projects</h2>
-            <p class="text-xs text-gray-500 mt-1">Every project can be customized, added, or modified using the secure Admin Login Panel</p>
+            <span class="text-xs font-bold text-brandOrange uppercase tracking-wider block">{{ __('Comprehensive Seva Modules') }}</span>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-brandGray uppercase tracking-tight mt-1">{{ __('Our Core Service Projects') }}</h2>
+            <p class="text-xs text-gray-500 mt-1">{{ __('Seva in action — caring for temples, Goshalas, Annapurna meals and children\'s literacy.') }}</p>
             <div class="h-1 w-16 bg-brandOrange mx-auto mt-3"></div>
         </div>
 
@@ -381,7 +555,7 @@
         @else
             <div class="text-center py-10 bg-white rounded-xl border border-gray-200 p-8 max-w-md mx-auto">
                 <span class="text-3xl block mb-2">🌱</span>
-                <p class="text-xs text-gray-500 font-medium">Core service project records will appear here.</p>
+                <p class="text-xs text-gray-500 font-medium">{{ __('Core service project records will appear here.') }}</p>
             </div>
         @endif
     </div>
@@ -392,11 +566,11 @@
 @php
     $partnersList = !empty($sponsorsStrip['partners']) ? $sponsorsStrip['partners'] : array_map(fn($n) => ['name' => $n, 'logo_path' => null], $sponsorsStrip['sponsors']);
 @endphp
-<section class="py-5 sm:py-6 bg-gradient-to-b from-slate-50 via-orange-50/20 to-slate-50 border-t border-b border-slate-200/80 overflow-hidden relative" id="homepage-sponsors-strip" aria-label="{{ $sponsorsStrip['heading'] ?? 'Our Supporting Partners' }}">
+<section class="py-5 sm:py-6 bg-gradient-to-b from-slate-50 via-orange-50/20 to-slate-50 border-t border-b border-slate-200/80 overflow-hidden relative" id="homepage-sponsors-strip" aria-label="{{ __($sponsorsStrip['heading'] ?? 'Our Supporting Partners') }}">
     <div class="max-w-6xl mx-auto px-4 mb-3 text-center">
-        <span class="text-[9.5px] font-extrabold text-brandOrange uppercase tracking-widest block mb-0.5">Collaborations &amp; Trust</span>
+        <span class="text-[9.5px] font-extrabold text-brandOrange uppercase tracking-widest block mb-0.5">{{ __('Collaborations & Trust') }}</span>
         <h2 class="text-base sm:text-lg font-extrabold text-slate-800 uppercase tracking-tight">
-            {{ $sponsorsStrip['heading'] ?? 'OUR SUPPORTING PARTNERS' }}
+            {{ __($sponsorsStrip['heading'] ?? 'OUR SUPPORTING PARTNERS') }}
         </h2>
     </div>
 
@@ -490,27 +664,30 @@
 
 <!-- 8. Connect With ABVHPS / Social Media Channels Strip -->
 @if(!empty($socialStrip['enabled']) && !empty($socialStrip['platforms']))
-<section class="py-8 sm:py-10 bg-white border-t border-slate-200/80" id="homepage-social-media-strip" aria-label="{{ $socialStrip['heading'] ?? 'Connect With ABVHPS' }}">
+<section class="py-8 sm:py-10 bg-white border-t border-slate-200/80" id="homepage-social-media-strip" aria-label="{{ __($socialStrip['heading'] ?? 'Connect With ABVHPS') }}">
     <div class="max-w-6xl mx-auto px-4 text-center">
-        <span class="text-[10px] font-extrabold text-brandOrange uppercase tracking-widest block mb-1">Official Channels &amp; Updates</span>
+        <span class="text-[10px] font-extrabold text-brandOrange uppercase tracking-widest block mb-1">{{ __('Official Channels & Updates') }}</span>
         <h2 class="text-xl sm:text-2xl font-extrabold text-slate-800 uppercase tracking-tight mb-2">
-            {{ $socialStrip['heading'] ?? 'CONNECT WITH ABVHPS' }}
+            {{ __($socialStrip['heading'] ?? 'CONNECT WITH ABVHPS') }}
         </h2>
         @if(!empty($socialStrip['subtext']))
             <p class="text-xs sm:text-sm text-gray-600 max-w-2xl mx-auto leading-relaxed font-medium mb-6">
-                {{ $socialStrip['subtext'] }}
+                {{ __($socialStrip['subtext']) }}
             </p>
         @endif
 
         <!-- Social Media Platform Buttons -->
-        <div class="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3.5 max-w-4xl mx-auto">
+        <div class="social-reveal-group flex flex-wrap items-center justify-center gap-2.5 sm:gap-3.5 max-w-4xl mx-auto">
             @foreach($socialStrip['platforms'] as $platformId => $platform)
                 <a href="{{ $platform['url'] }}"
+                   style="--reveal-delay: {{ $loop->index * 90 }}ms"
                    target="_blank"
                    rel="noopener noreferrer"
                    aria-label="{{ $platform['aria_label'] }}"
-                   class="group inline-flex items-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 bg-slate-50 hover:bg-white border border-slate-200 hover:border-brandOrange rounded-xl shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brandOrange">
-                    @if($platformId === 'facebook')
+                   class="social-reveal-item group inline-flex items-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 bg-slate-50 hover:bg-white border {{ $platformId === 'janavedika' ? 'social-featured border-brandOrange/60' : 'border-slate-200' }} hover:border-brandOrange rounded-xl shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brandOrange">
+                    @if($platformId === 'janavedika')
+                    <img src="{{ asset('images/janavedika-logo.png') }}" alt="" width="256" height="147" loading="lazy" decoding="async" class="h-5 sm:h-6 w-auto shrink-0 group-hover:scale-110 transition-transform" aria-hidden="true">
+                    @elseif($platformId === 'facebook')
                         <svg class="w-4 h-4 sm:w-4.5 sm:h-4.5 fill-[#1877F2] shrink-0 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" aria-hidden="true">
                             <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                         </svg>
@@ -547,19 +724,82 @@
             @endforeach
         </div>
     </div>
+
+    <style>
+        /* Social strip: staggered reveal. Only hides items when JS marks the group as armed, so no-JS users still see everything. */
+        .social-reveal-group.is-armed .social-reveal-item { opacity: 0; transform: translateY(14px); }
+        .social-reveal-group.is-armed.is-visible .social-reveal-item {
+            opacity: 1; transform: none;
+            transition: opacity .5s ease var(--reveal-delay, 0ms), transform .5s ease var(--reveal-delay, 0ms), box-shadow .2s ease, border-color .2s ease;
+        }
+        /* Featured (Janavedika) button: soft pulsing ring to draw the eye */
+        .social-featured { position: relative; }
+        .social-featured::after {
+            content: ""; position: absolute; inset: -3px; border-radius: 0.9rem; pointer-events: none;
+            border: 2px solid rgba(255, 102, 0, .55); opacity: 0; animation: socialPulse 2.6s ease-out 1.2s infinite;
+        }
+        @keyframes socialPulse { 0% { opacity: .8; transform: scale(.97); } 70%, 100% { opacity: 0; transform: scale(1.08); } }
+        @media (prefers-reduced-motion: reduce) {
+            .social-reveal-group.is-armed .social-reveal-item { opacity: 1; transform: none; }
+            .social-featured::after { animation: none; }
+        }
+    </style>
+    <script>
+        (function () {
+            var group = document.querySelector('#homepage-social-media-strip .social-reveal-group');
+            if (!group || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            group.classList.add('is-armed');
+            new IntersectionObserver(function (entries, obs) {
+                entries.forEach(function (e) {
+                    if (e.isIntersecting) { group.classList.add('is-visible'); obs.disconnect(); }
+                });
+            }, { threshold: 0.2 }).observe(group);
+        })();
+    </script>
 </section>
 @endif
 
-<!-- JavaScript logic to animate the slider images -->
+<!-- Hero slider: auto-advance, arrows, dots; pauses on hover/focus and when the tab is hidden -->
 <script>
-    let currentSlide = 0;
-    const slides = document.querySelectorAll('[id^="slide-"]');
-    setInterval(() => {
-        slides[currentSlide].classList.remove('opacity-100');
-        slides[currentSlide].classList.add('opacity-0');
-        currentSlide = (currentSlide + 1) % slides.length;
-        slides[currentSlide].classList.remove('opacity-0');
-        slides[currentSlide].classList.add('opacity-100');
-    }, 4000);
+    (function () {
+        var hero = document.getElementById('hero-slider');
+        if (!hero) return;
+        var slides = hero.querySelectorAll('[data-hero-slide]');
+        if (slides.length < 2) return;
+        var dots = hero.querySelectorAll('[data-hero-dot]');
+        var current = 0, timer = null;
+        var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        function show(n) {
+            n = (n + slides.length) % slides.length;
+            slides[current].classList.remove('opacity-100');
+            slides[current].classList.add('opacity-0', 'pointer-events-none');
+            slides[current].setAttribute('aria-hidden', 'true');
+            slides[n].classList.remove('opacity-0', 'pointer-events-none');
+            slides[n].classList.add('opacity-100');
+            slides[n].removeAttribute('aria-hidden');
+            dots.forEach(function (d, i) {
+                var on = i === n;
+                d.classList.toggle('w-7', on); d.classList.toggle('bg-[#FFE7A3]', on);
+                d.classList.toggle('w-2.5', !on); d.classList.toggle('bg-white/55', !on);
+            });
+            current = n;
+        }
+        function start() { if (!reduceMotion && !timer) timer = setInterval(function () { show(current + 1); }, 5500); }
+        function stop() { clearInterval(timer); timer = null; }
+
+        var prev = document.getElementById('hero-prev'), next = document.getElementById('hero-next');
+        if (prev) prev.addEventListener('click', function () { show(current - 1); stop(); start(); });
+        if (next) next.addEventListener('click', function () { show(current + 1); stop(); start(); });
+        dots.forEach(function (d) {
+            d.addEventListener('click', function () { show(parseInt(d.getAttribute('data-hero-dot'), 10)); stop(); start(); });
+        });
+        hero.addEventListener('mouseenter', stop);
+        hero.addEventListener('mouseleave', start);
+        hero.addEventListener('focusin', stop);
+        hero.addEventListener('focusout', start);
+        document.addEventListener('visibilitychange', function () { document.hidden ? stop() : start(); });
+        start();
+    })();
 </script>
 @endsection

@@ -88,6 +88,30 @@
                     </div>
                 </div>
 
+                <!-- Homepage Counters (optional manual override) -->
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4 text-xs">
+                    <div class="border-b border-gray-100 pb-2">
+                        <h3 class="font-black text-sm text-gray-900 uppercase flex items-center gap-2">
+                            <span class="text-brandOrange">&#128202;</span> HOMEPAGE COUNTERS
+                        </h3>
+                        <p class="text-[10px] text-gray-500">The home page shows live counts from the database. Only if some seva is recorded outside the portal, you may enter a figure you can verify. Leave a box empty to keep the live count. Counters that are 0 are not shown on the public page.</p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block font-bold text-gray-700 uppercase mb-1 text-[11px]">Verified Donors</label>
+                            <input type="number" min="0" max="100000000" name="homepage_stats_donors" value="{{ old('homepage_stats_donors', $settings['homepage_stats_donors'] ?? '') }}" placeholder="Live count" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-gray-700 uppercase mb-1 text-[11px]">Registered Members</label>
+                            <input type="number" min="0" max="100000000" name="homepage_stats_members" value="{{ old('homepage_stats_members', $settings['homepage_stats_members'] ?? '') }}" placeholder="Live count" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-gray-700 uppercase mb-1 text-[11px]">Total Volunteers</label>
+                            <input type="number" min="0" max="100000000" name="homepage_stats_volunteers" value="{{ old('homepage_stats_volunteers', $settings['homepage_stats_volunteers'] ?? '') }}" placeholder="Live count" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Homepage Social Media & Official Channels -->
                 <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-5 text-xs">
                     <div class="border-b border-gray-100 pb-2 flex items-center justify-between">
@@ -124,6 +148,14 @@
                         <label class="block font-black text-gray-800 uppercase tracking-wider text-[11px] mb-3">Official Platform Links (Only configured https:// URLs will render publicly)</label>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Janavedika -->
+                            <div class="md:col-span-2">
+                                <label class="block font-bold text-gray-700 uppercase mb-1 text-[11px] flex items-center gap-1.5">
+                                    <span class="text-brandOrange">J</span> Janavedika Page URL (janavedika.in only)
+                                </label>
+                                <input type="url" name="social_janavedika_url" value="{{ old('social_janavedika_url', $settings['social_janavedika_url']) }}" placeholder="https://janavedika.in/@abvhps" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none">
+                            </div>
+
                             <!-- Facebook -->
                             <div>
                                 <label class="block font-bold text-gray-700 uppercase mb-1 text-[11px] flex items-center gap-1.5">

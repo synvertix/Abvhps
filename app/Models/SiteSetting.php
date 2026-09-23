@@ -204,6 +204,24 @@ class SiteSetting extends Model
     }
 
     /**
+     * Optional manual overrides for the home page counters (admin > Site Global Settings).
+     * A blank setting means "use the live database count".
+     *
+     * @param array{donors:int,members:int,volunteers:int,years:int} $counts
+     */
+    public static function applyStatOverrides(array $counts): array
+    {
+        foreach (['donors', 'members', 'volunteers'] as $key) {
+            $value = static::get('homepage_stats_' . $key);
+            if ($value !== null && $value !== '' && is_numeric($value) && (int) $value >= 0) {
+                $counts[$key] = (int) $value;
+            }
+        }
+
+        return $counts;
+    }
+
+    /**
      * Supported social media platform definitions.
      *
      * @return array<string, array{key: string, name: string, short_name: string, aria_label: string}>
@@ -211,6 +229,12 @@ class SiteSetting extends Model
     public static function getSupportedSocialPlatforms(): array
     {
         return [
+            'janavedika' => [
+                'key'        => 'social_janavedika_url',
+                'name'       => 'Janavedika',
+                'short_name' => 'Janavedika',
+                'aria_label' => 'ABVHPS on Janavedika',
+            ],
             'facebook' => [
                 'key'        => 'social_facebook_url',
                 'name'       => 'Facebook',
@@ -257,6 +281,19 @@ class SiteSetting extends Model
     }
 
     /**
+     * True only for https URLs hosted on janavedika.in (or www.janavedika.in).
+     */
+    public static function isJanavedikaUrl(string $url): bool
+    {
+        $parts = parse_url(trim($url));
+        if (!is_array($parts) || strtolower($parts['scheme'] ?? '') !== 'https') {
+            return false;
+        }
+
+        return in_array(strtolower($parts['host'] ?? ''), ['janavedika.in', 'www.janavedika.in'], true);
+    }
+
+    /**
      * Get active, validated social media links for public display.
      * Returns only platforms with valid, non-empty, safe URLs.
      *
@@ -286,6 +323,11 @@ class SiteSetting extends Model
                     if (!str_starts_with(strtolower($trimmed), 'https://wa.me/') && !str_starts_with(strtolower($trimmed), 'https://api.whatsapp.com/')) {
                         continue;
                     }
+                }
+
+                // Janavedika specific strict domain check (janavedika.in or www.janavedika.in)
+                if ($id === 'janavedika' && !static::isJanavedikaUrl($trimmed)) {
+                    continue;
                 }
 
                 // Reject unsafe schemes / payloads

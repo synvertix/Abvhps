@@ -76,6 +76,23 @@ class TopContactBar extends StatelessWidget {
                 if (id.contains('youtube')) iconData = Icons.play_circle_fill;
                 if (id.contains('whatsapp')) iconData = Icons.chat;
 
+                if (id.contains('janavedika')) {
+                  return Container(
+                    margin: const EdgeInsets.only(left: 6),
+                    width: 22,
+                    height: 22,
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Image.asset(
+                      'assets/branding/janavedika_logo.png',
+                      fit: BoxFit.contain,
+                    ),
+                  );
+                }
+
                 return Container(
                   margin: const EdgeInsets.only(left: 6),
                   width: 22,

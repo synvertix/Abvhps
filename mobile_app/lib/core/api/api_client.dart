@@ -50,6 +50,13 @@ class ApiClient {
             }
           }
 
+          if (statusCode == 401) {
+            _tokenStorage.clearToken();
+            if (errorMessage == 'A network error occurred. Please try again.') {
+              errorMessage = 'Session expired or unauthenticated. Please log in again.';
+            }
+          }
+
           final apiException = ApiException(
             message: errorMessage,
             statusCode: statusCode,
@@ -86,6 +93,17 @@ class ApiClient {
   Future<Response> post(String path, {dynamic data}) async {
     try {
       return await _dio.post(path, data: data);
+    } on DioException catch (e) {
+      if (e.error is ApiException) {
+        throw e.error as ApiException;
+      }
+      throw ApiException(message: e.message ?? 'Unknown request error');
+    }
+  }
+
+  Future<Response> delete(String path, {dynamic data}) async {
+    try {
+      return await _dio.delete(path, data: data);
     } on DioException catch (e) {
       if (e.error is ApiException) {
         throw e.error as ApiException;

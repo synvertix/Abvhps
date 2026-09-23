@@ -338,6 +338,7 @@
                 </div>
 
                 <!-- SUBMIT DISPATCH BUTTON -->
+                @include('partials.legal-consent', ['type' => 'wing'])
                 <div class="text-center pt-4">
                     <button type="submit" id="btn_rudrasena_submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-gradient-to-r from-orange-600 via-orange-500 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-black text-sm py-4 px-12 rounded-xl shadow-xl hover:shadow-orange-500/25 transition duration-200 transform hover:-translate-y-0.5 uppercase tracking-wider cursor-pointer">
                         <span>Submit Rudrasena Application</span>

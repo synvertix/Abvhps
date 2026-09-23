@@ -211,7 +211,7 @@ class MobileApiPublicContentTest extends TestCase
 
     public function test_contact_get_returns_official_contact_and_social_channels(): void
     {
-        SiteSetting::set('contact_phone', '+91 8884933379');
+        SiteSetting::set('contact_phone', '+91 9989980055');
         SiteSetting::set('contact_email', 'info@abvhps.org');
         SiteSetting::set('homepage_social_enabled', '1');
         SiteSetting::set('social_youtube_url', 'https://youtube.com/@abvhps');
@@ -219,7 +219,7 @@ class MobileApiPublicContentTest extends TestCase
         $response = $this->getJson(route('api.v1.contact.show'));
         $response->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonPath('data.phone', '+91 8884933379')
+            ->assertJsonPath('data.phone', '+91 9989980055')
             ->assertJsonPath('data.email', 'info@abvhps.org');
     }
 

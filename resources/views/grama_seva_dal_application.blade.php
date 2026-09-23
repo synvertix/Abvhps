@@ -144,6 +144,7 @@
             </div>
 
             <!-- Main Submission Dispatch Action Button -->
+            @include('partials.legal-consent', ['type' => 'wing'])
             <div class="text-center pt-2">
                 <button type="submit" id="btn_dal_submit" class="bg-brandOrange hover:bg-opacity-90 text-white font-black text-sm py-3 px-12 rounded-lg shadow uppercase tracking-wider w-full sm:w-auto cursor-pointer">
                     Submit & Generate Official Service Charter

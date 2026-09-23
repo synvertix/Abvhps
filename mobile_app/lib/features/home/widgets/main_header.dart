@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/i18n/i18n.dart';
+import '../../../core/i18n/language_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 
 class MainHeader extends StatelessWidget {
@@ -104,6 +106,14 @@ class MainHeader extends StatelessWidget {
           ),
 
           const SizedBox(width: 8),
+
+          // Language picker (11 Indian languages)
+          IconButton(
+            key: const Key('language_button'),
+            tooltip: context.tr('Language'),
+            onPressed: () => showLanguageSheet(context),
+            icon: const Icon(Icons.language, color: AppTheme.templeGold, size: 26),
+          ),
 
           // Right: Hamburger Button
           IconButton(

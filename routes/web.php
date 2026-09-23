@@ -448,8 +448,35 @@ Route::get('/admin/membership-ledger', [App\Http\Controllers\MembershipControlle
     Route::post('/admin/banner/delete/{id}', [App\Http\Controllers\BannerController::class, 'destroy'])->name('admin.banner.destroy')->middleware('auth:web');
     Route::delete('/admin/banner/{id}', [App\Http\Controllers\BannerController::class, 'destroy'])->middleware('auth:web');
 
+    // 17. Home Hero Slides Management Module
+    Route::get('/admin/sliders', [App\Http\Controllers\HomeSliderController::class, 'index'])->name('admin.sliders.index')->middleware('auth:web');
+    Route::get('/admin/sliders/create', [App\Http\Controllers\HomeSliderController::class, 'create'])->name('admin.sliders.create')->middleware('auth:web');
+    Route::post('/admin/sliders/store', [App\Http\Controllers\HomeSliderController::class, 'store'])->name('admin.sliders.store')->middleware('auth:web');
+    Route::get('/admin/sliders/{id}/edit', [App\Http\Controllers\HomeSliderController::class, 'edit'])->name('admin.sliders.edit')->middleware('auth:web');
+    Route::post('/admin/sliders/{id}/update', [App\Http\Controllers\HomeSliderController::class, 'update'])->name('admin.sliders.update')->middleware('auth:web');
+    Route::post('/admin/sliders/{id}/toggle', [App\Http\Controllers\HomeSliderController::class, 'toggle'])->name('admin.sliders.toggle')->middleware('auth:web');
+    Route::delete('/admin/sliders/{id}', [App\Http\Controllers\HomeSliderController::class, 'destroy'])->name('admin.sliders.destroy')->middleware('auth:web');
+
     // 🔱 ABVHPS PUBLIC WEBSITE MAIN NAVIGATION ROUTES
 // ----------------------------------------------------------------------
+// Legal documents (Privacy Policy, Terms, Refund, Donation & Payment, Data Deletion)
+Route::get('/legal', [App\Http\Controllers\LegalController::class, 'index'])->name('legal.index');
+Route::get('/privacy-policy', [App\Http\Controllers\LegalController::class, 'privacy'])->name('legal.privacy');
+Route::get('/terms-and-conditions', [App\Http\Controllers\LegalController::class, 'terms'])->name('legal.terms');
+Route::get('/refund-cancellation-policy', [App\Http\Controllers\LegalController::class, 'refund'])->name('legal.refund');
+Route::get('/donation-payment-policy', [App\Http\Controllers\LegalController::class, 'donationPayments'])->name('legal.donation_payments');
+Route::get('/account-deletion', [App\Http\Controllers\LegalController::class, 'accountDeletion'])->name('legal.account_deletion');
+Route::post('/account-deletion/request', [App\Http\Controllers\LegalController::class, 'submitDataRequest'])->middleware('throttle:5,10')->name('legal.data_request');
+// Friendly aliases people (and app stores) commonly type
+Route::get('/privacy', fn () => redirect()->route('legal.privacy', [], 301));
+Route::get('/terms', fn () => redirect()->route('legal.terms', [], 301));
+Route::get('/refund-policy', fn () => redirect()->route('legal.refund', [], 301));
+Route::get('/delete-account', fn () => redirect()->route('legal.account_deletion', [], 301));
+Route::get('/data-deletion', fn () => redirect()->route('legal.account_deletion', [], 301));
+
+// Public site language switcher (English + major Indian languages)
+Route::get('/lang/{locale}', [App\Http\Controllers\LocaleController::class, 'switch'])->name('lang.switch');
+
 // Public Web Home Route
 Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('public.home');
 
@@ -470,14 +497,3 @@ Route::get('/project/{id}', [App\Http\Controllers\HomeController::class, 'showPr
 
 // Public Web Centralized Policy Center Routes
 Route::get('/policy-center', [App\Http\Controllers\HomeController::class, 'policyCenter'])->name('public.policy_center');
-Route::get('/terms', function() {
-    return redirect()->route('public.policy_center', '#terms-and-conditions');
-})->name('public.terms');
-Route::get('/privacy', function() {
-    return redirect()->route('public.policy_center', '#privacy-policy');
-})->name('public.privacy');
-Route::get('/refund-policy', function() {
-    return redirect()->route('public.policy_center', '#refund-policy');
-})->name('public.refund_policy');
-
-

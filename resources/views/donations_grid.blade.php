@@ -469,6 +469,7 @@
                 </div>
 
                 <!-- SUBMIT BUTTON & LOADER -->
+                @include('partials.legal-consent', ['type' => 'donation'])
                 <div class="pt-4 space-y-3">
                     <button type="submit" id="submit_donation_btn" class="w-full bg-brandOrange hover:bg-orange-600 text-white font-black text-sm sm:text-base py-4 px-6 rounded-2xl shadow-xl shadow-orange-500/25 uppercase tracking-wider transition transform hover:scale-[1.01] flex items-center justify-center gap-2 min-h-[52px] cursor-pointer">
                         <span id="btn_icon">🔒</span>

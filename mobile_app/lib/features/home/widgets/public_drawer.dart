@@ -1,4 +1,6 @@
 import 'dart:math' as math;
+import '../../../core/utils/url_helper.dart';
+import '../../../core/i18n/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/config/app_config.dart';
@@ -79,12 +81,12 @@ class _PublicDrawerState extends State<PublicDrawer> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'SELECT LOGIN PORTAL',
+                                context.tr('SELECT LOGIN PORTAL'),
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w900,
@@ -132,18 +134,18 @@ class _PublicDrawerState extends State<PublicDrawer> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Card 1: Member Login (OTP)
+                        // Card 1: Admin Login
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFE5E7EB), width: 2),
+                            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withValues(alpha: 0.04),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
                               ),
                             ],
                           ),
@@ -156,22 +158,22 @@ class _PublicDrawerState extends State<PublicDrawer> {
                                     width: 42,
                                     height: 42,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFFFEDD5),
+                                      color: const Color(0xFF1E293B),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: const Icon(
-                                      Icons.person,
-                                      color: AppTheme.primaryOrange,
+                                      Icons.admin_panel_settings,
+                                      color: Colors.white,
                                       size: 22,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  const Expanded(
+                                  Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          'MEMBER LOGIN',
+                                          context.tr('ADMIN LOGIN'),
                                           style: TextStyle(
                                             color: Color(0xFF1E293B),
                                             fontWeight: FontWeight.w900,
@@ -180,7 +182,7 @@ class _PublicDrawerState extends State<PublicDrawer> {
                                           ),
                                         ),
                                         Text(
-                                          'Registered members access via OTP',
+                                          'Authorized ABVHPS administrators',
                                           style: TextStyle(
                                             color: Color(0xFF64748B),
                                             fontSize: 11,
@@ -196,11 +198,11 @@ class _PublicDrawerState extends State<PublicDrawer> {
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
-                                  key: const Key('drawer_member_login_button'),
+                                  key: const Key('drawer_admin_login_button'),
                                   onPressed: () {
                                     Navigator.of(sheetContext).pop();
                                     Navigator.of(context).pop();
-                                    context.push('/login?type=member');
+                                    context.push('/login?type=admin');
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF111C2E),
@@ -211,8 +213,8 @@ class _PublicDrawerState extends State<PublicDrawer> {
                                     ),
                                     elevation: 0,
                                   ),
-                                  child: const Text(
-                                    'LOGIN WITH OTP  →',
+                                  child: Text(
+                                    '${context.tr('LOGIN AS ADMIN')}  →',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w900,
@@ -261,12 +263,12 @@ class _PublicDrawerState extends State<PublicDrawer> {
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  const Expanded(
+                                  Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          'VOLUNTEER LOGIN',
+                                          context.tr('VOLUNTEER LOGIN'),
                                           style: TextStyle(
                                             color: AppTheme.primaryOrange,
                                             fontWeight: FontWeight.w900,
@@ -306,8 +308,8 @@ class _PublicDrawerState extends State<PublicDrawer> {
                                     ),
                                     elevation: 2,
                                   ),
-                                  child: const Text(
-                                    'LOGIN AS VOLUNTEER  →',
+                                  child: Text(
+                                    '${context.tr('LOGIN AS VOLUNTEER')}  →',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w900,
@@ -470,7 +472,7 @@ class _PublicDrawerState extends State<PublicDrawer> {
                   // 58x58 Square Close Button with Bold Orange Outline
                   Semantics(
                     button: true,
-                    label: 'Close navigation',
+                    label: context.tr('Close navigation'),
                     child: InkWell(
                       key: const Key('drawer_close_button'),
                       onTap: () => Navigator.of(context).pop(),
@@ -711,7 +713,7 @@ class _PublicDrawerState extends State<PublicDrawer> {
                           constraints: const BoxConstraints(minHeight: 48),
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           alignment: Alignment.center,
-                          child: const Row(
+                          child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
@@ -721,7 +723,7 @@ class _PublicDrawerState extends State<PublicDrawer> {
                               ),
                               SizedBox(width: 8),
                               Text(
-                                'LOGIN PORTALS',
+                                context.tr('LOGIN PORTALS'),
                                 style: TextStyle(
                                   color: AppTheme.primaryOrange,
                                   fontWeight: FontWeight.w900,
@@ -767,8 +769,8 @@ class _PublicDrawerState extends State<PublicDrawer> {
                           constraints: const BoxConstraints(minHeight: 48),
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           alignment: Alignment.center,
-                          child: const Text(
-                            'MAKE A DONATION',
+                          child: Text(
+                            context.tr('MAKE A DONATION'),
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w900,
@@ -779,6 +781,35 @@ class _PublicDrawerState extends State<PublicDrawer> {
                         ),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 14),
+                  // ==========================================
+                  // LEGAL & POLICIES (open the official web pages)
+                  // ==========================================
+                  _buildSectionHeading('LEGAL & POLICIES'),
+                  _buildNavItem(
+                    title: 'PRIVACY POLICY',
+                    key: const Key('drawer_nav_privacy'),
+                    isActive: false,
+                    onTap: () => UrlHelper.launchSafeUrl(AppConfig.privacyPolicyUrl),
+                  ),
+                  _buildNavItem(
+                    title: 'TERMS & CONDITIONS',
+                    key: const Key('drawer_nav_terms'),
+                    isActive: false,
+                    onTap: () => UrlHelper.launchSafeUrl(AppConfig.termsUrl),
+                  ),
+                  _buildNavItem(
+                    title: 'REFUND POLICY',
+                    key: const Key('drawer_nav_refund'),
+                    isActive: false,
+                    onTap: () => UrlHelper.launchSafeUrl(AppConfig.refundPolicyUrl),
+                  ),
+                  _buildNavItem(
+                    title: 'DELETE MY ACCOUNT / DATA',
+                    key: const Key('drawer_nav_delete_data'),
+                    isActive: false,
+                    onTap: () => UrlHelper.launchSafeUrl(AppConfig.accountDeletionUrl),
                   ),
                 ],
               ),
@@ -875,7 +906,7 @@ class _PublicDrawerState extends State<PublicDrawer> {
         ),
       ),
       child: Text(
-        title,
+        context.tr(title),
         style: const TextStyle(
           color: AppTheme.primaryOrange,
           fontSize: 9.5,
@@ -922,7 +953,7 @@ class _PublicDrawerState extends State<PublicDrawer> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             alignment: Alignment.centerLeft,
             child: Text(
-              title,
+              context.tr(title),
               style: TextStyle(
                 color: isActive ? Colors.white : const Color(0xFFE5E7EB),
                 fontWeight: isActive ? FontWeight.w900 : FontWeight.w800,
@@ -972,7 +1003,7 @@ class _PublicDrawerState extends State<PublicDrawer> {
                     children: [
                       Expanded(
                         child: Text(
-                          title,
+                          context.tr(title),
                           style: TextStyle(
                             color: isExpanded ? AppTheme.primaryOrange : const Color(0xFFE5E7EB),
                             fontWeight: FontWeight.w800,
@@ -1035,7 +1066,7 @@ class _PublicDrawerState extends State<PublicDrawer> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 12),
             child: Text(
-              title,
+              context.tr(title),
               style: const TextStyle(
                 color: Color(0xFFD1D5DB),
                 fontWeight: FontWeight.w700,

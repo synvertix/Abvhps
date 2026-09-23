@@ -165,6 +165,7 @@
                 </div>
 
                 <!-- Core Submission Dispatch Action Anchor Button -->
+                @include('partials.legal-consent', ['type' => 'wing'])
                 <div class="text-center pt-2">
                     <button type="submit" id="btn_farmer_submit" class="bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm py-3 px-12 rounded-lg shadow uppercase tracking-wider w-full sm:w-auto cursor-pointer">
                         Submit & Generate Organic Producer Certificate

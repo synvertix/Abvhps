@@ -25,6 +25,8 @@
                 Complete your ₹100 membership fee payment securely via Razorpay Checkout. Upon successful verification, your 12-digit membership registration process will proceed to Aadhaar verification.
             </p>
 
+            @include('partials.legal-consent', ['type' => 'payment'])
+
             <button type="button" id="pay-button" onclick="startMembershipPayment()"
                 class="w-full flex justify-center items-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-brandOrange hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brandOrange shadow transition disabled:opacity-50">
                 <span id="button-text">Pay ₹100 Securely Now</span>

@@ -45,6 +45,17 @@ Route::prefix('v1')->group(function () {
         ->whereNumber('id')
         ->name('api.v1.campaigns.show');
 
+    // Health & System Bootstrap
+    Route::get('/health', [\App\Http\Controllers\Api\V1\HealthController::class, '__invoke'])->name('api.v1.health');
+    Route::get('/bootstrap', [\App\Http\Controllers\Api\V1\BootstrapController::class, '__invoke'])->name('api.v1.bootstrap');
+    Route::get('/sync-state', [\App\Http\Controllers\Api\V1\SyncStateController::class, 'index'])->name('api.v1.sync_state');
+
+    // Online Donations & Application APIs
+    Route::post('/donations/initiate', [\App\Http\Controllers\Api\V1\DonationApiController::class, 'initiate'])->name('api.v1.donations.initiate');
+    Route::get('/donations/{id}/status', [\App\Http\Controllers\Api\V1\DonationApiController::class, 'checkStatus'])->whereNumber('id')->name('api.v1.donations.status');
+    Route::post('/membership/apply', [\App\Http\Controllers\Api\V1\MemberApplicationApiController::class, 'apply'])->name('api.v1.membership.apply');
+    Route::post('/volunteer/apply', [\App\Http\Controllers\Api\V1\VolunteerApplicationApiController::class, 'apply'])->name('api.v1.volunteer.apply');
+
     // Blogs
     Route::get('/blogs', [\App\Http\Controllers\Api\V1\BlogController::class, 'index'])->name('api.v1.blogs.index');
     Route::get('/blogs/{id}', [\App\Http\Controllers\Api\V1\BlogController::class, 'show'])
@@ -86,6 +97,10 @@ Route::prefix('v1')->group(function () {
     // 2. Authentication Flow (Public Entrypoints)
     // ---------------------------------------------------------------------
     Route::prefix('auth')->group(function () {
+        // Admin Login
+        Route::post('/admin/login', [\App\Http\Controllers\Api\V1\AdminAuthController::class, 'login'])
+            ->name('api.v1.auth.admin.login');
+
         // Volunteer Login
         Route::post('/volunteer/login', [VolunteerAuthController::class, 'login'])
             ->name('api.v1.auth.volunteer.login');
@@ -142,6 +157,174 @@ Route::prefix('v1')->group(function () {
             Route::get('/card', [MemberProfileController::class, 'card'])
                 ->middleware(['ability:member:card'])
                 ->name('api.v1.member.card');
+        });
+
+        // -----------------------------------------------------------------
+        // 6. Protected Admin Routes
+        // -----------------------------------------------------------------
+        Route::prefix('admin')->middleware([
+            'api.account_type:admin',
+        ])->group(function () {
+            Route::get('/dashboard', [\App\Http\Controllers\Api\V1\AdminDashboardController::class, 'show'])
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.dashboard');
+
+            // Approved & Pending Memberships
+            Route::get('/memberships/pending', [\App\Http\Controllers\Api\V1\AdminMembershipController::class, 'pending'])
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.memberships.pending');
+            Route::get('/memberships', [\App\Http\Controllers\Api\V1\AdminMembershipController::class, 'index'])
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.memberships.index');
+            Route::get('/memberships/{id}', [\App\Http\Controllers\Api\V1\AdminMembershipController::class, 'show'])
+                ->whereNumber('id')
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.memberships.show');
+            Route::put('/memberships/{id}', [\App\Http\Controllers\Api\V1\AdminMembershipController::class, 'update'])
+                ->whereNumber('id')
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.memberships.update');
+            Route::delete('/memberships/{id}', [\App\Http\Controllers\Api\V1\AdminMembershipController::class, 'destroy'])
+                ->whereNumber('id')
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.memberships.destroy');
+
+            // Volunteer Desk
+            Route::get('/volunteers', [\App\Http\Controllers\Api\V1\AdminVolunteerController::class, 'index'])
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.volunteers.index');
+            Route::get('/volunteers/{id}', [\App\Http\Controllers\Api\V1\AdminVolunteerController::class, 'show'])
+                ->whereNumber('id')
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.volunteers.show');
+            Route::post('/volunteers/{id}/cadre', [\App\Http\Controllers\Api\V1\AdminVolunteerController::class, 'cadreUpdate'])
+                ->whereNumber('id')
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.volunteers.cadre');
+            Route::delete('/volunteers/{id}', [\App\Http\Controllers\Api\V1\AdminVolunteerController::class, 'destroy'])
+                ->whereNumber('id')
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.volunteers.destroy');
+
+            // Volunteer Events
+            Route::get('/volunteer-events', [\App\Http\Controllers\Api\V1\AdminVolunteerEventApiController::class, 'index'])
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.volunteer_events.index');
+            Route::get('/volunteer-events/{id}', [\App\Http\Controllers\Api\V1\AdminVolunteerEventApiController::class, 'show'])
+                ->whereNumber('id')
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.volunteer_events.show');
+            Route::delete('/volunteer-events/{id}', [\App\Http\Controllers\Api\V1\AdminVolunteerEventApiController::class, 'destroy'])
+                ->whereNumber('id')
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.volunteer_events.destroy');
+
+            // Rudrasena
+            Route::get('/rudrasena', [\App\Http\Controllers\Api\V1\AdminRudrasenaController::class, 'index'])
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.rudrasena.index');
+            Route::get('/rudrasena/{id}', [\App\Http\Controllers\Api\V1\AdminRudrasenaController::class, 'show'])
+                ->whereNumber('id')
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.rudrasena.show');
+            Route::post('/rudrasena/{id}/status', [\App\Http\Controllers\Api\V1\AdminRudrasenaController::class, 'updateStatus'])
+                ->whereNumber('id')
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.rudrasena.status');
+            Route::delete('/rudrasena/{id}', [\App\Http\Controllers\Api\V1\AdminRudrasenaController::class, 'destroy'])
+                ->whereNumber('id')
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.rudrasena.destroy');
+
+            // Local GP Gateways
+            Route::get('/local-gateways', [\App\Http\Controllers\Api\V1\AdminLocalGatewayController::class, 'index'])
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.local_gateways.index');
+            Route::post('/local-gateways/approve/{wing}/{id}', [\App\Http\Controllers\Api\V1\AdminLocalGatewayController::class, 'approve'])
+                ->whereNumber('id')
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.local_gateways.approve');
+            Route::delete('/local-gateways/delete/{wing}/{id}', [\App\Http\Controllers\Api\V1\AdminLocalGatewayController::class, 'destroy'])
+                ->whereNumber('id')
+                ->middleware(['ability:admin:dashboard'])
+                ->name('api.v1.admin.local_gateways.destroy');
+
+            // Our Team
+            Route::get('/team', [\App\Http\Controllers\Api\V1\AdminTeamController::class, 'index'])->middleware(['ability:admin:dashboard']);
+            Route::get('/team/{id}', [\App\Http\Controllers\Api\V1\AdminTeamController::class, 'show'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::post('/team', [\App\Http\Controllers\Api\V1\AdminTeamController::class, 'store'])->middleware(['ability:admin:dashboard']);
+            Route::post('/team/{id}', [\App\Http\Controllers\Api\V1\AdminTeamController::class, 'update'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::put('/team/{id}', [\App\Http\Controllers\Api\V1\AdminTeamController::class, 'update'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::delete('/team/{id}', [\App\Http\Controllers\Api\V1\AdminTeamController::class, 'destroy'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+
+            // Donations
+            Route::get('/donations', [\App\Http\Controllers\Api\V1\AdminDonationController::class, 'index'])->middleware(['ability:admin:dashboard']);
+            Route::get('/donations/{id}', [\App\Http\Controllers\Api\V1\AdminDonationController::class, 'show'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+
+            // Blogs
+            Route::get('/blogs', [\App\Http\Controllers\Api\V1\AdminBlogController::class, 'index'])->middleware(['ability:admin:dashboard']);
+            Route::get('/blogs/{id}', [\App\Http\Controllers\Api\V1\AdminBlogController::class, 'show'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::post('/blogs', [\App\Http\Controllers\Api\V1\AdminBlogController::class, 'store'])->middleware(['ability:admin:dashboard']);
+            Route::post('/blogs/{id}', [\App\Http\Controllers\Api\V1\AdminBlogController::class, 'update'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::put('/blogs/{id}', [\App\Http\Controllers\Api\V1\AdminBlogController::class, 'update'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::delete('/blogs/{id}', [\App\Http\Controllers\Api\V1\AdminBlogController::class, 'destroy'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+
+            // Media Gallery
+            Route::get('/gallery', [\App\Http\Controllers\Api\V1\AdminGalleryController::class, 'index'])->middleware(['ability:admin:dashboard']);
+            Route::post('/gallery', [\App\Http\Controllers\Api\V1\AdminGalleryController::class, 'store'])->middleware(['ability:admin:dashboard']);
+            Route::delete('/gallery/{id}', [\App\Http\Controllers\Api\V1\AdminGalleryController::class, 'destroy'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+
+            // Support Cores
+            Route::get('/support-cores', [\App\Http\Controllers\Api\V1\AdminSupportCoreController::class, 'index'])->middleware(['ability:admin:dashboard']);
+            Route::get('/support-cores/{id}', [\App\Http\Controllers\Api\V1\AdminSupportCoreController::class, 'show'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::post('/support-cores', [\App\Http\Controllers\Api\V1\AdminSupportCoreController::class, 'store'])->middleware(['ability:admin:dashboard']);
+            Route::post('/support-cores/{id}', [\App\Http\Controllers\Api\V1\AdminSupportCoreController::class, 'update'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::put('/support-cores/{id}', [\App\Http\Controllers\Api\V1\AdminSupportCoreController::class, 'update'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::delete('/support-cores/{id}', [\App\Http\Controllers\Api\V1\AdminSupportCoreController::class, 'destroy'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+
+            // Exams Board & Results
+            Route::get('/exams', [\App\Http\Controllers\Api\V1\AdminExamController::class, 'index'])->middleware(['ability:admin:dashboard']);
+            Route::post('/exams', [\App\Http\Controllers\Api\V1\AdminExamController::class, 'store'])->middleware(['ability:admin:dashboard']);
+            Route::put('/exams/{id}', [\App\Http\Controllers\Api\V1\AdminExamController::class, 'update'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::delete('/exams/{id}', [\App\Http\Controllers\Api\V1\AdminExamController::class, 'destroy'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::get('/exams/{id}/applicants', [\App\Http\Controllers\Api\V1\AdminExamController::class, 'applicants'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::post('/exams/results/{appId}', [\App\Http\Controllers\Api\V1\AdminExamController::class, 'saveResult'])->whereNumber('appId')->middleware(['ability:admin:dashboard']);
+            Route::post('/exams/{id}/publish-results', [\App\Http\Controllers\Api\V1\AdminExamController::class, 'publishResults'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::post('/exams/{id}/unpublish-results', [\App\Http\Controllers\Api\V1\AdminExamController::class, 'unpublishResults'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+
+            // Fundraising
+            Route::get('/fundraising', [\App\Http\Controllers\Api\V1\AdminCampaignController::class, 'index'])->middleware(['ability:admin:dashboard']);
+            Route::get('/fundraising/{id}', [\App\Http\Controllers\Api\V1\AdminCampaignController::class, 'show'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::post('/fundraising', [\App\Http\Controllers\Api\V1\AdminCampaignController::class, 'store'])->middleware(['ability:admin:dashboard']);
+            Route::post('/fundraising/{id}', [\App\Http\Controllers\Api\V1\AdminCampaignController::class, 'update'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::put('/fundraising/{id}', [\App\Http\Controllers\Api\V1\AdminCampaignController::class, 'update'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::post('/fundraising/{id}/toggle', [\App\Http\Controllers\Api\V1\AdminCampaignController::class, 'toggleStatus'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::delete('/fundraising/{id}', [\App\Http\Controllers\Api\V1\AdminCampaignController::class, 'destroy'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+
+            // Contact Forms Audit
+            Route::get('/contacts', [\App\Http\Controllers\Api\V1\AdminContactController::class, 'index'])->middleware(['ability:admin:dashboard']);
+            Route::get('/contacts/{id}', [\App\Http\Controllers\Api\V1\AdminContactController::class, 'show'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::post('/contacts/{id}/status', [\App\Http\Controllers\Api\V1\AdminContactController::class, 'updateStatus'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::delete('/contacts/{id}', [\App\Http\Controllers\Api\V1\AdminContactController::class, 'destroy'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+
+            // Tax Certificates
+            Route::get('/tax-certificates', [\App\Http\Controllers\Api\V1\AdminTaxCertificateController::class, 'index'])->middleware(['ability:admin:dashboard']);
+            Route::post('/tax-certificates', [\App\Http\Controllers\Api\V1\AdminTaxCertificateController::class, 'store'])->middleware(['ability:admin:dashboard']);
+            Route::post('/tax-certificates/{id}/toggle', [\App\Http\Controllers\Api\V1\AdminTaxCertificateController::class, 'toggleVisibility'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::delete('/tax-certificates/{id}', [\App\Http\Controllers\Api\V1\AdminTaxCertificateController::class, 'destroy'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+
+            // Site Global Settings
+            Route::get('/settings', [\App\Http\Controllers\Api\V1\AdminSiteSettingsController::class, 'index'])->middleware(['ability:admin:dashboard']);
+            Route::post('/settings', [\App\Http\Controllers\Api\V1\AdminSiteSettingsController::class, 'update'])->middleware(['ability:admin:dashboard']);
+
+            // Banner Management
+            Route::get('/banners', [\App\Http\Controllers\Api\V1\AdminBannerController::class, 'index'])->middleware(['ability:admin:dashboard']);
+            Route::get('/banners/{id}', [\App\Http\Controllers\Api\V1\AdminBannerController::class, 'show'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::post('/banners', [\App\Http\Controllers\Api\V1\AdminBannerController::class, 'store'])->middleware(['ability:admin:dashboard']);
+            Route::post('/banners/{id}', [\App\Http\Controllers\Api\V1\AdminBannerController::class, 'update'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::put('/banners/{id}', [\App\Http\Controllers\Api\V1\AdminBannerController::class, 'update'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::post('/banners/{id}/toggle', [\App\Http\Controllers\Api\V1\AdminBannerController::class, 'toggleStatus'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
+            Route::delete('/banners/{id}', [\App\Http\Controllers\Api\V1\AdminBannerController::class, 'destroy'])->whereNumber('id')->middleware(['ability:admin:dashboard']);
         });
     });
 });

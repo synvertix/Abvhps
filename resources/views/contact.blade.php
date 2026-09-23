@@ -124,6 +124,7 @@
                         <textarea name="message" rows="5" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5 font-semibold text-gray-800 focus:ring-2 focus:ring-brandOrange outline-none" placeholder="Please write your detailed query here (Note: external links and web addresses are filtered for security)..."></textarea>
                     </div>
 
+                    @include('partials.legal-consent', ['type' => 'contact'])
                     <div class="pt-2">
                         <button type="submit" id="contact-submit-btn" class="w-full bg-brandOrange hover:bg-orange-700 text-white font-black text-xs py-3.5 rounded-xl shadow-md uppercase tracking-wider transition flex items-center justify-center gap-2">
                             <span>✉️</span> <span>Submit Inquiry</span>

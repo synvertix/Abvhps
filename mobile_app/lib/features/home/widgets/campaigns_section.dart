@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/i18n/i18n.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_network_image.dart';
 
@@ -23,8 +24,8 @@ class CampaignsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'DHARMA SEVA INITIATIVES',
+          Text(
+            context.tr('DHARMA SEVA INITIATIVES'),
             style: TextStyle(
               color: AppTheme.primaryOrange,
               fontSize: 11,
@@ -33,8 +34,8 @@ class CampaignsSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Fundraising Campaigns',
+          Text(
+            context.tr('Fundraising Campaigns'),
             style: TextStyle(
               color: AppTheme.neutralGray,
               fontSize: 22,
@@ -43,8 +44,8 @@ class CampaignsSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Support meaningful initiatives and help us serve communities across India.',
+          Text(
+            context.tr('Support meaningful initiatives and help us serve communities across India.'),
             style: TextStyle(
               color: AppTheme.textSecondary,
               fontSize: 12,
@@ -149,7 +150,7 @@ class CampaignsSection extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Raised: $raised ($percent%)',
+                                  '${context.tr('Raised:')} $raised ($percent%)',
                                   style: const TextStyle(
                                     color: AppTheme.primaryOrange,
                                     fontSize: 11,
@@ -157,7 +158,7 @@ class CampaignsSection extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  'Target: $target',
+                                  '${context.tr('Target:')} $target',
                                   style: const TextStyle(
                                     color: AppTheme.neutralGray,
                                     fontSize: 11,

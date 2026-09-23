@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -44,7 +44,7 @@
                     'logo' => asset('images/ABVHPS_LOGO.jpg'),
                     'contactPoint' => [
                         '@type' => 'ContactPoint',
-                        'telephone' => \App\Models\SiteSetting::get('contact_phone', '+91 8884933379'),
+                        'telephone' => \App\Models\SiteSetting::get('contact_phone', '+91 9989980055'),
                         'contactType' => 'customer service',
                         'email' => \App\Models\SiteSetting::get('contact_email', 'info@abvhps.org'),
                         'areaServed' => 'IN',
@@ -65,26 +65,80 @@
     @endphp
     <script type="application/ld+json">{!! json_encode($schemaData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
 
-    <!-- Tailwind CSS v4 Browser/Play CDN Link -->
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <style type="text/tailwindcss">
-        @theme {
-            --color-brandOrange: #FF6600;
-            --color-brandGray: #4A4A4A;
-            --color-brandDarkGray: #1A1A1A;
-            --color-brandLightOrange: #FFF5EE;
-        }
-    </style>
+    {{-- Selected-language font (Noto Sans carries every Indian script) + saffron browser chrome on phones --}}
+    @php $__loc = config('abvhps.locales.' . app()->getLocale()); @endphp
+    <meta name="theme-color" content="#E85D04">
+    @if(!empty($__loc['font']))
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family={{ str_replace(' ', '+', $__loc['font']) }}:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+        <style>body, button, input, select, textarea { font-family: '{{ $__loc['font'] }}', 'Nirmala UI', system-ui, sans-serif; }</style>
+    @endif
+
+    {{-- Tailwind CSS: compiled by Vite when available (fast, cacheable); otherwise the Tailwind CDN build as a safe fallback --}}
+    @if(\App\Support\CompiledAssets::cssAvailable())
+        @vite('resources/css/app.css')
+    @else
+        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+        <style type="text/tailwindcss">
+            @theme {
+                --color-brandOrange: #FF6600;
+                --color-brandGray: #4A4A4A;
+                --color-brandDarkGray: #1A1A1A;
+                --color-brandLightOrange: #FFF5EE;
+            }
+        </style>
+    @endif
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans">
+    {{-- Sacred geometry (mandala) symbol, reused as a devotional watermark across pages --}}
+    <svg width="0" height="0" class="absolute" aria-hidden="true" focusable="false">
+        <defs>
+            <symbol id="abvhps-mandala" viewBox="0 0 200 200">
+                <g fill="none" stroke="currentColor" stroke-width="1.1">
+                    <circle cx="100" cy="100" r="97"/>
+                    <circle cx="100" cy="100" r="90" stroke-dasharray="2 5"/>
+                    <circle cx="100" cy="100" r="64"/>
+                    <circle cx="100" cy="100" r="34"/>
+                    @for($i = 0; $i < 16; $i++)
+                        <ellipse cx="100" cy="46" rx="9" ry="24" transform="rotate({{ $i * 22.5 }} 100 100)"/>
+                    @endfor
+                    @for($i = 0; $i < 8; $i++)
+                        <ellipse cx="100" cy="82" rx="7" ry="16" transform="rotate({{ $i * 45 + 22.5 }} 100 100)"/>
+                    @endfor
+                </g>
+                <circle cx="100" cy="100" r="6" fill="currentColor"/>
+            </symbol>
+        </defs>
+    </svg>
 
     <!-- 1. Top Header -->
     <header class="bg-brandGray text-white text-[11px] sm:text-xs py-2 px-4">
         <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
             <div class="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1">
-                <span>📞 {{ \App\Models\SiteSetting::get('contact_phone', '+91 8884933379') }}</span>
+                <span>📞 {{ __('Helpline') }}: {{ \App\Models\SiteSetting::get('contact_phone', '+91 9989980055') }}</span>
                 <span>✉️ {{ \App\Models\SiteSetting::get('contact_email', 'info@abvhps.org') }}</span>
             </div>
+            {{-- Language switcher --}}
+            <details class="relative group/lang order-last sm:order-none" id="lang-switcher">
+                <summary class="list-none cursor-pointer inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 px-3 py-1 text-[11px] font-bold text-white transition select-none [&::-webkit-details-marker]:hidden" aria-label="{{ __('Language') }}">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>
+                    <span>{{ config('abvhps.locales.' . app()->getLocale() . '.native') }}</span>
+                    <svg class="w-3 h-3 opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+                </summary>
+                <ul class="absolute right-0 sm:right-0 mt-2 w-44 max-h-80 overflow-y-auto rounded-xl bg-white text-gray-800 shadow-2xl ring-1 ring-black/10 py-1.5 z-[70] text-xs" role="listbox">
+                    @foreach(config('abvhps.locales') as $__code => $__meta)
+                        <li>
+                            <a href="{{ route('lang.switch', $__code) }}" hreflang="{{ $__code }}" lang="{{ $__code }}" rel="nofollow"
+                               class="flex items-center justify-between px-3.5 py-2 font-semibold hover:bg-orange-50 hover:text-brandOrange {{ app()->getLocale() === $__code ? 'text-brandOrange bg-orange-50/70' : '' }}"
+                               @if(app()->getLocale() === $__code) aria-current="true" @endif>
+                                <span>{{ $__meta['native'] }}</span>
+                                @if(app()->getLocale() === $__code)<span aria-hidden="true">&#10003;</span>@endif
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            </details>
             @php
                 $topSocialEnabled = in_array(\App\Models\SiteSetting::get('homepage_social_enabled', '1'), ['1', 'yes', true, 1], true);
                 $topSocialLinks = $topSocialEnabled ? \App\Models\SiteSetting::getActiveSocialLinks() : [];
@@ -96,9 +150,11 @@
                            target="_blank"
                            rel="noopener noreferrer"
                            aria-label="{{ $platform['aria_label'] }}"
-                           class="w-6 h-6 rounded-full bg-white/10 hover:bg-brandOrange text-white flex items-center justify-center transition duration-150 focus:outline-none focus:ring-1 focus:ring-brandOrange"
+                           class="w-6 h-6 rounded-full {{ $platformId === 'janavedika' ? 'bg-white hover:bg-brandLightOrange' : 'bg-white/10 hover:bg-brandOrange' }} text-white flex items-center justify-center transition duration-150 focus:outline-none focus:ring-1 focus:ring-brandOrange"
                            title="{{ $platform['name'] }}">
-                            @if($platformId === 'facebook')
+                            @if($platformId === 'janavedika')
+                            <img src="{{ asset('images/janavedika-logo.png') }}" alt="" width="256" height="147" decoding="async" class="w-4 h-auto shrink-0" aria-hidden="true">
+                            @elseif($platformId === 'facebook')
                                 <svg class="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                                 </svg>
@@ -155,28 +211,28 @@
 
             <!-- 12 Menu Navigation Links (Desktop >= 1280px / xl) -->
             <div class="hidden xl:flex items-center gap-4 font-semibold text-sm text-brandGray">
-                <a href="/" class="hover:text-brandOrange transition">Home</a>
-                <a href="/about" class="hover:text-brandOrange transition">About</a>
-                <a href="{{ route('public.team') }}" class="nav-link">Our Team</a>
-                <a href="/gallery" class="hover:text-brandOrange transition">Gallery</a>
-                <a href="/membership" class="hover:text-brandOrange transition">Membership</a>
-                <a href="/volunteer" class="hover:text-brandOrange transition">Volunteer</a>
+                <a href="/" class="hover:text-brandOrange transition">{{ __('Home') }}</a>
+                <a href="/about" class="hover:text-brandOrange transition">{{ __('About') }}</a>
+                <a href="{{ route('public.team') }}" class="nav-link">{{ __('Our Team') }}</a>
+                <a href="/gallery" class="hover:text-brandOrange transition">{{ __('Gallery') }}</a>
+                <a href="/membership" class="hover:text-brandOrange transition">{{ __('Membership') }}</a>
+                <a href="/volunteer" class="hover:text-brandOrange transition">{{ __('Volunteer') }}</a>
 
                 <!-- Fixed Exam Sub-Menu Dropdown Desk with Notice Board -->
                 <div class="relative group py-2">
                     <button class="hover:text-brandOrange transition cursor-pointer flex items-center focus:outline-none">
-                        <span>Exam</span>
+                        <span>{{ __('Exam') }}</span>
                     </button>
                     <div class="absolute left-0 pt-2 w-48 hidden group-hover:block z-50 top-full">
                         <div class="bg-white border border-gray-200 rounded-lg shadow-xl py-1">
                             <a href="{{ route('public.exams_board') }}" class="block px-4 py-2 text-gray-700 hover:bg-brandLightOrange hover:text-brandOrange font-bold transition text-xs border-b border-gray-100">
-                                Exams Notice Board
+                                {{ __('Exams Notice Board') }}
                             </a>
                             <a href="{{ route('exam.form') }}" class="block px-4 py-2 text-gray-700 hover:bg-brandLightOrange hover:text-brandOrange font-medium transition text-xs">
-                                Apply Online
+                                {{ __('Apply Online') }}
                             </a>
                             <a href="{{ route('exam.results_portal') }}" class="block px-4 py-2 text-gray-700 hover:bg-brandLightOrange hover:text-brandOrange font-medium transition text-xs border-t border-gray-100">
-                                View Results
+                                {{ __('View Results') }}
                             </a>
                         </div>
                     </div>
@@ -185,7 +241,7 @@
                 <!-- GLOBAL OUR WINGS DROPDOWN DESK SYSTEM -->
                 <div class="relative inline-block text-left group">
                     <button type="button" class="font-bold text-gray-700 hover:text-brandOrange transition uppercase cursor-pointer py-2">
-                        <span>OUR WINGS</span>
+                        <span>{{ __('OUR WINGS') }}</span>
                     </button>
                     
                     <div class="absolute left-0 w-56 bg-white border border-gray-200 rounded-lg shadow-xl py-1 z-50 hidden group-hover:block transition animate-fadeIn">
@@ -204,19 +260,20 @@
                     </div>
                 </div>
 
-                <a href="{{ route('donations.grid') }}" class="hover:text-brandOrange transition">FUNDRAISE</a>
-                <a href="{{ route('public.blogs') }}" class="nav-link font-semibold text-gray-700 hover:text-orange-500 transition">Blogs</a>
-                <a href="{{ route('public.contact') }}" class="hover:text-brandOrange transition">Contact</a>
+                <a href="{{ route('donations.grid') }}" class="hover:text-brandOrange transition">{{ __('FUNDRAISE') }}</a>
+                <a href="{{ route('public.blogs') }}" class="nav-link font-semibold text-gray-700 hover:text-orange-500 transition">{{ __('Blogs') }}</a>
+                <a href="{{ route('public.contact') }}" class="hover:text-brandOrange transition">{{ __('Contact') }}</a>
                 @if(!auth()->guard('web')->check() && !auth()->guard('volunteer')->check())
                 <button type="button" onclick="openLoginModal()" class="cursor-pointer font-bold text-gray-700 hover:text-brandOrange transition uppercase inline-flex items-center gap-1.5 py-1.5 px-3 rounded-lg border border-gray-200 hover:border-brandOrange bg-white shadow-xs">
                     <svg class="w-4 h-4 text-brandOrange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
-                    <span>LOGIN</span>
+                    <span>{{ __('LOGIN') }}</span>
                 </button>
                 @endif
-                <a href="{{ route('donations.grid') }}" class="bg-brandOrange text-white px-4 py-2 rounded shadow hover:bg-opacity-90 transition">Donation</a>
+                <a href="{{ route('donations.grid') }}" class="bg-brandOrange text-white px-4 py-2 rounded shadow hover:bg-opacity-90 transition">{{ __('Donation') }}</a>
             </div>
 
         </div>
+        <div class="h-[3px] w-full" style="background: linear-gradient(90deg, #B8860B, #F6D77B 30%, #FF6600 60%, #F6D77B 85%, #B8860B);" aria-hidden="true"></div>
     </nav>
 
     <!-- Scoped Navigation Scrollbar Styles -->
@@ -331,54 +388,54 @@
             
             <!-- SECTION 1: EXPLORE SAMITI -->
             <div class="pt-1 pb-1.5 border-b border-slate-600/40 text-[9.5px] text-brandOrange font-black tracking-widest uppercase">
-                EXPLORE SAMITI
+                {{ __('EXPLORE SAMITI') }}
             </div>
 
             <a href="/" 
                onclick="togglePublicMobileMenu(false)" 
                class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->is('/') ? 'is-active' : '' }}"
                @if(request()->is('/')) aria-current="page" @endif>
-                <span class="truncate">HOME</span>
+                <span class="truncate">{{ __('HOME') }}</span>
             </a>
 
             <a href="/about" 
                onclick="togglePublicMobileMenu(false)" 
                class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->is('about*') ? 'is-active' : '' }}"
                @if(request()->is('about*')) aria-current="page" @endif>
-                <span class="truncate">ABOUT US</span>
+                <span class="truncate">{{ __('ABOUT US') }}</span>
             </a>
 
             <a href="{{ route('public.team') }}" 
                onclick="togglePublicMobileMenu(false)" 
                class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->routeIs('public.team*') ? 'is-active' : '' }}"
                @if(request()->routeIs('public.team*')) aria-current="page" @endif>
-                <span class="truncate">OUR TEAM</span>
+                <span class="truncate">{{ __('OUR TEAM') }}</span>
             </a>
 
             <a href="/gallery" 
                onclick="togglePublicMobileMenu(false)" 
                class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->is('gallery*') ? 'is-active' : '' }}"
                @if(request()->is('gallery*')) aria-current="page" @endif>
-                <span class="truncate">MEDIA GALLERY</span>
+                <span class="truncate">{{ __('MEDIA GALLERY') }}</span>
             </a>
 
             <a href="/membership" 
                onclick="togglePublicMobileMenu(false)" 
                class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->is('membership*') ? 'is-active' : '' }}"
                @if(request()->is('membership*')) aria-current="page" @endif>
-                <span class="truncate">MEMBERSHIP PORTAL</span>
+                <span class="truncate">{{ __('MEMBERSHIP PORTAL') }}</span>
             </a>
 
             <a href="/volunteer" 
                onclick="togglePublicMobileMenu(false)" 
                class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->is('volunteer*') ? 'is-active' : '' }}"
                @if(request()->is('volunteer*')) aria-current="page" @endif>
-                <span class="truncate">VOLUNTEER CADRE</span>
+                <span class="truncate">{{ __('VOLUNTEER CADRE') }}</span>
             </a>
 
             <!-- SECTION 2: ACADEMICS & SERVICES -->
             <div class="pt-3 pb-1.5 border-b border-slate-600/40 text-[9.5px] text-brandOrange font-black tracking-widest uppercase">
-                ACADEMICS & SERVICES
+                {{ __('ACADEMICS & SERVICES') }}
             </div>
 
             <!-- Accordion 1: Exam -->
@@ -387,7 +444,7 @@
                         onclick="togglePublicSubmenu('public-exam-submenu')"
                         class="public-nav-row w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-gray-200 hover:text-brandOrange transition focus:outline-none cursor-pointer min-h-[48px]">
                     <span class="font-extrabold text-[11px] uppercase tracking-wider">
-                        EXAMS INFO & RESULTS
+                        {{ __('EXAMS INFO & RESULTS') }}
                     </span>
                 </button>
                 <div id="public-exam-submenu" 
@@ -395,24 +452,24 @@
                     <a href="{{ route('public.exams_board') }}" 
                        onclick="togglePublicMobileMenu(false)" 
                        class="block px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/70 transition border-b border-gray-800/60">
-                        EXAMS NOTICE BOARD
+                        {{ __('EXAMS NOTICE BOARD') }}
                     </a>
                     <a href="{{ route('exam.form') }}" 
                        onclick="togglePublicMobileMenu(false)" 
                        class="block px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/70 transition border-b border-gray-800/60">
-                        APPLY ONLINE
+                        {{ __('APPLY ONLINE') }}
                     </a>
                     <a href="{{ route('exam.results_portal') }}" 
                        onclick="togglePublicMobileMenu(false)" 
                        class="block px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/70 transition">
-                        VIEW RESULTS
+                        {{ __('VIEW RESULTS') }}
                     </a>
                 </div>
             </div>
 
             <!-- SECTION 3: OUR WINGS -->
             <div class="pt-3 pb-1.5 border-b border-slate-600/40 text-[9.5px] text-brandOrange font-black tracking-widest uppercase">
-                OUR WINGS SUBSYSTEMS
+                {{ __('OUR WINGS SUBSYSTEMS') }}
             </div>
 
             <!-- Accordion 2: Our Wings -->
@@ -421,7 +478,7 @@
                         onclick="togglePublicSubmenu('public-wings-submenu')"
                         class="public-nav-row w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-gray-200 hover:text-brandOrange transition focus:outline-none cursor-pointer min-h-[48px]">
                     <span class="font-extrabold text-[11px] uppercase tracking-wider">
-                        OUR WINGS
+                        {{ __('OUR WINGS') }}
                     </span>
                 </button>
                 <div id="public-wings-submenu" 
@@ -451,28 +508,28 @@
 
             <!-- SECTION 4: COMMUNITY & SUPPORT -->
             <div class="pt-3 pb-1.5 border-b border-slate-600/40 text-[9.5px] text-brandOrange font-black tracking-widest uppercase">
-                COMMUNITY & SUPPORT
+                {{ __('COMMUNITY & SUPPORT') }}
             </div>
 
             <a href="{{ route('donations.grid') }}" 
                onclick="togglePublicMobileMenu(false)" 
                class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->routeIs('donations.*') ? 'is-active' : '' }}"
                @if(request()->routeIs('donations.*')) aria-current="page" @endif>
-                <span class="truncate">FUNDRAISE CAMPAIGNS</span>
+                <span class="truncate">{{ __('FUNDRAISE CAMPAIGNS') }}</span>
             </a>
 
             <a href="{{ route('public.blogs') }}" 
                onclick="togglePublicMobileMenu(false)" 
                class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->routeIs('public.blogs*') ? 'is-active' : '' }}"
                @if(request()->routeIs('public.blogs*')) aria-current="page" @endif>
-                <span class="truncate">BLOGS & UPDATES</span>
+                <span class="truncate">{{ __('BLOGS & UPDATES') }}</span>
             </a>
 
             <a href="{{ route('public.contact') }}" 
                onclick="togglePublicMobileMenu(false)" 
                class="public-nav-row flex items-center px-3.5 py-2.5 rounded-xl min-h-[48px] text-gray-200 shadow-xs {{ request()->routeIs('public.contact*') ? 'is-active' : '' }}"
                @if(request()->routeIs('public.contact*')) aria-current="page" @endif>
-                <span class="truncate">CONTACT US</span>
+                <span class="truncate">{{ __('CONTACT US') }}</span>
             </a>
 
             <a href="{{ route('public.policy_center') }}" 
@@ -489,13 +546,13 @@
                    onclick="togglePublicMobileMenu(false); openLoginModal();"
                    class="w-full bg-[#111c2e] hover:bg-black text-brandOrange border border-brandOrange/50 font-black text-center py-2.5 min-h-[48px] rounded-xl shadow-md transition flex items-center justify-center gap-2 uppercase tracking-wider text-xs cursor-pointer">
                     <svg class="w-4 h-4 text-brandOrange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
-                    <span>LOGIN PORTALS</span>
+                    <span>{{ __('LOGIN PORTALS') }}</span>
                 </button>
                 @endif
                 <a href="{{ route('donations.grid') }}" 
                    onclick="togglePublicMobileMenu(false)" 
                    class="w-full bg-brandOrange hover:bg-orange-600 text-white font-black text-center py-2.5 min-h-[48px] rounded-xl shadow-md transition flex items-center justify-center uppercase tracking-wider text-xs border border-orange-400/50 cursor-pointer">
-                    MAKE A DONATION
+                    {{ __('MAKE A DONATION') }}
                 </a>
             </div>
         </nav>
@@ -503,7 +560,7 @@
         <!-- Footer of Drawer (Opaque #0b1426) -->
         <div class="p-3.5 border-t border-white/10 space-y-1.5 text-[10px] shrink-0 bg-[#0b1426]">
             <div class="text-gray-400 text-[9px] space-y-0.5 font-bold">
-                <div>📞 {{ \App\Models\SiteSetting::get('contact_phone', '+91 8884933379') }}</div>
+                <div>📞 {{ \App\Models\SiteSetting::get('contact_phone', '+91 9989980055') }}</div>
                 <div>✉️ {{ \App\Models\SiteSetting::get('contact_email', 'info@abvhps.org') }}</div>
             </div>
             <div class="text-center text-[8px] font-black text-gray-500 tracking-wider pt-1 border-t border-white/10">
@@ -518,91 +575,190 @@
     </main>
 
     <!-- 4. Footer Component -->
-    <footer class="bg-brandDarkGray text-gray-300 pt-10 pb-4 px-4 mt-12">
-        <div class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 border-b border-gray-700 pb-8">
-            <div>
-                <h3 class="text-white font-bold text-base mb-3 text-brandOrange uppercase tracking-wide">About ABVHPS</h3>
+    <footer class="relative overflow-hidden bg-brandDarkGray text-gray-300 pt-12 pb-4 px-4 mt-12">
+        <div class="absolute top-0 inset-x-0 h-1"
+             style="background: linear-gradient(90deg, transparent, #F6D77B 15%, #B8860B 50%, #F6D77B 85%, transparent);"
+             aria-hidden="true"></div>
+
+        <svg class="absolute -right-24 -top-24 w-[26rem] h-[26rem] text-[#D4A017]/[0.07] pointer-events-none"
+             viewBox="0 0 200 200"
+             aria-hidden="true">
+            <use href="#abvhps-mandala" width="200" height="200"/>
+        </svg>
+
+        <div class="relative max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-7 border-b border-gray-700 pb-8">
+            <div class="xl:col-span-1">
+                <h3 class="text-white font-bold text-base mb-4 text-brandOrange uppercase tracking-wide">
+                    {{ __('About ABVHPS') }}
+                </h3>
                 <p class="text-xs text-gray-300 leading-relaxed">
-                    {{ \App\Models\SiteSetting::get('footer_about', 'Dedicated to preserving and promoting Hindu culture and values worldwide under the behest of Rajaguru Sri Sri Sri Subrahmanneswara Swamy Garu.') }}
+                    {{
+                        __(
+                            \App\Models\SiteSetting::get(
+                                'footer_about',
+                                config(
+                                    'abvhps.copy.footer_about',
+                                    'Dedicated to preserving and promoting Sanatana Dharma, Hindu culture and values worldwide.'
+                                )
+                            )
+                        )
+                    }}
                 </p>
             </div>
+
             <div>
-                <h3 class="text-white font-bold text-base mb-3 text-brandOrange uppercase tracking-wide">Quick Links</h3>
-                <div class="grid grid-cols-1 gap-1.5 text-xs">
-                    <a href="/about" class="text-gray-300 hover:text-white transition">About Us</a>
-                    <a href="/membership" class="text-gray-300 hover:text-white transition">Membership</a>
-                    <a href="/volunteer" class="text-gray-300 hover:text-white transition">Volunteer</a>
-                    <a href="{{ route('donations.grid') }}" class="text-gray-300 hover:text-white transition">Donation</a>
-                    <a href="{{ route('public.certificates') }}" class="text-gray-300 hover:text-white transition">80G / 12A</a>
-                    <a href="{{ route('public.blogs') }}" class="text-gray-300 hover:text-white transition">Blogs & Updates</a>
+                <h3 class="text-white font-bold text-base mb-4 text-brandOrange uppercase tracking-wide">
+                    {{ __('Quick Links') }}
+                </h3>
+                <div class="space-y-2 text-xs">
+                    <a href="/about" class="text-gray-300 hover:text-white block transition">{{ __('About Us') }}</a>
+                    <a href="/membership" class="text-gray-300 hover:text-white block transition">{{ __('Membership') }}</a>
+                    <a href="/volunteer" class="text-gray-300 hover:text-white block transition">{{ __('Volunteer') }}</a>
+                    <a href="{{ route('donations.grid') }}" class="text-gray-300 hover:text-white block transition">{{ __('Donation') }}</a>
+                    <a href="{{ route('public.certificates') }}" class="text-gray-300 hover:text-white block transition">80G / 12A</a>
+                    <a href="{{ route('public.blogs') }}" class="text-gray-300 hover:text-white block transition">{{ __('Blogs & Updates') }}</a>
                 </div>
             </div>
+
             <div>
-                <h3 class="text-white font-bold text-base mb-3 text-brandOrange uppercase tracking-wide">Our Wings</h3>
-                <div class="space-y-1.5 text-xs">
+                <h3 class="text-white font-bold text-base mb-4 text-brandOrange uppercase tracking-wide">
+                    {{ __('Our Wings') }}
+                </h3>
+                <div class="space-y-2 text-xs">
                     <a href="{{ route('rudrasena.form') }}" class="text-gray-300 hover:text-white block transition">Rudrasena Dal</a>
                     <a href="{{ route('kalabrundam.form') }}" class="text-gray-300 hover:text-white block transition">Kala Brundam</a>
                     <a href="{{ route('gramasevadal.form') }}" class="text-gray-300 hover:text-white block transition">Grama Seva Dal</a>
-                    <a href="{{ route('organicfarmers.form') }}" class="hover:text-white block font-bold text-emerald-400 transition">Organic Farmers</a>
-                    <a href="{{ route('public.exams_board') }}" class="text-gray-300 hover:text-white block transition">Exams Notice Board</a>
+                    <a href="{{ route('organicfarmers.form') }}" class="text-emerald-400 hover:text-white block font-bold transition">Organic Farmers</a>
                 </div>
             </div>
+
             <div>
-                <h3 class="text-white font-bold text-base mb-3 text-brandOrange uppercase tracking-wide">Support</h3>
+                <h3 class="text-white font-bold text-base mb-4 text-brandOrange uppercase tracking-wide">
+                    {{ __('Services & Exams') }}
+                </h3>
                 <div class="space-y-2 text-xs">
+                    <a href="{{ route('public.exams_board') }}" class="text-gray-300 hover:text-white block transition">{{ __('Exams Notice Board') }}</a>
+                    <a href="{{ route('exam.form') }}" class="text-gray-300 hover:text-white block transition">{{ __('Exam Application') }}</a>
+                    <a href="{{ route('exam.results_portal') }}" class="text-gray-300 hover:text-white block transition">{{ __('Check Results') }}</a>
+                    <a href="{{ route('donations.grid') }}" class="text-gray-300 hover:text-white block transition">{{ __('Fundraise Campaigns') }}</a>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-white font-bold text-base mb-4 text-brandOrange uppercase tracking-wide">
+                    {{ __('Support') }}
+                </h3>
+                <div class="space-y-3 text-xs">
                     <div>
-                        <span class="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">Official Support Email</span>
-                        <a href="mailto:{{ \App\Models\SiteSetting::get('contact_email', 'info@abvhps.org') }}" class="text-orange-400 font-semibold hover:underline block break-all">
+                        <span class="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">
+                            {{ __('Official Support Email') }}
+                        </span>
+                        <a href="mailto:{{ \App\Models\SiteSetting::get('contact_email', 'info@abvhps.org') }}"
+                           class="text-orange-400 font-semibold hover:underline block break-all">
                             {{ \App\Models\SiteSetting::get('contact_email', 'info@abvhps.org') }}
                         </a>
                     </div>
+
                     <div>
-                        <span class="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">Helpline</span>
-                        <a href="tel:{{ \App\Models\SiteSetting::get('contact_phone', '+91 8884933379') }}" class="text-gray-300 hover:text-white block font-mono">
-                            {{ \App\Models\SiteSetting::get('contact_phone', '+91 8884933379') }}
+                        <span class="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">
+                            {{ __('Helpline') }}
+                        </span>
+                        <a href="tel:{{ \App\Models\SiteSetting::get('contact_phone', '+91 9989980055') }}"
+                           class="text-gray-300 hover:text-white block font-mono transition">
+                            {{ \App\Models\SiteSetting::get('contact_phone', '+91 9989980055') }}
                         </a>
                     </div>
-                    <div class="pt-1">
-                        <a href="{{ route('public.policy_center') }}" class="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wide text-brandOrange hover:text-orange-300 bg-gray-800/80 hover:bg-gray-800 px-3 py-1.5 rounded-lg border border-orange-500/30 transition shadow-xs">
-                            <span>📜</span>
-                            <span>Policy Center</span>
-                            <span>&rarr;</span>
+
+                    @if(\Illuminate\Support\Facades\Route::has('public.policy_center'))
+                        <a href="{{ route('public.policy_center') }}"
+                           class="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wide text-brandOrange hover:text-orange-300 bg-gray-800/80 hover:bg-gray-800 px-3 py-1.5 rounded-lg border border-orange-500/30 transition shadow-xs">
+                            <span aria-hidden="true">📜</span>
+                            <span>{{ __('Policy Center') }}</span>
+                            <span aria-hidden="true">&rarr;</span>
                         </a>
-                    </div>
-                    <div>
-                        <a href="{{ route('public.contact') }}" class="text-gray-400 hover:text-white block text-xs transition">
-                            Grievance Redressal
-                        </a>
-                    </div>
+                    @endif
+
+                    <a href="{{ route('public.contact') }}"
+                       class="text-gray-400 hover:text-white block transition">
+                        {{ __('Grievance Redressal') }}
+                    </a>
                 </div>
             </div>
+
             <div>
-                <h3 class="text-white font-bold text-base mb-3 text-brandOrange uppercase tracking-wide">Contact Us</h3>
-                <p class="text-xs text-gray-300 leading-relaxed mb-2">
-                    {{ \App\Models\SiteSetting::get('contact_address', 'Survey No:1826, Shanmukhapuram, Akkalareddy Palli Village and Post, Porumamilla Mandalam, Kadapa, A.P - 516193') }}
+                <h3 class="text-white font-bold text-base mb-4 text-brandOrange uppercase tracking-wide">
+                    {{ __('Contact Us') }}
+                </h3>
+                <p class="text-xs text-gray-300 leading-relaxed mb-3">
+                    {{
+                        \App\Models\SiteSetting::get(
+                            'contact_address',
+                            'Survey No:1826, Shanmukhapuram, Akkalareddy Palli Village and Post, Porumamilla Mandalam, Kadapa, A.P - 516193'
+                        )
+                    }}
                 </p>
-                <div class="text-xs font-mono text-gray-400 space-y-1">
-                    <div>📞 {{ \App\Models\SiteSetting::get('contact_phone', '+91 8884933379') }}</div>
-                    <div>✉️ {{ \App\Models\SiteSetting::get('contact_email', 'info@abvhps.org') }}</div>
+
+                <div class="text-xs text-gray-400 space-y-2">
+                    <div>
+                        📞
+                        <a href="tel:{{ \App\Models\SiteSetting::get('contact_phone', '+91 9989980055') }}"
+                           class="hover:text-white transition">
+                            {{ \App\Models\SiteSetting::get('contact_phone', '+91 9989980055') }}
+                        </a>
+                    </div>
+
+                    <div class="break-all">
+                        ✉️
+                        <a href="mailto:{{ \App\Models\SiteSetting::get('contact_email', 'info@abvhps.org') }}"
+                           class="hover:text-white transition">
+                            {{ \App\Models\SiteSetting::get('contact_email', 'info@abvhps.org') }}
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="max-w-7xl mx-auto pt-4 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 gap-2">
-            <div>
-                &copy; {{ date('Y') }} ABVHPS. All Rights Reserved.
-            </div>
-            <div class="flex items-center gap-4 text-xs font-medium">
-                <a href="{{ route('public.policy_center') }}" class="text-gray-400 hover:text-white transition">Policy Center</a>
-                <span class="text-gray-700">|</span>
-                <a href="{{ route('public.terms') }}" class="text-gray-400 hover:text-white transition">Terms</a>
-                <span class="text-gray-700">|</span>
-                <a href="{{ route('public.privacy') }}" class="text-gray-400 hover:text-white transition">Privacy</a>
-                <span class="text-gray-700">|</span>
-                <a href="{{ route('public.refund_policy') }}" class="text-gray-400 hover:text-white transition">Refunds</a>
-            </div>
+
+        <nav aria-label="Legal"
+             class="relative max-w-7xl mx-auto flex flex-wrap items-center justify-center gap-x-5 gap-y-2 pt-5 text-xs font-semibold text-gray-400">
+
+            @if(\Illuminate\Support\Facades\Route::has('legal.index'))
+                <a href="{{ route('legal.index') }}" class="hover:text-white transition">{{ __('Legal & Policies') }}</a>
+            @endif
+
+            @if(\Illuminate\Support\Facades\Route::has('legal.privacy'))
+                <a href="{{ route('legal.privacy') }}" class="hover:text-white transition">{{ __('Privacy Policy') }}</a>
+            @endif
+
+            @if(\Illuminate\Support\Facades\Route::has('legal.terms'))
+                <a href="{{ route('legal.terms') }}" class="hover:text-white transition">{{ __('Terms & Conditions') }}</a>
+            @endif
+
+            @if(\Illuminate\Support\Facades\Route::has('legal.refund'))
+                <a href="{{ route('legal.refund') }}" class="hover:text-white transition">{{ __('Refund Policy') }}</a>
+            @endif
+
+            @if(\Illuminate\Support\Facades\Route::has('legal.donation_payments'))
+                <a href="{{ route('legal.donation_payments') }}" class="hover:text-white transition">{{ __('Donation & Payment Policy') }}</a>
+            @endif
+
+            @if(\Illuminate\Support\Facades\Route::has('legal.account_deletion'))
+                <a href="{{ route('legal.account_deletion') }}" class="hover:text-white transition">{{ __('Delete My Data') }}</a>
+            @endif
+        </nav>
+
+        <div class="relative text-center pt-5">
+            <span class="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.3em] text-[#F6D77B]">
+                <span class="h-px w-8 bg-gradient-to-r from-transparent to-[#F6D77B]" aria-hidden="true"></span>
+                <span aria-hidden="true">&#2384;</span>
+                {{ __('Jai Sanatana Dharma') }}
+                <span class="h-px w-8 bg-gradient-to-l from-transparent to-[#F6D77B]" aria-hidden="true"></span>
+            </span>
+        </div>
+
+        <div class="relative text-center text-xs text-gray-500 pt-3">
+            &copy; {{ date('Y') }} ABVHPS. {{ __('All Rights Reserved.') }}
         </div>
     </footer>
-
     <!-- Floating WhatsApp Quick Connect Button -->
     <x-whatsapp-floating-button />
 
@@ -617,7 +773,7 @@
                         <img src="{{ asset('images/logo_abvhps.png') }}" class="w-full h-full object-contain" alt="ABVHPS">
                     </div>
                     <div>
-                        <h2 id="login-modal-title" class="text-base sm:text-lg font-extrabold uppercase tracking-wide text-white">Select Login Portal</h2>
+                        <h2 id="login-modal-title" class="text-base sm:text-lg font-extrabold uppercase tracking-wide text-white">{{ __('Select Login Portal') }}</h2>
                         <p class="text-[11px] text-orange-200">Akhanda Bharatha Viswa Hindu Parirakshana Samiti</p>
                     </div>
                 </div>
@@ -635,11 +791,11 @@
                             <div class="w-12 h-12 rounded-xl bg-orange-100 text-brandOrange flex items-center justify-center mb-4 group-hover:scale-105 transition">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
                             </div>
-                            <h3 class="text-base font-extrabold text-brandGray group-hover:text-brandOrange transition uppercase tracking-wide mb-1">Admin Login</h3>
+                            <h3 class="text-base font-extrabold text-brandGray group-hover:text-brandOrange transition uppercase tracking-wide mb-1">{{ __('Admin Login') }}</h3>
                             <p class="text-xs text-gray-600 leading-relaxed mb-6">Authorized ABVHPS Administration access.</p>
                         </div>
                         <a href="{{ route('login') }}" class="w-full inline-flex items-center justify-center gap-2 bg-brandGray hover:bg-black text-white text-xs font-black py-3 px-4 rounded-xl shadow-sm uppercase tracking-wider transition">
-                            <span>LOGIN AS ADMIN</span>
+                            <span>{{ __('LOGIN AS ADMIN') }}</span>
                             <span>→</span>
                         </a>
                     </div>
@@ -650,11 +806,11 @@
                             <div class="w-12 h-12 rounded-xl bg-orange-500 text-white flex items-center justify-center mb-4 group-hover:scale-105 transition shadow-sm">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                             </div>
-                            <h3 class="text-base font-extrabold text-brandOrange uppercase tracking-wide mb-1">Volunteer Login</h3>
+                            <h3 class="text-base font-extrabold text-brandOrange uppercase tracking-wide mb-1">{{ __('Volunteer Login') }}</h3>
                             <p class="text-xs text-gray-600 leading-relaxed mb-6">Approved ABVHPS Volunteers and Presidents.</p>
                         </div>
                         <a href="{{ route('volunteer.login') }}" class="w-full inline-flex items-center justify-center gap-2 bg-brandOrange hover:bg-orange-600 text-white text-xs font-black py-3 px-4 rounded-xl shadow-md uppercase tracking-wider transition">
-                            <span>LOGIN AS VOLUNTEER</span>
+                            <span>{{ __('LOGIN AS VOLUNTEER') }}</span>
                             <span>→</span>
                         </a>
                     </div>

@@ -210,8 +210,8 @@
                 </div>
                 <div class="bg-gray-800/80 p-4 rounded-xl border border-gray-700 space-y-1">
                     <span class="text-gray-400 text-[10px] font-black uppercase tracking-wider block">Helpline / WhatsApp</span>
-                    <a href="tel:{{ \App\Models\SiteSetting::get('contact_phone', '+91 8884933379') }}" class="text-orange-400 font-mono font-bold hover:underline block text-sm">
-                        {{ \App\Models\SiteSetting::get('contact_phone', '+91 8884933379') }}
+                    <a href="tel:{{ \App\Models\SiteSetting::get('contact_phone', '+91 9989980055') }}" class="text-orange-400 font-mono font-bold hover:underline block text-sm">
+                      {{ \App\Models\SiteSetting::get('contact_phone', '+91 9989980055') }}
                     </a>
                     <span class="text-[10px] text-gray-400 block pt-1">Monday – Saturday (9:00 AM – 6:00 PM IST)</span>
                 </div>
