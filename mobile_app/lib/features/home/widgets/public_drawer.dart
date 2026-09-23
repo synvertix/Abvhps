@@ -132,18 +132,18 @@ class _PublicDrawerState extends State<PublicDrawer> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Card 1: Member Login (OTP)
+                        // Card 1: Admin Login
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFE5E7EB), width: 2),
+                            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withValues(alpha: 0.04),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
                               ),
                             ],
                           ),
@@ -156,12 +156,12 @@ class _PublicDrawerState extends State<PublicDrawer> {
                                     width: 42,
                                     height: 42,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFFFEDD5),
+                                      color: const Color(0xFF1E293B),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: const Icon(
-                                      Icons.person,
-                                      color: AppTheme.primaryOrange,
+                                      Icons.admin_panel_settings,
+                                      color: Colors.white,
                                       size: 22,
                                     ),
                                   ),
@@ -171,7 +171,7 @@ class _PublicDrawerState extends State<PublicDrawer> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          'MEMBER LOGIN',
+                                          'ADMIN LOGIN',
                                           style: TextStyle(
                                             color: Color(0xFF1E293B),
                                             fontWeight: FontWeight.w900,
@@ -180,7 +180,7 @@ class _PublicDrawerState extends State<PublicDrawer> {
                                           ),
                                         ),
                                         Text(
-                                          'Registered members access via OTP',
+                                          'Authorized ABVHPS administrators',
                                           style: TextStyle(
                                             color: Color(0xFF64748B),
                                             fontSize: 11,
@@ -196,11 +196,11 @@ class _PublicDrawerState extends State<PublicDrawer> {
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
-                                  key: const Key('drawer_member_login_button'),
+                                  key: const Key('drawer_admin_login_button'),
                                   onPressed: () {
                                     Navigator.of(sheetContext).pop();
                                     Navigator.of(context).pop();
-                                    context.push('/login?type=member');
+                                    context.push('/login?type=admin');
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF111C2E),
@@ -212,7 +212,7 @@ class _PublicDrawerState extends State<PublicDrawer> {
                                     elevation: 0,
                                   ),
                                   child: const Text(
-                                    'LOGIN WITH OTP  →',
+                                    'LOGIN AS ADMIN  →',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w900,

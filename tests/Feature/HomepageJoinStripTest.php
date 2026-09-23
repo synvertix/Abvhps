@@ -94,7 +94,7 @@ class HomepageJoinStripTest extends TestCase
 
         $response = $this->actingAs($admin)->post(route('admin.settings.update'), [
             'site_title'                   => 'ABVHPS Portal',
-            'contact_phone'                => '+91 8884933379',
+            'contact_phone'                => '+91 9989980055',
             'contact_email'                => 'info@abvhps.org',
             'contact_address'              => 'HQ Address',
             'footer_about'                 => 'About ABVHPS',
@@ -127,7 +127,7 @@ class HomepageJoinStripTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.settings.update'), [
             'site_title'            => 'ABVHPS Portal',
-            'contact_phone'         => '+91 8884933379',
+            'contact_phone'         => '+91 9989980055',
             'contact_email'         => 'info@abvhps.org',
             'contact_address'       => 'HQ Address',
             'footer_about'          => 'About ABVHPS',
@@ -191,7 +191,7 @@ class HomepageJoinStripTest extends TestCase
         // 1. Admin customizes sponsor heading and list
         $this->actingAs($admin)->post(route('admin.settings.update'), [
             'site_title'                => 'ABVHPS Portal',
-            'contact_phone'             => '+91 8884933379',
+            'contact_phone'             => '+91 9989980055',
             'contact_email'             => 'info@abvhps.org',
             'contact_address'           => 'HQ Address',
             'footer_about'              => 'About ABVHPS',
@@ -209,7 +209,7 @@ class HomepageJoinStripTest extends TestCase
         // 2. Admin disables sponsor strip
         $this->actingAs($admin)->post(route('admin.settings.update'), [
             'site_title'                => 'ABVHPS Portal',
-            'contact_phone'             => '+91 8884933379',
+            'contact_phone'             => '+91 9989980055',
             'contact_email'             => 'info@abvhps.org',
             'contact_address'           => 'HQ Address',
             'footer_about'              => 'About ABVHPS',

@@ -31,18 +31,7 @@ class HomeController extends Controller
         }
 
         // 2. Sliders
-        $sliders = DB::table('home_sliders')
-            ->where('is_active', true)
-            ->orderBy('sort_order', 'asc')
-            ->get()
-            ->map(function ($s) {
-                return [
-                    'id'          => $s->id,
-                    'title'       => $s->title,
-                    'subtitle'    => $s->subtitle,
-                    'image_url'   => !empty($s->image_path) ? asset('storage/' . $s->image_path) : null,
-                ];
-            });
+        $sliders = \App\Support\HeroSlides::forHome();
 
         // 3. Published Announcements (Exams)
         $publishedExams = DB::table('exam_settings')
@@ -79,6 +68,7 @@ class HomeController extends Controller
                 'years'      => $yearsOfService,
             ];
         });
+        $liveCounts = \App\Models\SiteSetting::applyStatOverrides($liveCounts);
 
         // 5. Active Fundraising Campaigns
         $fundraisingCampaigns = FundraisingCampaign::active()
@@ -167,7 +157,7 @@ class HomeController extends Controller
 
         // 10. Contact & WhatsApp
         $contact = [
-            'phone'           => SiteSetting::get('contact_phone', '+91 8884933379'),
+            'phone'           => SiteSetting::get('contact_phone', '+91 9989980055'),
             'email'           => SiteSetting::get('contact_email', 'info@abvhps.org'),
             'address'         => SiteSetting::get('contact_address', 'Survey No:1826, Shanmukhapuram, Akkalareddy Palli Village and Post, Porumamilla Mandalam, Kadapa, A.P - 516193'),
             'whatsapp_number' => SiteSetting::getWhatsAppNumber(),

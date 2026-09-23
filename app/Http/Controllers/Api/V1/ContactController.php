@@ -18,7 +18,7 @@ class ContactController extends Controller
     public function show(): JsonResponse
     {
         $contact = [
-            'phone'           => SiteSetting::get('contact_phone', '+91 8884933379'),
+            'phone'           => SiteSetting::get('contact_phone', '+91 9989980055'),
             'email'           => SiteSetting::get('contact_email', 'info@abvhps.org'),
             'address'         => SiteSetting::get('contact_address', 'Survey No:1826, Shanmukhapuram, Akkalareddy Palli Village and Post, Porumamilla Mandalam, Kadapa, A.P - 516193'),
             'whatsapp_number' => SiteSetting::getWhatsAppNumber(),

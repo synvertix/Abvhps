@@ -16,10 +16,26 @@
 <div class="py-12 px-4 bg-gray-50">
     <div class="max-w-5xl mx-auto space-y-8">
 
+        <!-- 1b. Our Divine Origin -->
+        <div class="bg-white p-6 sm:p-8 rounded-lg border border-gray-200 shadow-sm space-y-4">
+            <h2 class="text-xs font-bold text-brandGray uppercase tracking-wider border-b border-gray-200 pb-2">
+                {{ __('Our Divine Origin') }}
+            </h2>
+            <div class="space-y-3 text-sm text-brandGray leading-relaxed">
+                <p>{!! __(config('abvhps.copy.origin_1'), ['guru' => '<strong>' . e(config('abvhps.copy.guru')) . '</strong>']) !!}</p>
+                <p>{{ __(config('abvhps.copy.origin_2')) }}</p>
+            </div>
+        </div>
+
+        <!-- 1c. Vision, Mission & Goal -->
+        <div class="rounded-2xl bg-gradient-to-b from-[#FFF8EC] to-[#FFFDF8] border border-amber-200/70 p-6 sm:p-10">
+            @include('partials.pillars')
+        </div>
+
         <!-- 2. Our Mission Section -->
         <div class="bg-white p-6 sm:p-8 rounded-lg border border-gray-200 shadow-sm space-y-4">
             <h2 class="text-xs font-bold text-brandGray uppercase tracking-wider border-b border-gray-200 pb-2">
-                Our Mission
+                {{ __('Our Mission in Action') }}
             </h2>
             <div class="space-y-3 text-sm text-brandGray leading-relaxed">
                 <p>

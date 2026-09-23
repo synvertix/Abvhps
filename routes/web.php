@@ -448,8 +448,20 @@ Route::get('/admin/membership-ledger', [App\Http\Controllers\MembershipControlle
     Route::post('/admin/banner/delete/{id}', [App\Http\Controllers\BannerController::class, 'destroy'])->name('admin.banner.destroy')->middleware('auth:web');
     Route::delete('/admin/banner/{id}', [App\Http\Controllers\BannerController::class, 'destroy'])->middleware('auth:web');
 
+    // 17. Home Hero Slides Management Module
+    Route::get('/admin/sliders', [App\Http\Controllers\HomeSliderController::class, 'index'])->name('admin.sliders.index')->middleware('auth:web');
+    Route::get('/admin/sliders/create', [App\Http\Controllers\HomeSliderController::class, 'create'])->name('admin.sliders.create')->middleware('auth:web');
+    Route::post('/admin/sliders/store', [App\Http\Controllers\HomeSliderController::class, 'store'])->name('admin.sliders.store')->middleware('auth:web');
+    Route::get('/admin/sliders/{id}/edit', [App\Http\Controllers\HomeSliderController::class, 'edit'])->name('admin.sliders.edit')->middleware('auth:web');
+    Route::post('/admin/sliders/{id}/update', [App\Http\Controllers\HomeSliderController::class, 'update'])->name('admin.sliders.update')->middleware('auth:web');
+    Route::post('/admin/sliders/{id}/toggle', [App\Http\Controllers\HomeSliderController::class, 'toggle'])->name('admin.sliders.toggle')->middleware('auth:web');
+    Route::delete('/admin/sliders/{id}', [App\Http\Controllers\HomeSliderController::class, 'destroy'])->name('admin.sliders.destroy')->middleware('auth:web');
+
     // 🔱 ABVHPS PUBLIC WEBSITE MAIN NAVIGATION ROUTES
 // ----------------------------------------------------------------------
+// Public site language switcher (English + major Indian languages)
+Route::get('/lang/{locale}', [App\Http\Controllers\LocaleController::class, 'switch'])->name('lang.switch');
+
 // Public Web Home Route
 Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('public.home');
 

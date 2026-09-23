@@ -5,6 +5,11 @@ class AppTheme {
   static const Color primaryOrange = Color(0xFFFF6600); // --color-brandOrange
   static const Color primaryDarkOrange = Color(0xFFE65C00);
   static const Color lightOrange = Color(0xFFFFF5EE); // --color-brandLightOrange
+  static const Color deepSaffron = Color(0xFFC93F00); // devotional gradient start
+  static const Color warmGold = Color(0xFFF28A0F); // devotional gradient end
+  static const Color templeGold = Color(0xFFD4A017); // gold accents
+  static const Color softGold = Color(0xFFFFE7A3); // light gold (lines, watermark)
+  static const Color creamBg = Color(0xFFFFF8EC); // warm section background
   static const Color neutralGray = Color(0xFF4A4A4A); // --color-brandGray
   static const Color darkGray = Color(0xFF1A1A1A); // --color-brandDarkGray
   static const Color topBarBg = Color(0xFF4A4A4A); // Header top bar

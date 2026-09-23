@@ -80,7 +80,7 @@ Inspection of `resources/views/home.blade.php` and `resources/views/layouts/app.
 ### Detailed Section Properties
 
 1. **Top Header & Bar**
-   - Heading/Text: Phone `+91 8884933379`, Email `info@abvhps.org`
+   - Heading/Text: Phone `+91 9989980055`, Email `info@abvhps.org`
    - Data Source: `SiteSetting::get('contact_phone')`, `SiteSetting::get('contact_email')`, `SiteSetting::getActiveSocialLinks()`
    - Behavior: Responsive top banner.
 2. **Main Navigation**

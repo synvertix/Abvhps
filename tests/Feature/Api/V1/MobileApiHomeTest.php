@@ -147,9 +147,9 @@ class MobileApiHomeTest extends TestCase
 
     public function test_home_endpoint_returns_dynamic_banner_and_public_contact(): void
     {
-        SiteSetting::set('contact_phone', '+91 8884933379');
+        SiteSetting::set('contact_phone', '+91 9989980055');
         SiteSetting::set('contact_email', 'info@abvhps.org');
-        SiteSetting::set('contact_whatsapp', '+918884933379');
+        SiteSetting::set('contact_whatsapp', '+919989980055');
 
         Banner::create([
             'page_key' => 'home',
@@ -168,7 +168,7 @@ class MobileApiHomeTest extends TestCase
         $this->assertEquals('Official Test Subtitle', $response->json('data.banner.subtitle'));
         $this->assertStringContainsString('banners/desktop_test.jpg', $response->json('data.banner.desktop_banner'));
         $this->assertStringContainsString('banners/mobile_test.jpg', $response->json('data.banner.mobile_banner'));
-        $this->assertEquals('+91 8884933379', $response->json('data.contact.phone'));
+        $this->assertEquals('+91 9989980055', $response->json('data.contact.phone'));
         $this->assertEquals('info@abvhps.org', $response->json('data.contact.email'));
     }
 

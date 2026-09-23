@@ -22,6 +22,7 @@ class HomepageSocialMediaLinksTest extends TestCase
 
     private function clearAllSocialSettings(): void
     {
+        SiteSetting::set('social_janavedika_url', null);
         SiteSetting::set('social_facebook_url', null);
         SiteSetting::set('social_instagram_url', null);
         SiteSetting::set('social_youtube_url', null);
@@ -480,7 +481,7 @@ class HomepageSocialMediaLinksTest extends TestCase
     // =========================================================================
     public function test_existing_phone_and_info_email_remain_visible(): void
     {
-        SiteSetting::set('contact_phone', '+91 8884933379');
+        SiteSetting::set('contact_phone', '+91 9989980055');
         SiteSetting::set('contact_email', 'info@abvhps.org');
         SiteSetting::set('social_facebook_url', 'https://facebook.com/abvhps');
 
@@ -492,7 +493,70 @@ class HomepageSocialMediaLinksTest extends TestCase
         $headerEnd = strpos($content, '</header>', $headerStart);
         $headerHtml = substr($content, $headerStart, $headerEnd - $headerStart);
 
-        $this->assertStringContainsString('+91 8884933379', $headerHtml);
+        $this->assertStringContainsString('+91 9989980055', $headerHtml);
         $this->assertStringContainsString('info@abvhps.org', $headerHtml);
+    }
+
+    // =========================================================================
+    // 20. JANAVEDIKA: SEEDED OFFICIAL PAGE RENDERS ON HOMEPAGE + TOP BAR
+    // =========================================================================
+    public function test_janavedika_official_page_is_seeded_and_renders(): void
+    {
+        // The seed migration ships https://janavedika.in/@abvhps as the default.
+        $this->assertEquals('https://janavedika.in/@abvhps', SiteSetting::get('social_janavedika_url'));
+
+        $content = $this->get('/')->assertStatus(200)->getContent();
+
+        $stripStart = strpos($content, 'id="homepage-social-media-strip"');
+        $this->assertNotFalse($stripStart);
+        $stripHtml = substr($content, $stripStart, strpos($content, '</section>', $stripStart) - $stripStart);
+        $this->assertStringContainsString('href="https://janavedika.in/@abvhps"', $stripHtml);
+        $this->assertStringContainsString('aria-label="ABVHPS on Janavedika"', $stripHtml);
+        $this->assertStringContainsString('social-featured', $stripHtml);
+
+        $topStart = strpos($content, 'id="top-bar-social-links"');
+        $this->assertNotFalse($topStart);
+        $topHtml = substr($content, $topStart, strpos($content, '</header>', $topStart) - $topStart);
+        $this->assertStringContainsString('href="https://janavedika.in/@abvhps"', $topHtml);
+    }
+
+    // =========================================================================
+    // 21. JANAVEDIKA: ONLY janavedika.in HTTPS URLS ARE ACCEPTED
+    // =========================================================================
+    public function test_janavedika_url_validation(): void
+    {
+        $admin = $this->createAdmin();
+
+        foreach ([
+            'http://janavedika.in/@abvhps',
+            'https://evil-janavedika.in/@abvhps',
+            'https://janavedika.in.evil.com/@abvhps',
+            'https://example.com/@abvhps',
+            'javascript:alert(1)',
+        ] as $bad) {
+            $this->actingAs($admin)
+                ->post(route('admin.settings.update'), ['social_janavedika_url' => $bad])
+                ->assertSessionHasErrors('social_janavedika_url');
+        }
+
+        foreach (['https://janavedika.in/@abvhps', 'https://www.janavedika.in/@abvhps'] as $good) {
+            $this->actingAs($admin)
+                ->post(route('admin.settings.update'), ['social_janavedika_url' => $good])
+                ->assertSessionHasNoErrors();
+            $this->assertEquals($good, SiteSetting::get('social_janavedika_url'));
+        }
+    }
+
+    // =========================================================================
+    // 22. JANAVEDIKA: NON-JANAVEDIKA URL STORED DIRECTLY IS NEVER RENDERED
+    // =========================================================================
+    public function test_janavedika_non_janavedika_value_is_not_rendered(): void
+    {
+        $this->clearAllSocialSettings();
+        SiteSetting::set('homepage_social_enabled', '1');
+        SiteSetting::set('social_janavedika_url', 'https://evil.example.com/@abvhps');
+
+        $this->assertArrayNotHasKey('janavedika', SiteSetting::getActiveSocialLinks());
+        $this->get('/')->assertDontSee('https://evil.example.com/@abvhps', false);
     }
 }

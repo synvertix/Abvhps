@@ -225,7 +225,7 @@ class SeoOptimizationTest extends TestCase
         $content = $response->getContent();
 
         // Top header retains contact phone and email
-        $response->assertSee('+91 8884933379');
+        $response->assertSee('+91 9989980055');
         $response->assertSee('info@abvhps.org');
 
         // Top header element check

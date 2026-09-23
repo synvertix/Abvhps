@@ -12,7 +12,7 @@ class HomeController extends Controller
     public function index()
     {
         // Fetch all active sliders from database
-        $sliders = DB::table('home_sliders')->where('is_active', true)->orderBy('sort_order', 'asc')->get();
+        $sliders = \App\Support\HeroSlides::forHome();
 
         // Fetch all active core projects from database
         $projects = DB::table('our_supports')->where('status', 'show')->orderBy('sort_order', 'asc')->get();
@@ -62,6 +62,7 @@ class HomeController extends Controller
                 'years'      => $yearsOfService,
             ];
         });
+        $liveCounts = \App\Models\SiteSetting::applyStatOverrides($liveCounts);
 
         // Homepage Floating Join / Membership Strip Settings
         $rawJoinEnabled = \App\Models\SiteSetting::get('homepage_join_enabled', '1');

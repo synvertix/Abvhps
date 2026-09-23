@@ -33,7 +33,7 @@ class PublicFooter extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Dedicated to preserving and promoting Hindu culture and values worldwide under the behest of Rajaguru Sri Sri Sri Subrahmanneswara Swamy Garu.',
+            'Dedicated to preserving and promoting Hindu culture and values worldwide under the guidance of Rajaguru Sri Sri Sri Subrahmanneswara Swamy Garu.',
             style: TextStyle(
               color: Colors.white70,
               fontSize: 12,

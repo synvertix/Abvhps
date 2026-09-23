@@ -82,7 +82,7 @@ class WhatsAppIntegrationTest extends TestCase
     {
         $response = $this->actingAs($this->admin)->post(route('admin.settings.update'), [
             'site_title' => 'ABVHPS Updated',
-            'contact_phone' => '+91 8884933379',
+            'contact_phone' => '+91 9989980055',
             'whatsapp_number' => '+91 9123456789',
             'contact_email' => 'info@abvhps.org',
             'contact_address' => 'Sample address',
@@ -123,7 +123,7 @@ class WhatsAppIntegrationTest extends TestCase
         // Test non-digit letters
         $response = $this->actingAs($this->admin)->post(route('admin.settings.update'), [
             'site_title' => 'ABVHPS Test',
-            'contact_phone' => '+91 8884933379',
+            'contact_phone' => '+91 9989980055',
             'whatsapp_number' => 'INVALID_NUMBER_ABC',
             'contact_email' => 'info@abvhps.org',
             'contact_address' => 'Sample address',
@@ -135,7 +135,7 @@ class WhatsAppIntegrationTest extends TestCase
         // Test too short
         $responseShort = $this->actingAs($this->admin)->post(route('admin.settings.update'), [
             'site_title' => 'ABVHPS Test',
-            'contact_phone' => '+91 8884933379',
+            'contact_phone' => '+91 9989980055',
             'whatsapp_number' => '12345',
             'contact_email' => 'info@abvhps.org',
             'contact_address' => 'Sample address',

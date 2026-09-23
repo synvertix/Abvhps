@@ -17,7 +17,7 @@ class ContactInfoModel {
 
   factory ContactInfoModel.fromJson(Map<String, dynamic> json) {
     return ContactInfoModel(
-      phone: json['phone']?.toString() ?? '+91 8884933379',
+      phone: json['phone']?.toString() ?? '+91 9989980055',
       email: json['email']?.toString() ?? 'info@abvhps.org',
       address: json['address']?.toString() ?? '',
       whatsappNumber: json['whatsapp_number']?.toString(),

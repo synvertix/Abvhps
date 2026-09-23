@@ -16,14 +16,14 @@ class SettingController extends Controller
     {
         $settings = [
             'site_title' => SiteSetting::get('site_title', 'ABVHPS - Akhanda Bharatha Viswa Hindu Parirakshana Samiti'),
-            'contact_phone' => SiteSetting::get('contact_phone', '+91 8884933379'),
+            'contact_phone' => SiteSetting::get('contact_phone', '+91 9989980055'),
             'whatsapp_number' => SiteSetting::getWhatsAppNumber(),
             'contact_email' => SiteSetting::get('contact_email', 'info@abvhps.org'),
             'contact_address' => SiteSetting::get('contact_address', 'Survey No:1826, Shanmukhapuram, Akkalareddy Palli Village and Post, Porumamilla Mandalam, Kadapa, A.P - 516193'),
             'facebook_url' => SiteSetting::get('facebook_url', 'https://facebook.com/abvhps'),
             'twitter_url' => SiteSetting::get('twitter_url', 'https://twitter.com/abvhps'),
             'youtube_url' => SiteSetting::get('youtube_url', 'https://youtube.com/@abvhps'),
-            'footer_about' => SiteSetting::get('footer_about', 'Dedicated to preserving and promoting Hindu culture and values worldwide under the behest of Rajaguru Sri Sri Sri Subrahmanneswara Swamy Garu.'),
+            'footer_about' => SiteSetting::get('footer_about', 'Dedicated to preserving and promoting Hindu culture and values worldwide under the guidance of Rajaguru Sri Sri Sri Subrahmanneswara Swamy Garu.'),
             'membership_fee' => SiteSetting::get('membership_fee', '100.00'),
             'volunteer_fee' => SiteSetting::get('volunteer_fee', '150.00'),
 
@@ -47,6 +47,10 @@ class SettingController extends Controller
             'homepage_social_enabled' => SiteSetting::get('homepage_social_enabled', '1'),
             'homepage_social_heading' => SiteSetting::get('homepage_social_heading', 'CONNECT WITH ABVHPS'),
             'homepage_social_subtext' => SiteSetting::get('homepage_social_subtext', 'Follow ABVHPS for updates on Seva activities, membership programs, volunteer initiatives, events, and organizational announcements.'),
+            'homepage_stats_donors' => SiteSetting::get('homepage_stats_donors', ''),
+            'homepage_stats_members' => SiteSetting::get('homepage_stats_members', ''),
+            'homepage_stats_volunteers' => SiteSetting::get('homepage_stats_volunteers', ''),
+            'social_janavedika_url' => SiteSetting::get('social_janavedika_url', ''),
             'social_facebook_url' => SiteSetting::get('social_facebook_url', ''),
             'social_instagram_url' => SiteSetting::get('social_instagram_url', ''),
             'social_youtube_url' => SiteSetting::get('social_youtube_url', ''),
@@ -110,6 +114,20 @@ class SettingController extends Controller
             }
         ];
 
+        $janavedikaSocialUrlRule = [
+            'nullable',
+            'string',
+            'max:255',
+            function ($attribute, $value, $fail) {
+                if ($value === null || $value === '') return;
+                $trimmed = trim((string)$value);
+                if ($trimmed === '') return;
+                if (!filter_var($trimmed, FILTER_VALIDATE_URL) || !SiteSetting::isJanavedikaUrl($trimmed)) {
+                    $fail('The Janavedika link must be a secure URL on janavedika.in (e.g. https://janavedika.in/@abvhps).');
+                }
+            }
+        ];
+
         $rules = [
             'site_title' => 'string|max:255',
             'contact_phone' => 'string|max:50',
@@ -157,6 +175,10 @@ class SettingController extends Controller
             'homepage_social_enabled' => 'nullable|in:0,1,yes,no',
             'homepage_social_heading' => 'nullable|string|max:255',
             'homepage_social_subtext' => 'nullable|string|max:1000',
+            'homepage_stats_donors' => 'nullable|integer|min:0|max:100000000',
+            'homepage_stats_members' => 'nullable|integer|min:0|max:100000000',
+            'homepage_stats_volunteers' => 'nullable|integer|min:0|max:100000000',
+            'social_janavedika_url' => $janavedikaSocialUrlRule,
             'social_facebook_url' => $httpsUrlRule,
             'social_instagram_url' => $httpsUrlRule,
             'social_youtube_url' => $httpsUrlRule,
@@ -176,8 +198,9 @@ class SettingController extends Controller
             'homepage_join_secondary_cta_text', 'homepage_join_secondary_cta_url',
             'homepage_sponsors_enabled', 'homepage_sponsors_heading',
             'homepage_social_enabled', 'homepage_social_heading', 'homepage_social_subtext',
-            'social_facebook_url', 'social_instagram_url', 'social_youtube_url',
+            'social_janavedika_url', 'social_facebook_url', 'social_instagram_url', 'social_youtube_url',
             'social_x_url', 'social_linkedin_url', 'social_whatsapp_url', 'social_telegram_url',
+            'homepage_stats_donors', 'homepage_stats_members', 'homepage_stats_volunteers',
         ];
 
         foreach ($scalarKeys as $key) {

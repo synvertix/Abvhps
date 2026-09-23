@@ -246,7 +246,7 @@ void main() {
 
     test('ContactInfoModel parses correctly', () {
       final json = {
-        'phone': '+91 8884933379',
+        'phone': '+91 9989980055',
         'email': 'info@abvhps.org',
         'address': 'D.No. 4-1-1, Main Road, Guntur',
         'whatsapp_number': '+91 9989980055',
@@ -261,7 +261,7 @@ void main() {
       };
 
       final contact = ContactInfoModel.fromJson(json);
-      expect(contact.phone, '+91 8884933379');
+      expect(contact.phone, '+91 9989980055');
       expect(contact.socialLinks.first.name, 'Facebook');
     });
 

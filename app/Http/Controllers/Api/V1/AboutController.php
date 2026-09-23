@@ -35,10 +35,14 @@ class AboutController extends Controller
             'registration_no'=> '20/2023',
             'founder_guru'   => 'Rajaguru Sri Sri Sri Subrahmanneswara Swamy Garu',
             'logo_url'       => ApiMediaHelper::resolveUrl('images/ABVHPS_LOGO.jpg'),
+            'origin'         => [
+                str_replace(':guru', config('abvhps.copy.guru'), config('abvhps.copy.origin_1')),
+                config('abvhps.copy.origin_2'),
+            ],
         ];
 
         $mission = [
-            'title' => 'Our Mission',
+            'title' => 'Our Mission in Action',
             'paragraphs' => [
                 'Akhanda Bharatha Viswa Hindu Parirakshana Samiti (ABVHPS) is dedicated to safeguarding, nurturing, and propagating the timeless principles of Sanathana Dharma across every village, mandal, and district. Through proactive grassroots initiatives, we unite communities to preserve cultural heritage, temple welfare, and traditional values.',
                 'Our mission encompasses selfless service (Seva), educational support for underprivileged youth, comprehensive healthcare camps, Gau Samrakshana (cow protection), and rural empowerment through specialized wings like Rudrasena, Kala Brundam, Grama Seva Dal, and Organic Farmers support desks.',
@@ -73,18 +77,9 @@ class AboutController extends Controller
         ];
 
         $pillars = [
-            [
-                'title'       => 'Our Vision',
-                'description' => 'A unified and culturally enlightened society where Sanathana Dharma thrives, sacred traditions are revered, and every individual is empowered through spiritual wisdom and collective welfare.',
-            ],
-            [
-                'title'       => 'Our Mission',
-                'description' => 'To protect and promote Hindu heritage, establish Goshalas, revive ancient temples, provide daily Annadanam, and build resilient village communities across Akhanda Bharatha.',
-            ],
-            [
-                'title'       => 'The Goal',
-                'description' => 'To establish active Dharma and Seva units across all panchayats, mandals, and districts, fostering a generation committed to selfless service and national integrity.',
-            ],
+            ['title' => 'Our Vision',  'description' => config('abvhps.copy.vision')],
+            ['title' => 'Our Mission', 'description' => config('abvhps.copy.mission')],
+            ['title' => 'The Goal',    'description' => config('abvhps.copy.goal')],
         ];
 
         return response()->json([
