@@ -497,14 +497,3 @@ Route::get('/project/{id}', [App\Http\Controllers\HomeController::class, 'showPr
 
 // Public Web Centralized Policy Center Routes
 Route::get('/policy-center', [App\Http\Controllers\HomeController::class, 'policyCenter'])->name('public.policy_center');
-Route::get('/terms', function() {
-    return redirect()->route('public.policy_center', '#terms-and-conditions');
-})->name('public.terms');
-Route::get('/privacy', function() {
-    return redirect()->route('public.policy_center', '#privacy-policy');
-})->name('public.privacy');
-Route::get('/refund-policy', function() {
-    return redirect()->route('public.policy_center', '#refund-policy');
-})->name('public.refund_policy');
-
-
